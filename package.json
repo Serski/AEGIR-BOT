@@ -6,7 +6,6 @@
   "scripts": {
     "start": "node bot.js",
     "deploy": "node deploy-commands.js",
-    "backup": "node backupFirestore.js",
     "test": "node --test"
   },
   "keywords": [],
