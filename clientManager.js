@@ -5,12 +5,12 @@ class clientManager {
         //Remove spaces
         emojiName = emojiName.replace(/\s/g, '');
         const client = bot.getClient();
-        const guildID = bot.getGuildID();
+        const guildId = bot.getGuildID();
         if (!client) {
             console.log("Client not found")
             return null;
         }
-        const guild = client.guilds.cache.get(guildID);
+        const guild = client.guilds.cache.get(guildId);
         if (!guild) {
             console.log("Guild not found")
             return null;
@@ -26,8 +26,8 @@ class clientManager {
     static async getUser(userID) {
         const bot = require('./bot');
         const client = bot.getClient();
-        const guildID = bot.getGuildID();
-        const guild = client.guilds.cache.get(guildID);
+        const guildId = bot.getGuildID();
+        const guild = client.guilds.cache.get(guildId);
         if (!guild) {
             console.log("Guild not found")
             return null;
