@@ -1,8 +1,7 @@
 const OpenAI = require ('openai');
 const dbm = require('./database-manager');
 
-//Api key is in config.json, fourth element named gpt token. Grab it as constant
-const apiKey = require('./config.json').gptToken;
+const { gptToken: apiKey } = require('./config');
 //Format to work as gpt key
 //const apiToken = "Bearer " + apiKey;
 

@@ -6,7 +6,7 @@
  *      CLIENT_ID       – the application / client ID
  *      GUILD_ID        – the test-server ID (for slash-command registration)
  *
- *  • In local dev you can still drop a config.json next to this file:
+ *  • In local dev you can still drop a config file next to this file:
  *      { "token":"...", "clientId":"...", "guildId":"..." }
  */
 
@@ -15,7 +15,7 @@ const path = require('node:path');
 const { Client, GatewayIntentBits, Collection, Events } = require('discord.js');
 
 // ────────────────────────────────────────────────────────────────
-// 1) Load secrets from ENV, else fall back to ./config.json
+// 1) Load secrets from ENV, else fall back to ./config
 // ────────────────────────────────────────────────────────────────
 let token   = process.env.DISCORD_TOKEN;
 let clientId = process.env.CLIENT_ID;
@@ -23,14 +23,14 @@ let guildId  = process.env.GUILD_ID;
 
 if (!token || !clientId || !guildId) {
   try {
-    const local = require('./config.json');
-    token    ||= local.token;
-    clientId ||= local.clientId;
-    guildId  ||= local.guildId;
-    console.log('[INFO] Using values from config.json (dev mode)');
+    const { token: localToken, clientId: localClientId, guildId: localGuildId } = require('./config');
+    token    ||= localToken;
+    clientId ||= localClientId;
+    guildId  ||= localGuildId;
+    console.log('[INFO] Using values from config (dev mode)');
   } catch {
     console.warn(
-      '[WARN] No ENV vars and no config.json found. ' +
+      '[WARN] No ENV vars and no config file found. ' +
       'Set DISCORD_TOKEN / CLIENT_ID / GUILD_ID!'
     );
   }
