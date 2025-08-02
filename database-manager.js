@@ -24,11 +24,6 @@ async function loadCollection(collectionName) {
   }
 }
 
-async function loadCollectionFileNames(collectionName) {
-  const coll = await loadCollection(collectionName);
-  return Object.keys(coll).reduce((acc, k) => ((acc[k] = k), acc), {});
-}
-
 async function saveFile(collection, doc, data) {
   const coll = await loadCollection(collection);
   coll[doc] = data;
@@ -46,12 +41,6 @@ async function docDelete(collection, doc) {
   return saveCollection(collection, coll);
 }
 
-async function fieldDelete(collection, doc, field) {
-  const coll = await loadCollection(collection);
-  if (coll[doc]) delete coll[doc][field];
-  return saveCollection(collection, coll);
-}
-
 async function logData() {
   // no‑op for the file backend
   console.log('[database-manager] logData skipped (file backend).');
@@ -60,10 +49,8 @@ async function logData() {
 module.exports = {
   saveCollection,
   loadCollection,
-  loadCollectionFileNames,
   saveFile,
   loadFile,
   docDelete,
-  fieldDelete,
   logData,
 };
