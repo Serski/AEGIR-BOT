@@ -2,8 +2,8 @@ const shop = require('./shop');
 const char = require('./char');
 const marketplace = require('./marketplace');
 const admin = require('./admin');
-//Import guildId from config.json
-const { guildId } = require('./config.json');
+// Import guildId from config.js (environment variables take priority)
+const { guildId } = require('./config.js');
 
 // MODALS
 addItem = async (interaction) => {

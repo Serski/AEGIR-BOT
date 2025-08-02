@@ -1,5 +1,6 @@
 const { REST, Routes, SlashCommandBuilder } = require('discord.js');
-const { clientId, guildId, token } = require('./config.json');
+// Load credentials from config.js (env vars take priority over config.json)
+const { clientId, guildId, token } = require('./config.js');
 const fs = require('node:fs');
 const path = require('node:path');
 const dbm = require('./database-manager');

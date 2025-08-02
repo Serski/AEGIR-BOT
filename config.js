@@ -15,11 +15,24 @@ if (fs.existsSync(cfgPath)) {
   }
 }
 
-// Environment variables have priority
-const keys = ['DISCORD_TOKEN', 'OPENAI_API_KEY', 'CLIENT_ID', 'GUILD_ID', 'ADMIN_ID'];
-for (const key of keys) {
-  if (process.env[key]) {
-    cfg[key] = process.env[key];
+// Environment variables have priority.  Normalize so callers can use either
+// upper- or lower-case keys (e.g. `CLIENT_ID` or `clientId`).
+const mappings = {
+  DISCORD_TOKEN: 'token',
+  OPENAI_API_KEY: 'openaiApiKey',
+  CLIENT_ID: 'clientId',
+  GUILD_ID: 'guildId',
+  ADMIN_ID: 'adminId',
+};
+
+for (const [envKey, alias] of Object.entries(mappings)) {
+  if (process.env[envKey]) {
+    cfg[envKey] = process.env[envKey];
+    cfg[alias] = process.env[envKey];
+  } else if (cfg[alias]) {
+    cfg[envKey] = cfg[alias];
+  } else if (cfg[envKey]) {
+    cfg[alias] = cfg[envKey];
   }
 }
 
