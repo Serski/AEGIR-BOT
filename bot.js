@@ -1,4 +1,4 @@
-const {clientId, guildId, token} = require('./config.json');
+const { clientId, guildId, token } = require('./config');
 const Discord = require('discord.js');
 const fs = require('node:fs');
 const path = require('node:path');
