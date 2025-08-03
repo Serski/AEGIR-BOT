@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 const admin = require('../../admin'); // Importing the database manager
+const logger = require('../../logger');
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -17,7 +18,7 @@ module.exports = {
                 await interaction.editReply(({ embeds: [embed], components: rows}));
             }
         } catch (error) {
-            console.error("Failed to get incomes", error);
+            logger.error("Failed to get incomes", error);
             await interaction.editReply({ content: "An error was caught. Contact Alex.", ephemeral: true });
         }
 	},

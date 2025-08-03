@@ -1,5 +1,6 @@
 const dbm = require('./database-manager');
 const clientManager = require('./clientManager');
+const logger = require('./logger');
 
 // Load the shop collection, add the "Need None Of Roles" field to each document's usageOptions, and save the collection back to the database
 // This is a one-time script to add the "Need None Of Roles" field to each document's usageOptions
@@ -25,7 +26,7 @@ async function loadResourcesJSON() {
     const fs = require('fs');
     fs.writeFileSync('resources.json', JSON.stringify(resources, null, 2));
 
-    console.log("Resources saved to resources.json");
+    logger.info("Resources saved to resources.json");
 }
 
 async function saveResourcesJSON() {
@@ -33,7 +34,7 @@ async function saveResourcesJSON() {
     const resources = JSON.parse(fs.readFileSync('resources.json'));
 
     await dbm.saveFile('keys', 'resources', resources);
-    console.log("Resources saved to database");
+    logger.info("Resources saved to database");
 }
 
 async function getResourceEmojis() {
@@ -42,7 +43,7 @@ async function getResourceEmojis() {
     for (let resource in resources) {
         let emoji = clientManager.getEmoji(resource);
         if (!emoji || emoji == null) {
-            console.log(`Resource ${resource} does not have an emoji`);
+            logger.warn(`Resource ${resource} does not have an emoji`);
             continue;
         }
         resources[resource].emoji = emoji;
@@ -78,7 +79,7 @@ async function addShireToShireNames() {
         }
     }
 
-    console.log(kingdoms.Jorvik.shires);
+    logger.debug(kingdoms.Jorvik.shires);
 
     await dbm.saveFile('keys', 'kingdoms', kingdoms);
 }
@@ -125,7 +126,7 @@ async function resetIncomeCD() {
             let nextCycleTime = new Date(startDate);
 
             while (nextCycleTime < now) {
-                console.log(nextCycleTime, now)
+                logger.debug(nextCycleTime, now);
                 switch (delayUnit) {
                     case 'D':
                         nextCycleTime.setUTCDate(nextCycleTime.getUTCDate() + delayAmount);
@@ -142,18 +143,18 @@ async function resetIncomeCD() {
                 }
             }
 
-            console.log(nextCycleTime);
-            console.log(nextResetTimes);
-            console.log(delay);
-            console.log(nextResetTimes.get(delay));
-            console.log("Next Cycle Day" + nextCycleTime.getUTCDate() + " Next Cycle Month" + nextCycleTime.getUTCMonth() + " Next Cycle Year" + nextCycleTime.getUTCFullYear());
-            console.log("Now Day" + now.getUTCDate() + " Now Month" + now.getUTCMonth() + " Now Year" + now.getUTCFullYear());
+            logger.debug(nextCycleTime);
+            logger.debug(nextResetTimes);
+            logger.debug(delay);
+            logger.debug(nextResetTimes.get(delay));
+            logger.debug("Next Cycle Day" + nextCycleTime.getUTCDate() + " Next Cycle Month" + nextCycleTime.getUTCMonth() + " Next Cycle Year" + nextCycleTime.getUTCFullYear());
+            logger.debug("Now Day" + now.getUTCDate() + " Now Month" + now.getUTCMonth() + " Now Year" + now.getUTCFullYear());
 
             nextResetTimes.set(delay, nextCycleTime.getUTCDate() === now.getUTCDate() &&
                                       nextCycleTime.getUTCMonth() === now.getUTCMonth() &&
                                       nextCycleTime.getUTCFullYear() === now.getUTCFullYear());
 
-            console.log(nextResetTimes.get(delay));
+            logger.debug(nextResetTimes.get(delay));
           }
           if (nextResetTimes.get(delay)) {
             charData[key] = true;

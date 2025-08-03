@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 const admin = require('../../admin'); // Importing the database manager
+const logger = require('../../logger');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -16,7 +17,7 @@ module.exports = {
             }
             await interaction.reply({ embeds: [reply] });
         } catch (error) {
-            console.error("Failed to get player kingdoms", error);
+            logger.error("Failed to get player kingdoms", error);
             await interaction.reply({ content: "An error was caught. Contact Alex.", ephemeral: true });
         }
     }

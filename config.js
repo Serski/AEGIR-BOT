@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const logger = require('./logger');
 
 // Load local configuration if available
 let cfg = {};
@@ -11,7 +12,7 @@ if (fs.existsSync(cfgPath)) {
       Object.assign(cfg, localCfg);
     }
   } catch (err) {
-    console.error('Failed to parse config.json:', err);
+    logger.error('Failed to parse config.json:', err);
   }
 }
 

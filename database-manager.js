@@ -1,6 +1,7 @@
 // database-manager.js  –  SIMPLE FILE STORAGE VERSION
 const fs   = require('node:fs');
 const path = require('node:path');
+const logger = require('./logger');
 
 const storageDir = path.join(__dirname, 'jsonStorage');
 if (!fs.existsSync(storageDir)) fs.mkdirSync(storageDir);
@@ -10,7 +11,7 @@ function saveCollection(collectionName, data) {
   const fp = path.join(storageDir, `${collectionName}.json`);
   return fs.promises
     .writeFile(fp, JSON.stringify(data, null, 2))
-    .then(() => console.log(`Collection "${collectionName}" saved (file).`));
+    .then(() => logger.info(`Collection \"${collectionName}\" saved (file).`));
 }
 
 // helper to read whole collection (returns {} if missing)
@@ -54,7 +55,7 @@ async function fieldDelete(collection, doc, field) {
 
 async function logData() {
   // no‑op for the file backend
-  console.log('[database-manager] logData skipped (file backend).');
+  logger.debug('[database-manager] logData skipped (file backend).');
 }
 
 module.exports = {

@@ -1,13 +1,13 @@
 const dbm = require('./database-manager'); // Importing the database manager
 const shop = require('./shop');
 const clientManager = require('./clientManager');
+const logger = require('./logger');
 const axios = require('axios');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, createWebhook } = require('discord.js');
 // No configuration fields are required from config.js in this module.
 
 class char {
   static async warn(playerID) {
-    console.log(playerID);
     let collectionName = 'characters';
     let charData = await dbm.loadFile(collectionName, playerID);
     if (charData) {
@@ -138,7 +138,7 @@ class char {
     try {
       charData = await dbm.loadFile(collectionName, userID);
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       return "Character not found- use /newchar first";
     }
     if (charData) {
@@ -250,7 +250,6 @@ class char {
     const MartialEmoji = clientManager.getEmoji("Martial");
     const IntrigueEmoji = clientManager.getEmoji("Intrigue");
     const DevotionEmoji = clientManager.getEmoji("Devotion");
-    console.log(DevotionEmoji);
     const LegitimacyEmoji = clientManager.getEmoji("Legitimacy");
 
     let prestige = charData.stats.Prestige;
@@ -288,7 +287,6 @@ class char {
       charData.stats.Intrigue = intrigue;
       charData.stats.Devotion = devotion;
       charData.stats.Legitimacy = legitimacy;
-      console.log(userID);
       await dbm.saveFile('characters', userID, charData);
     }
 
@@ -371,7 +369,6 @@ class char {
     let resourceMap = {}
     let incomesCollectedArray = [];
     for (let [key, value] of Object.entries(charIncomeData)) {
-      console.log(value);
 
       //Each value will include an emoji, goldGiven, itemGiven, and itemAmount field
       //Should add goldGiven to total, and if itemGiven is not "" and itemAmount is not 0, add itemAmount to the resourceMap. 
@@ -379,12 +376,9 @@ class char {
       let delay = value.data.delay || "1D";
       let incomeAvailableKey = delay === "1D" ? "incomeAvailable" : `incomeAvailable${delay}`;
 
-      console.log(incomeAvailableKey);
-
       let goldGiven = value.data.goldGiven;
       let itemGiven = value.data.itemGiven;
       let itemAmount = value.data.itemAmount;
-      console.log(goldGiven);
       let emoji = value.data.emoji;
       let tempString = "";
       tempString += emoji + " **__" + value.income + "__**\n"; 
@@ -400,7 +394,6 @@ class char {
         afterString += tempString;
         afterString += "\n";
         total += goldGiven;
-        console.log(total);
         if (itemGiven != "" && itemAmount != 0) {
           if (resourceMap[itemGiven]) {
             resourceMap[itemGiven] += itemAmount;
@@ -524,16 +517,9 @@ class char {
                 }
             }
 
-            console.log(nextCycleTime);
-            console.log(nextResetTimes.get(delay));
-            console.log("Next Cycle Day" + nextCycleTime.getUTCDate() + " Next Cycle Month" + nextCycleTime.getUTCMonth() + " Next Cycle Year" + nextCycleTime.getUTCFullYear());
-            console.log("Now Day" + now.getUTCDate() + " Now Month" + now.getUTCMonth() + " Now Year" + now.getUTCFullYear());
-
             nextResetTimes.set(delay, nextCycleTime.getUTCDate() === now.getUTCDate() &&
                                       nextCycleTime.getUTCMonth() === now.getUTCMonth() &&
                                       nextCycleTime.getUTCFullYear() === now.getUTCFullYear());
-
-            console.log(nextResetTimes.get(delay));
           }
           if (nextResetTimes.get(delay)) {
             charData[key] = true;
@@ -601,8 +587,6 @@ class char {
       roles = roles.map(role => role.replace(/\s+/g, ""));
       roles = roles.filter(role => role.length > 0);
       let hasRole = false;
-
-      console.log(roles);
       for (let i = 0; i < roles.length; i++) {
         if (user.roles.cache.some(role => role.id === roles[i])) {
           hasRole = true;
@@ -830,19 +814,14 @@ class char {
       }
     }
 
-    console.log(recipeData);
-
     //There are multiple role options, either Need Any Of Roles or Need All Of Roles. If Need Any Of Roles, check if user has any of the roles. If Need All Of Roles, check if user has all of the roles
     if (recipeData.recipeOptions["Need Any Of Roles"]) {
       //Roles are enclosed in <@& and >, and there may be multiple roles. They may not be comma separated but commas and spaces may exist
-      console.log(recipeData.recipeOptions["Need Any Of Roles"]);
       let roles = recipeData.recipeOptions["Need Any Of Roles"].split("<@&");
-      console.log(roles);
       roles = roles.map(role => role.replace(">", ""));
       roles = roles.map(role => role.replace(",", ""));
       roles = roles.map(role => role.replace(/\s+/g, ""));
       roles = roles.filter(role => role.length > 0);
-      console.log(roles);
       let hasRole = false;
       for (let i = 0; i < roles.length; i++) {
         if (user.roles.cache.some(role => role.id === roles[i])) {
@@ -923,7 +902,6 @@ class char {
     }
 
     returnEmbed.setDescription("Began crafting " + recipeData.recipeOptions.Icon + " " + recipe);
-    console.log(returnEmbed);
     return returnEmbed;
   }
 
@@ -1466,7 +1444,6 @@ class char {
   
     let members = await role.guild.members.fetch();
     members = members.filter(member => member.roles.cache.has(role.id));
-    console.log(members.length);
   
     let errorMembers = [];
   
@@ -1474,10 +1451,6 @@ class char {
   
       // Check if the member has a character
       let charID = member.user.username;
-      console.log("ID" + charID);
-      console.log(id);
-      console.log(member);
-      console.log(charData[charID]);
       if (!charData[charID]) {
         errorMembers.push(charID);
         continue;
@@ -1499,7 +1472,6 @@ class char {
     }
   
     await dbm.saveCollection(collectionName, charData);
-    console.log(errorMembers);
   
     return errorMembers;
   }
@@ -1643,7 +1615,6 @@ class char {
   }
 
   static async giveItemToPlayer(playerGiving, player, item, amount) {
-    console.log("start");
     if (playerGiving === player) {
       return "You can't give items to yourself!";
     }
@@ -1670,15 +1641,11 @@ class char {
       return "Error: Player not found";
     }
 
-    console.log("playerGiving: " + playerGiving);
-
     let charData2;
     [player, charData2] = await this.findPlayerData(player);
     if (!player) {
       return "Error: Player not found";
     }
-
-    console.log("player: " + player);
 
     if (charData && charData2) {
       if (charData.inventory[item] && charData.inventory[item] >= amount) {
@@ -1718,10 +1685,6 @@ class char {
     if (!player) {
       return "Error: Player not found";
     }
-
-    console.log(charData.balance);
-    console.log(gold);
-    console.log(charData.balance >= gold);
     if (charData && charData2) {
       if (charData.balance >= gold) {
         charData.balance -= gold;

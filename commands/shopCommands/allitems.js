@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 const shop = require('../../shop'); // Importing the database manager
+const logger = require('../../logger');
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -12,7 +13,7 @@ module.exports = {
 		// console.log(itemListString);
 		// await interaction.reply(itemListString);
 		let [embed, rows] = await shop.createAllItemsEmbed(1, interaction);
-		console.log(rows);
+                logger.debug(rows);
 		await interaction.reply({ embeds: [embed], components: rows});
 	},
 };

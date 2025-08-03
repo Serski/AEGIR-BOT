@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 const admin = require('../../admin'); // Importing the database manager
+const logger = require('../../logger');
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -27,7 +28,7 @@ module.exports = {
                 return;
             }
         } catch (error) {
-            console.error("Failed to help:", error);
+            logger.error("Failed to help:", error);
             await interaction.reply({ content: "Failed to help. Please try again.", ephemeral: true });
         }
 	},

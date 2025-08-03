@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 const admin = require('../../admin'); // Importing the database manager
+const logger = require('../../logger');
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -38,7 +39,7 @@ module.exports = {
                 await interaction.followUp({ embeds: [reply]});
             }
         } catch (error) {
-            console.error("Failed to add map menu:", error);
+            logger.error("Failed to add map menu:", error);
             await interaction.reply({ content: "Failed to add the map. Please try again.", ephemeral: true });
         }
 	},

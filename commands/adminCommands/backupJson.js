@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 const dbm = require('../../database-manager'); // Importing the database manager
+const logger = require('../../logger');
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -12,7 +13,7 @@ module.exports = {
             await dbm.backupJsonToFirestore();
             await interaction.editReply("Successfully backed up JSON files.");
         } catch (error) {
-            console.error("Failed to backup JSON files", error);
+            logger.error("Failed to backup JSON files", error);
             await interaction.editReply({ content: "An error was caught. Contact Alex.", ephemeral: true });
         }
 	},
