@@ -1,10 +1,9 @@
-const { REST, Routes, SlashCommandBuilder } = require('discord.js');
+const { REST, Routes } = require('discord.js');
 // Load credentials from config.js (env vars take priority over config.json)
 const { clientId, guildId, token } = require('./config.js');
 const fs = require('node:fs');
 const path = require('node:path');
 const dbm = require('./database-manager');
-const { map } = require('./admin');
 
 
 async function loadCommands() {
