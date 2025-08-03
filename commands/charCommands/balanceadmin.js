@@ -12,14 +12,11 @@ module.exports = {
 		const charResponse = interaction.options.getUser('player').toString();
         const charNumeric = charResponse.substring(2, charResponse.length - 1);
 		const charID = await dataGetters.getCharFromNumericID(charNumeric);
-
-		(async () => {
             let replyEmbed = await char.balance(charID);
             if (typeof(replyEmbed) == 'string') {
                 await interaction.reply(replyEmbed);
             } else {
                 await interaction.reply({ embeds: [replyEmbed] });
             }
-		})()
 	},
 };

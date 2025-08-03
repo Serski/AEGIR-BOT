@@ -12,8 +12,6 @@ module.exports = {
         ),
     async execute(interaction) {
         const recipe = interaction.options.getString('recipe');
-
-        (async () => {
             let reply = await shop.inspectRecipe(recipe)
             if (typeof(reply) == 'string') {
                 // Ephemeral reply
@@ -22,6 +20,5 @@ module.exports = {
                 await interaction.reply({ embeds: [reply] });
             }
             // Call the useItem function from the Shop class
-        })()
     },
 };

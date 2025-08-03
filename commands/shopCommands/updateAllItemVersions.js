@@ -6,8 +6,7 @@ module.exports = {
 		.setName('updateallitemversions')
 		.setDescription('Update the version of all items')
 		.setDefaultMemberPermissions(0),
-	execute(interaction) {
-		(async () => {
+	async execute(interaction) {
 			try {
 				await interaction.deferReply();
 				let response = await shop.updateAllItemVersions();
@@ -17,6 +16,5 @@ module.exports = {
 				console.error('Failed to update item versions:', error);
 				await interaction.reply({ content: 'Error updating item versions.', ephemeral: true });
 			}
-		})();
 	},
 };

@@ -20,11 +20,9 @@ module.exports = {
                     {name: 'Lore', value: 'lore'},
                     {name: 'Rank', value: 'rank'},
                     {name: 'Guide', value: 'guide'})),
-	execute(interaction) {
+	async execute(interaction) {
 		const mapName = interaction.options.getString('embed');
 		const type = interaction.options.getString('type');
-
-		(async () => {
             let returnString = await admin.removeMap(mapName, type);
 
 			if (returnString) {
@@ -34,6 +32,5 @@ module.exports = {
 				await interaction.reply(`${capitalType} '${mapName}' has been removed.`);
 			}
 			// Call the addItem function from the Shop class
-		})()
 	},
 };

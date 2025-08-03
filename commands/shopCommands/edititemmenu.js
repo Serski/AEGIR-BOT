@@ -11,10 +11,8 @@ module.exports = {
 			.setDescription('The item name')
 			.setRequired(true)
 		),
-	execute(interaction) {
+	async execute(interaction) {
 		const itemName = interaction.options.getString('itemname');
-
-		(async () => {
 			//shop.editItemMenu returns an array with the first element being the replyEmbed and the second element being the rows
 			let reply = await shop.editItemMenu(itemName, 1, interaction.user.tag);
             if (typeof(reply) == 'string') {
@@ -24,6 +22,5 @@ module.exports = {
 				let rows = reply[1];
                 await interaction.reply({ embeds: [replyEmbed], components: [rows]});
             }
-		})()
 	},
 };

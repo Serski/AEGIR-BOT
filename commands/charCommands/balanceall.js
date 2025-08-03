@@ -6,9 +6,7 @@ module.exports = {
 		.setName('balanceall')
 		.setDescription('Show balance of all players')
         .setDefaultMemberPermissions(0),
-	execute(interaction) {
-
-		(async () => {
+	async execute(interaction) {
             let [replyEmbed, replyRows] = await char.balanceAll(1);
             if (typeof(replyEmbed) == 'string') {
                 await interaction.reply(replyEmbed);
@@ -16,6 +14,5 @@ module.exports = {
                 //Has action rows
                 await interaction.reply({ embeds: [replyEmbed], components: replyRows});
             }
-		})()
 	},
 };

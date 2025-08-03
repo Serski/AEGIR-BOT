@@ -11,10 +11,8 @@ module.exports = {
             .setDescription('The income name')
             .setRequired(true)
         ),
-    execute(interaction) {
+    async execute(interaction) {
         const itemName = interaction.options.getString('income');
-
-        (async () => {
             let returnString = await shop.removeIncome(itemName);
 
 			if (returnString) {
@@ -23,6 +21,5 @@ module.exports = {
 				await interaction.reply(`Income '${itemName}' has been removed.`);
 			}
             // Call the addItem function from the Shop class
-        })()
     },
 };

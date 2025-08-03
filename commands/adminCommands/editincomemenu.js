@@ -13,8 +13,6 @@ module.exports = {
         ),
     async execute(interaction) {
         const role = interaction.options.getString('income');
-
-        (async () => {
             //addIncome(roleID, incomeString)
             let reply = await admin.editIncomeMenu(role, interaction.user.tag);
             if (typeof(reply) == 'string') {
@@ -23,6 +21,5 @@ module.exports = {
                 await interaction.reply({ embeds: [reply] });
             }
             // Call the useItem function from the Shop class
-        })()
     }
 };

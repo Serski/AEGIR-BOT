@@ -11,10 +11,8 @@ module.exports = {
 			.setDescription('The recipe name')
 			.setRequired(true)
 		),
-	execute(interaction) {
+	async execute(interaction) {
 		const recipeName = interaction.options.getString('recipename');
-
-		(async () => {
 			//shop.editrecipeMenu returns an array with the first element being the replyEmbed and the second element being the rows
 			let reply = await shop.editRecipeMenu(recipeName, interaction.user.tag);
             if (typeof(reply) == 'string') {
@@ -22,6 +20,5 @@ module.exports = {
             } else {
                 await interaction.reply({ embeds: [reply]});
             }
-		})()
 	},
 };
