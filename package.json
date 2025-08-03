@@ -2,11 +2,12 @@
   "name": "aegir-bot",
   "version": "1.0.0",
   "description": "",
-  "main": "bot.js",
+  "main": "dist/index.js",
   "scripts": {
-    "start": "node bot.js",
+    "start": "node dist/index.js",
     "deploy": "node deploy-commands.js",
-    "test": "node --test"
+    "test": "node --test",
+    "build": "tsc"
   },
   "keywords": [],
   "author": "",
@@ -21,5 +22,8 @@
     "firebase-admin": "^12.3.1",
     "node-fetch": "^3.3.1",
     "openai": "^4.25.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2"
   }
 }
