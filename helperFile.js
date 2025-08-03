@@ -162,16 +162,17 @@ async function resetIncomeCD() {
       }
     }
     
-    await dbm.saveCollection(collectionName, data);
-  }
-
-resetIncomeCD();
-
+  await dbm.saveCollection(collectionName, data);
+}
 // addTo10RecipeIngredients();
 
 module.exports = {
     addNeedNoneOfRolesToShop,
     loadResourcesJSON,
     saveResourcesJSON,
-    getResourceEmojis
-}
+    getResourceEmojis,
+    healthToLegitimacy,
+    addShireToShireNames,
+    addTo10RecipeIngredients,
+    resetIncomeCD,
+  };
