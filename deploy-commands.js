@@ -42,9 +42,9 @@ async function loadCommands() {
 
 	// dbm.saveFile('keys', 'commandList', commandList, (err, result) => {
 	//     if (err) {
-	//         console.error('Failed to save command list:', err);
+	//	   console.error('Failed to save command list:', err);
 	//     } else {
-	//         console.log('Command list saved successfully:', result);
+	//	   console.log('Command list saved successfully:', result);
 	//     }
 	// });
 
@@ -56,11 +56,11 @@ async function loadCommands() {
 
 	// and deploy your commands!
 	(async () => {
-		
-			logger.info(`Started refreshing ${commands.length} application (/) commands.`);
+		logger.info(`Started refreshing ${commands.length} application (/) commands.`);
 
-			logger.debug(clientId, guildId);
+		logger.debug(clientId, guildId);
 
+		try {
 			// The put method is used to fully refresh all commands in the guild with the current set
 			const data = await rest.put(
 				Routes.applicationGuildCommands(clientId, guildId),
@@ -68,7 +68,10 @@ async function loadCommands() {
 			);
 
 			logger.info(`Successfully reloaded ${data.length} application (/) commands.`);
-		
+		} catch (error) {
+			logger.error('Failed to reload application (/) commands:', error);
+			process.exit(1);
+		}
 	})();
 }
 
