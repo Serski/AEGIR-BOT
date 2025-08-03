@@ -1,10 +1,9 @@
-const { REST, Routes, SlashCommandBuilder } = require('discord.js');
+const { REST, Routes } = require('discord.js');
 // Load credentials from config.js (env vars take priority over config.json)
 const { clientId, guildId, token } = require('./config.js');
 const fs = require('node:fs');
 const path = require('node:path');
 const dbm = require('./database-manager');
-const { map } = require('./admin');
 const logger = require('./logger');
 
 
@@ -14,7 +13,8 @@ async function loadCommands() {
 	const foldersPath = path.join(__dirname, 'commands');
 	const commandFolders = fs.readdirSync(foldersPath);
 
-	let commandList = {};
+        // this will store metadata for the help command
+        let commandList = {};
 
 
 	for (const folder of commandFolders) {
@@ -28,28 +28,40 @@ async function loadCommands() {
 			count++;
 		}
 		// Grab the SlashCommandBuilder#toJSON() output of each command's data for deployment
-		for (const file of commandFiles) {
-			//Add this command to the list of commands with fields "name", "description" and "help"
-			const filePath = path.join(commandsPath, file);
-			const command = require(filePath);
-			if ('data' in command && 'execute' in command) {
-				commands.push(command.data.toJSON());
-			} else {
-				logger.warn(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
-			}
-		}
-	}
+                for (const file of commandFiles) {
+                        // Add this command to the list of commands with fields "description", "options" and "help"
+                        const filePath = path.join(commandsPath, file);
+                        const command = require(filePath);
+                        if ('data' in command && 'execute' in command) {
+                                commands.push(command.data.toJSON());
 
-	// dbm.saveFile('keys', 'commandList', commandList, (err, result) => {
-	//     if (err) {
-	//         console.error('Failed to save command list:', err);
-	//     } else {
-	//         console.log('Command list saved successfully:', result);
-	//     }
-	// });
+                                // build a metadata object for the help system
+                                const options = {};
+                                if (Array.isArray(command.data.options)) {
+                                        for (const option of command.data.options) {
+                                                options[option.name] = option.description ?? '';
+                                        }
+                                }
 
-	//Also save commandList to a local json
-	// fs.writeFileSync('commandList.json', JSON.stringify(commandList, null, 2));
+                                commandList[command.data.name] = {
+                                        description: command.data.description ?? '',
+                                        options,
+                                        help: command.help ?? command.data.description ?? ''
+                                };
+                        } else {
+                                logger.warn(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
+                        }
+                }
+        }
+
+        // save commandList both to the database and locally
+        try {
+                await dbm.saveFile('keys', 'commandList', commandList);
+                fs.writeFileSync(path.join(__dirname, 'commandList.json'), JSON.stringify(commandList, null, 2));
+                logger.info('Command list saved successfully.');
+        } catch (err) {
+                logger.error('Failed to save command list:', err);
+        }
 
 	// Construct and prepare an instance of the REST module
 	const rest = new REST().setToken(token);
