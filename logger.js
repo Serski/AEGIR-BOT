@@ -6,7 +6,9 @@ function shouldLog(level) {
 }
 
 module.exports = {
-  error: (...args) => console.error(...args),
+  error: (...args) => {
+    if (shouldLog('error')) console.error(...args);
+  },
   warn: (...args) => {
     if (shouldLog('warn')) console.warn(...args);
   },
