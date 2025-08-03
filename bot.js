@@ -14,6 +14,7 @@
 const fs   = require('node:fs');
 const path = require('node:path');
 const { Client, GatewayIntentBits, Collection, Events } = require('discord.js');
+const logger             = require('./logger');
 
 // ────────────────────────────────────────────────────────────────
 // 1) Load secrets from ENV, else fall back to optional ./config.js
@@ -28,9 +29,9 @@ if (!token || !clientId || !guildId) {
     token    ||= local.token;
     clientId ||= local.clientId;
     guildId  ||= local.guildId;
-    console.log('[INFO] Using values from local config.js (dev mode)');
+    logger.info('Using values from local config.js (dev mode)');
   } catch {
-    console.warn(
+    logger.warn(
       '[WARN] No ENV vars found and no local config.js file present. ' +
       'Environment variables take precedence; config.js is optional for development. ' +
       'Set DISCORD_TOKEN / CLIENT_ID / GUILD_ID!'
@@ -70,14 +71,14 @@ for (const folder of commandFolders) {
     if ('data' in command && 'execute' in command) {
       client.commands.set(command.data.name, command);
     } else {
-      console.log(`[WARN] Command at ${filePath} missing "data" or "execute".`);
+      logger.warn(`Command at ${filePath} missing "data" or "execute".`);
     }
   }
 }
 
 // ───── Ready event ──────────────────────────────────────────────
 client.once('ready', () => {
-  console.log(`Logged in as ${client.user.tag}!`);
+  logger.info(`Logged in as ${client.user.tag}!`);
 });
 
 // ───── Interaction handler ─────────────────────────────────────
@@ -87,7 +88,7 @@ client.on(Events.InteractionCreate, async interaction => {
     try {
       await command.execute(interaction);
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       const reply = { content: 'There was an error while executing this command!', ephemeral: true };
       interaction.replied || interaction.deferred
         ? interaction.followUp(reply)
@@ -104,7 +105,7 @@ client.on('guildMemberAdd', member => {
 });
 
 client.on('guildMemberRemove', member => {
-  console.log('Member left:', member.id);
+  logger.info('Member left:', member.id);
 });
 
 client.on('userUpdate', (oldUser, newUser) => {

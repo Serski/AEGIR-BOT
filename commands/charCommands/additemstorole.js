@@ -2,6 +2,7 @@
 
 const { SlashCommandBuilder } = require('discord.js');
 const char = require('../../char'); // Importing the database manager
+const logger = require('../../logger');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -17,11 +18,11 @@ module.exports = {
         const amount = interaction.options.getInteger('amount');
 
         const response = await char.addItemToRole(role, item, amount);
-        console.log("response" + response);
-        console.log(typeof response);
+        logger.debug("response" + response);
+        logger.debug(typeof response);
 
         if (typeof response == 'object') {
-            console.log("here");
+            logger.debug("here");
             if (response.length > 0) {
                 return interaction.reply("Errors on the following characters: " + response.join(", "));
             } else {

@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const admin = require('../../admin'); // Importing the database manager
 const dbm = require ('../../database-manager');
+const logger = require('../../logger');
 
 ///editfield <field number> <new value>
 module.exports = {
@@ -43,7 +44,7 @@ module.exports = {
             // Show the modal to the user
             await interaction.showModal(modal);
         } catch (error) {
-            console.error('Error executing editmapabout command:', error);
+            logger.error('Error executing editmapabout command:', error);
         }
     }
 };

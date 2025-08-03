@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 const shop = require('../../shop'); // Importing the database manager
+const logger = require('../../logger');
 
 ///editfield <field number> <new value>
 module.exports = {
@@ -21,7 +22,7 @@ module.exports = {
         const fieldNumber = interaction.options.getInteger('fieldnumber');
         const newValue = interaction.options.getString('newvalue');
 
-        console.log('new value: ' + newValue);
+        logger.debug('new value: ' + newValue);
 
         let reply = await shop.editItemField(interaction.user.tag, fieldNumber, newValue);
         await interaction.reply(reply);

@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const dbm = require('./database-manager');
 const { map } = require('./admin');
+const logger = require('./logger');
 
 
 async function loadCommands() {
@@ -34,7 +35,7 @@ async function loadCommands() {
 			if ('data' in command && 'execute' in command) {
 				commands.push(command.data.toJSON());
 			} else {
-				console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
+				logger.warn(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
 			}
 		}
 	}
@@ -56,9 +57,9 @@ async function loadCommands() {
 	// and deploy your commands!
 	(async () => {
 		
-			console.log(`Started refreshing ${commands.length} application (/) commands.`);
+			logger.info(`Started refreshing ${commands.length} application (/) commands.`);
 
-			console.log(clientId, guildId);
+			logger.debug(clientId, guildId);
 
 			// The put method is used to fully refresh all commands in the guild with the current set
 			const data = await rest.put(
@@ -66,7 +67,7 @@ async function loadCommands() {
 				{ body: commands },
 			);
 
-			console.log(`Successfully reloaded ${data.length} application (/) commands.`);
+			logger.info(`Successfully reloaded ${data.length} application (/) commands.`);
 		
 	})();
 }

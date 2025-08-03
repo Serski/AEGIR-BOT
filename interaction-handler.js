@@ -4,6 +4,7 @@ const marketplace = require('./marketplace');
 const admin = require('./admin');
 // Import guildId from config.js (environment variables take priority)
 const { guildId } = require('./config.js');
+const logger = require('./logger');
 
 // MODALS
 addItem = async (interaction) => {
@@ -168,7 +169,7 @@ shopLayout = async (interaction) => {
 //BUTTONS
 shopSwitch = async (interaction) => {
   let [edittedEmbed, rows] = await shop.createShopEmbed(interaction.customId.slice(11), interaction);
-  console.log(interaction);
+  logger.debug(interaction);
   await interaction.update({ embeds: [edittedEmbed], components: rows});
 }
 incomeSwitch = async (interaction) => {
@@ -207,7 +208,7 @@ helpSwitch = async (interaction) => {
 }
 
 exports.handle = async (interaction) => {
-  console.log(interaction.customId);
+  logger.debug(interaction.customId);
   if (interaction.isModalSubmit()) {
     if (interaction.customId === 'additemmodal') {
       addItem(interaction);
