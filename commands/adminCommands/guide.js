@@ -10,10 +10,8 @@ module.exports = {
 			.setDescription('The guide name')
 			.setRequired(true)
 		),
-	execute(interaction) {
+	async execute(interaction) {
 		const guideName = interaction.options.getString('guide');
-
-		(async () => {
             let returnEmbed = await admin.map(guideName, interaction.channelId, "guide");
 
 			// If the return is a string, it's an error message
@@ -24,6 +22,5 @@ module.exports = {
                 await interaction.reply({ embeds: [returnEmbed] });
             }
 			// Call the addItem function from the Shop class
-		})()
 	},
 };

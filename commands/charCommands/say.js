@@ -10,10 +10,8 @@ module.exports = {
 			.setDescription('The message to send')
 			.setRequired(true)
 		),
-	execute(interaction) {
+	async execute(interaction) {
         const message = interaction.options.getString('message');
-
-		(async () => {
             let reply = await char.say(interaction.user.tag, message, interaction.channel)
             if (typeof(reply) == 'string') {
                 await interaction.reply({ content: reply, ephemeral: true });
@@ -21,6 +19,5 @@ module.exports = {
                 await interaction.reply({ embeds: [reply] });
             }
             // Call the useItem function from the Shop class
-        })()
 	},
 };

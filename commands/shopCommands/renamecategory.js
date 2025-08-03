@@ -16,12 +16,10 @@ module.exports = {
             .setDescription('The new name of the category')
             .setRequired(true)
         ),
-	execute(interaction) {
+	async execute(interaction) {
         const category = interaction.options.getString('category');
         const newCategory = interaction.options.getString('newcategory');
-		(async () => {
 			reply = await shop.renameCategory(category, newCategory);
             await interaction.reply(reply);
-		})()
 	},
 };

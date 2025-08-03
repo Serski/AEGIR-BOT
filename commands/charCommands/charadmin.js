@@ -17,14 +17,11 @@ module.exports = {
 		//char is a string starting with <@ and ending with >
 		const charNumeric = charResponse.substring(2, charResponse.length - 1);
 		const charID = await dataGetters.getCharFromNumericID(charNumeric);
-
-		(async () => {
             let replyEmbed = await char.char(charID);
             if (typeof(replyEmbed) == 'string') {
                 await interaction.reply(replyEmbed);
             } else {
                 await interaction.reply({ embeds: [replyEmbed] });
             }
-		})()
 	},
 };

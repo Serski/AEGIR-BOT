@@ -10,16 +10,13 @@ module.exports = {
 			.setDescription('The item name')
 			.setRequired(true)
 		),
-	execute(interaction) {
+	async execute(interaction) {
 		const itemName = interaction.options.getString('itemname');
-
-		(async () => {
             let replyEmbed = await shop.inspect(itemName);
             if (typeof(replyEmbed) == 'string') {
                 await interaction.reply({content: replyEmbed, ephemeral: true });
             } else {
                 await interaction.reply({ embeds: [replyEmbed] });
             }
-		})()
 	},
 };
