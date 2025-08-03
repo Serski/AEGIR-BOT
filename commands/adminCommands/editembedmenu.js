@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const admin = require('../../admin'); // Importing the database manager
+const maps = require('../../admin/maps'); // Importing the database manager
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -26,7 +26,7 @@ module.exports = {
 
         (async () => {
             //addIncome(roleID, incomeString)
-            let reply = await admin.editMapMenu(role, interaction.user.tag, type);
+            let reply = await maps.editMapMenu(role, interaction.user.tag, type);
             if (typeof(reply) == 'string') {
                 await interaction.reply(reply);
             } else {

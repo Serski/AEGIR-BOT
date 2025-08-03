@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const admin = require('../../admin'); // Importing the database manager
+const maps = require('../../admin/maps'); // Importing the database manager
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -25,7 +25,7 @@ module.exports = {
             let embed = interaction.options.getString('embed');
             let channelID = interaction.channelId;
             // Call the method with the channel object directly
-            let reply = await admin.map(embed, channelID, type);
+            let reply = await maps.map(embed, channelID, type);
             if (typeof(reply) == 'string') {
                 await interaction.reply(reply);
             } else {

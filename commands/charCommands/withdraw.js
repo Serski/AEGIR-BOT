@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const char = require('../../char'); // Importing the database manager
+const inventory = require('../../char/inventory'); // Importing the database manager
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -14,7 +14,7 @@ module.exports = {
         const quantity = interaction.options.getInteger('quantity');
 
 		(async () => {
-            let replyEmbed = await char.withdraw(charID, quantity);
+            let replyEmbed = await inventory.withdraw(charID, quantity);
             if (typeof(replyEmbed) == 'string') {
                 await interaction.reply(replyEmbed);
             } else {

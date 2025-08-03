@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const admin = require('../../admin'); // Importing the database manager
+const maps = require('../../admin/maps'); // Importing the database manager
 
 ///editfield <field number> <new value>
 module.exports = {
@@ -26,7 +26,7 @@ module.exports = {
             newValue = interaction.options.getString('newvalue');
         }
 
-        let reply = await admin.editMapField(interaction.user.tag, fieldNumber, newValue);
+        let reply = await maps.editMapField(interaction.user.tag, fieldNumber, newValue);
         if (typeof(reply) == 'string') {
             await interaction.reply(reply);
         } else {

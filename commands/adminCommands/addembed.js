@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const admin = require('../../admin'); // Importing the database manager
+const maps = require('../../admin/maps'); // Importing the database manager
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -25,13 +25,13 @@ module.exports = {
             let type = interaction.options.getString('type');
             let guild = interaction.guild;
             // Call the method with the channel object directly
-            map = await admin.addMap(map, guild, type);
+            map = await maps.addMap(map, guild, type);
             
             // Respons with an ephemeral message saying that map should appear below
             await interaction.reply({ content: 'Embed menu should appear below', ephemeral: true });
 
             // Show the map menu
-            let reply = await admin.editMapMenu(map, interaction.user.tag, type);
+            let reply = await maps.editMapMenu(map, interaction.user.tag, type);
             if (typeof(reply) == 'string') {
                 await interaction.followUp(reply);
             } else {

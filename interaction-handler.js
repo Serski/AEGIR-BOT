@@ -2,6 +2,7 @@ const shop = require('./shop');
 const char = require('./char');
 const marketplace = require('./marketplace');
 const admin = require('./admin');
+const maps = require('./admin/maps');
 // Import guildId from config.js (environment variables take priority)
 const { guildId } = require('./config.js');
 
@@ -226,7 +227,7 @@ exports.handle = async (interaction) => {
     }
     //Check if it starts with editmapaboutmodal
     if (interaction.customId.substring(0, 17) === 'editmapaboutmodal') {
-      admin.editMapAbout(interaction);
+      maps.editMapAbout(interaction);
     }
     // if (interaction.customId === 'addusedescriptionmodal') {
     //   addUseDescription(interaction);

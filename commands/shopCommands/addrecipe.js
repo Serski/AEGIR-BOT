@@ -1,7 +1,6 @@
 //ADMIN COMMAND
 const { SlashCommandBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const shop = require('../../shop');
-//const shop = require('../../shop'); // Importing shop
+const crafting = require('../../shop/crafting');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -17,13 +16,13 @@ module.exports = {
             recipeName = 'New Recipe';
         }
 
-        recipeName = await shop.addRecipe(recipeName);
+        recipeName = await crafting.addRecipe(recipeName);
         
         // Respons with an ephemeral message saying that recipe should appear below
         await interaction.reply({ content: 'Edit recipe menu should appear below', ephemeral: true });
 
         // Show the edit recipe menu
-        let reply = await shop.editRecipeMenu(recipeName, interaction.user.tag);
+        let reply = await crafting.editRecipeMenu(recipeName, interaction.user.tag);
         if (typeof(reply) == 'string') {
             await interaction.followUp(reply);
         } else {

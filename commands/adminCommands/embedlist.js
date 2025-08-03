@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const admin = require('../../admin'); // Importing the database manager
+const maps = require('../../admin/maps'); // Importing the database manager
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -21,16 +21,16 @@ module.exports = {
             let reply;
             switch (interaction.options.getString('type')) {
                 case 'map':
-                    reply = await admin.allMaps();
+                    reply = await maps.allMaps();
                     break;
                 case 'lore':
-                    reply = await admin.allLores();
+                    reply = await maps.allLores();
                     break;
                 case 'rank':
-                    reply = await admin.allRanks();
+                    reply = await maps.allRanks();
                     break;
                 case 'guide':
-                    reply = await admin.allGuides();
+                    reply = await maps.allGuides();
                     break;
                 default:
                     reply = "Invalid type";

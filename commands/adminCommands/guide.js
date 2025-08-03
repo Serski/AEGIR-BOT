@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const admin = require('../../admin'); // Importing the database manager
+const maps = require('../../admin/maps'); // Importing the database manager
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -14,7 +14,7 @@ module.exports = {
 		const guideName = interaction.options.getString('guide');
 
 		(async () => {
-            let returnEmbed = await admin.map(guideName, interaction.channelId, "guide");
+            let returnEmbed = await maps.map(guideName, interaction.channelId, "guide");
 
 			// If the return is a string, it's an error message
             if (typeof(returnEmbed) == 'string') {

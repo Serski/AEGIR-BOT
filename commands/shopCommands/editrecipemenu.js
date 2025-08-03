@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const shop = require('../../shop'); // Importing the database manager
+const crafting = require('../../shop/crafting'); // Importing the database manager
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -15,8 +15,8 @@ module.exports = {
 		const recipeName = interaction.options.getString('recipename');
 
 		(async () => {
-			//shop.editrecipeMenu returns an array with the first element being the replyEmbed and the second element being the rows
-			let reply = await shop.editRecipeMenu(recipeName, interaction.user.tag);
+			//crafting.editrecipeMenu returns an array with the first element being the replyEmbed and the second element being the rows
+			let reply = await crafting.editRecipeMenu(recipeName, interaction.user.tag);
             if (typeof(reply) == 'string') {
                 await interaction.reply(reply);
             } else {

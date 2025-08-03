@@ -4,7 +4,6 @@ const { clientId, guildId, token } = require('./config.js');
 const fs = require('node:fs');
 const path = require('node:path');
 const dbm = require('./database-manager');
-const { map } = require('./admin');
 
 
 async function loadCommands() {

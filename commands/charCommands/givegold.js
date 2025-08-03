@@ -1,7 +1,7 @@
 //Admin command
 
 const { SlashCommandBuilder } = require('discord.js');
-const char = require('../../char'); // Importing the database manager
+const inventory = require('../../char/inventory'); // Importing the database manager
 const clientManager = require('../../clientManager');
 
 module.exports = {
@@ -14,7 +14,7 @@ module.exports = {
         const playerGiving = interaction.user.toString();
         const player = interaction.options.getUser('player').toString();
         const amount = interaction.options.getInteger('amount');
-        const response = await char.giveGoldToPlayer(playerGiving, player, amount);
+        const response = await inventory.giveGoldToPlayer(playerGiving, player, amount);
 
         if (response == true) {
             return interaction.reply(`Gave ${clientManager.getEmoji("Gold")} ${amount} to ${player}`);

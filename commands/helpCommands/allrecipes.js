@@ -1,12 +1,12 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
-const shop = require('../../shop'); // Importing the database manager
+const crafting = require('../../shop/crafting'); // Importing the database manager
 
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('allrecipes')
 		.setDescription('List all recipes'),
 	async execute(interaction) {
-        reply = await shop.recipesEmbed(!interaction.member.permissions.has(PermissionFlagsBits.Administrator), 1);
+        reply = await crafting.recipesEmbed(!interaction.member.permissions.has(PermissionFlagsBits.Administrator), 1);
         if (typeof(reply) == 'string') {
             await interaction.reply(reply);
             return;

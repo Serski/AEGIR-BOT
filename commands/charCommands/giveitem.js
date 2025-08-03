@@ -1,7 +1,7 @@
 //Admin command
 
 const { SlashCommandBuilder } = require('discord.js');
-const char = require('../../char'); // Importing the database manager
+const inventory = require('../../char/inventory'); // Importing the database manager
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -18,7 +18,7 @@ module.exports = {
         if (!amount) {
             amount = 1;
         }
-        const response = await char.giveItemToPlayer(playerGiving, player, item, amount);
+        const response = await inventory.giveItemToPlayer(playerGiving, player, item, amount);
 
         if (response == true) {
             return interaction.reply(`Gave ${amount} ${item} to ${player}`);

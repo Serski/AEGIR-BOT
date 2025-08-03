@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const admin = require('../../admin'); // Importing the database manager
+const maps = require('../../admin/maps'); // Importing the database manager
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -25,7 +25,7 @@ module.exports = {
 		const type = interaction.options.getString('type');
 
 		(async () => {
-            let returnString = await admin.removeMap(mapName, type);
+            let returnString = await maps.removeMap(mapName, type);
 
 			if (returnString) {
 				await interaction.reply(returnString);
