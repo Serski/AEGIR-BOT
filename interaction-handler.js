@@ -6,7 +6,7 @@ const admin = require('./admin');
 const { guildId } = require('./config.js');
 
 // MODALS
-addItem = async (interaction) => {
+const addItem = async (interaction) => {
   // Get the data entered by the user
   const itemName = interaction.fields.getTextInputValue('itemname');
   let itemIcon = interaction.fields.getTextInputValue('itemicon');
@@ -14,7 +14,7 @@ addItem = async (interaction) => {
   const itemDescription = interaction.fields.getTextInputValue('itemdescription');
   const itemCategory = interaction.fields.getTextInputValue('itemcategory');
   
-  colonCounter = 0;
+  let colonCounter = 0;
   for (let i = 0; i < itemIcon.length; i++) {
     if (itemIcon[i] == ":") {
       colonCounter++;
@@ -113,7 +113,7 @@ addItem = async (interaction) => {
 // // }
 // }
 
-newChar = async (interaction) => {
+const newChar = async (interaction) => {
   // Get the data entered by the user
   const userID = interaction.user.tag;
   const numericID = interaction.user.id;
@@ -158,7 +158,7 @@ newChar = async (interaction) => {
   }
 };
 
-shopLayout = async (interaction) => {
+const shopLayout = async (interaction) => {
   const categoryToEdit = interaction.fields.getTextInputValue('categorytoedit');
   const layoutString = interaction.fields.getTextInputValue('layoutstring');
 
@@ -166,33 +166,33 @@ shopLayout = async (interaction) => {
 }
 
 //BUTTONS
-shopSwitch = async (interaction) => {
+const shopSwitch = async (interaction) => {
   let [edittedEmbed, rows] = await shop.createShopEmbed(interaction.customId.slice(11), interaction);
   console.log(interaction);
   await interaction.update({ embeds: [edittedEmbed], components: rows});
 }
-incomeSwitch = async (interaction) => {
+const incomeSwitch = async (interaction) => {
   interaction.deferUpdate();
   let [edittedEmbed, rows] = await admin.allIncomes(interaction.customId.slice(11));
   await interaction.editReply({ embeds: [edittedEmbed], components: rows});
 }
-salesSwitch = async (interaction) => {
+const salesSwitch = async (interaction) => {
   let [edittedEmbed, rows] = await marketplace.createSalesEmbed(interaction.customId.slice(11));
   await interaction.update({ embeds: [edittedEmbed], components: rows});
 }
-allItemSwitch = async (interaction) => {
+const allItemSwitch = async (interaction) => {
   let [edittedEmbed, rows] = await shop.createAllItemsEmbed(interaction.customId.slice(11), interaction);
   await interaction.update({ embeds: [edittedEmbed], components: rows});
 }
-itemSwitch = async (interaction) => {
+const itemSwitch = async (interaction) => {
   let [edittedEmbed, rows] = await shop.editItemMenu(interaction.customId.substring(12), interaction.customId[11], interaction.user.tag);
   await interaction.update({ embeds: [edittedEmbed], components: [rows]});
 }
-balaSwitch = async (interaction) => {
+const balaSwitch = async (interaction) => {
   let [edittedEmbed, rows] = await char.balanceAll(interaction.customId[11])
   await interaction.update({ embeds: [edittedEmbed], components: rows});
 }
-helpSwitch = async (interaction) => {
+const helpSwitch = async (interaction) => {
   //This one is odder, will either have the 11th character be "A" or "R" for admin or regular help. The 12th character will be the page number.
   let isAdmin = false;
   if (interaction.customId[11] == "A") {
@@ -206,7 +206,7 @@ helpSwitch = async (interaction) => {
   await interaction.update({ embeds: [edittedEmbed], components: rows});
 }
 
-exports.handle = async (interaction) => {
+const handle = async (interaction) => {
   console.log(interaction.customId);
   if (interaction.isModalSubmit()) {
     if (interaction.customId === 'additemmodal') {
@@ -264,4 +264,6 @@ exports.handle = async (interaction) => {
     }
   }
 }
+
+exports.handle = handle;
 
