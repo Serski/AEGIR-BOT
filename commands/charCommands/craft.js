@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const char = require('../../char'); // Importing the database manager
+const Char = require('../../Char'); // Importing the database manager
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -14,7 +14,7 @@ module.exports = {
 		const recipe = interaction.options.getString('recipe');
 
 		(async () => {
-            let reply = await char.craft(interaction.user, recipe, interaction.guild)
+            let reply = await Char.craft(interaction.user, recipe, interaction.guild)
             if (typeof(reply) == 'string') {
                 await interaction.reply(reply);
             } else {

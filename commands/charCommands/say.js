@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const char = require('../../char'); // Importing the database manager
+const Char = require('../../Char'); // Importing the database manager
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -14,7 +14,7 @@ module.exports = {
         const message = interaction.options.getString('message');
 
 		(async () => {
-            let reply = await char.say(interaction.user.tag, message, interaction.channel)
+            let reply = await Char.say(interaction.user.tag, message, interaction.channel)
             if (typeof(reply) == 'string') {
                 await interaction.reply({ content: reply, ephemeral: true });
             } else {

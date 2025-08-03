@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const shop = require('../../shop'); // Importing the database manager
+const Shop = require('../../Shop'); // Importing the database manager
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -10,7 +10,7 @@ module.exports = {
 		(async () => {
 			try {
 				await interaction.deferReply();
-				let response = await shop.updateAllItemVersions();
+				let response = await Shop.updateAllItemVersions();
 				console.log(response);  // Log the response for debugging
 				await interaction.editReply({ content: response });
 			} catch (error) {

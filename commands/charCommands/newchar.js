@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-//const char = require('../../char'); // Importing char
+//const Char = require('../../Char'); // Importing char
 
 module.exports = {
 	data: new SlashCommandBuilder()

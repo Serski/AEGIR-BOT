@@ -1,11 +1,11 @@
 const dbm = require('./database-manager'); // Importing the database manager
-const shop = require('./shop');
-const clientManager = require('./clientManager');
+const Shop = require('./Shop');
+const ClientManager = require('./ClientManager');
 const axios = require('axios');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, createWebhook } = require('discord.js');
 // No configuration fields are required from config.js in this module.
 
-class char {
+class Char {
   static async warn(playerID) {
     console.log(playerID);
     let collectionName = 'characters';
@@ -124,7 +124,7 @@ class char {
           name: charData.name,
           icon_url: charData.icon ? charData.icon : 'https://cdn.discordapp.com/attachments/890351376004157440/1332678517888126986/NEW_LOGO_CLEAN_smallish.png?ex=6798c416&is=67977296&hm=ada5afdd0bcb677d3a0a1ca6aabe55f554810e3044048ac4e5cd85d0d73e7f0d&',
         },
-        description: clientManager.getEmoji("Gold") + " **" + charData.balance + "**",
+        description: ClientManager.getEmoji("Gold") + " **" + charData.balance + "**",
       };
       return charEmbed;
     } else {
@@ -181,7 +181,7 @@ class char {
     let superstring = "";
     for (let i = start; i < end; i++) {
       let char = charArray[i];
-      superstring += "** <@" + char.value.numericID + "> **: " + char.value.balance + "\n";
+      superstring += "** <@" + Char.value.numericID + "> **: " + Char.value.balance + "\n";
     }
 
     const balanceEmbed = {
@@ -234,7 +234,7 @@ class char {
         description: bioString,
         fields: [
           {
-            name: clientManager.getEmoji("Gold") + " Balance: " + (charData.balance ? charData.balance : 0),
+            name: ClientManager.getEmoji("Gold") + " Balance: " + (charData.balance ? charData.balance : 0),
             value: await this.getStatsBlock(charData, userID),
           },
         ],
@@ -246,12 +246,12 @@ class char {
   }
 
   static async getStatsBlock(charData, userID) {
-    const PrestigeEmoji = clientManager.getEmoji("Prestige");
-    const MartialEmoji = clientManager.getEmoji("Martial");
-    const IntrigueEmoji = clientManager.getEmoji("Intrigue");
-    const DevotionEmoji = clientManager.getEmoji("Devotion");
+    const PrestigeEmoji = ClientManager.getEmoji("Prestige");
+    const MartialEmoji = ClientManager.getEmoji("Martial");
+    const IntrigueEmoji = ClientManager.getEmoji("Intrigue");
+    const DevotionEmoji = ClientManager.getEmoji("Devotion");
     console.log(DevotionEmoji);
-    const LegitimacyEmoji = clientManager.getEmoji("Legitimacy");
+    const LegitimacyEmoji = ClientManager.getEmoji("Legitimacy");
 
     let prestige = charData.stats.Prestige;
     let martial = charData.stats.Martial;
@@ -342,7 +342,7 @@ class char {
     let charIncomeData = [];
 
     //Add on incomes from roles. role.id is a number that corresponds to the role's ID. Meanwhile, incomeList data is a list of incomes- within each income from that list, there is a "roles" array that contains the ids of roles that match that income
-    let user = await clientManager.getUser(numericID);
+    let user = await ClientManager.getUser(numericID);
     let roles = user.roles.cache;
 
     let incomeAvailableKey = "incomeAvailable";
@@ -389,10 +389,10 @@ class char {
       let tempString = "";
       tempString += emoji + " **__" + value.income + "__**\n"; 
       if (goldGiven > 0 || goldGiven < 0) {
-        tempString += clientManager.getEmoji("Gold") + " Gold : `" + goldGiven + "`\n";
+        tempString += ClientManager.getEmoji("Gold") + " Gold : `" + goldGiven + "`\n";
       }
       if (itemGiven != "" && (itemAmount > 0 || itemAmount < 0)) {
-        tempString += clientManager.getEmoji(itemGiven) + " " + itemGiven + " : `" + itemAmount + "`\n";
+        tempString += ClientManager.getEmoji(itemGiven) + " " + itemGiven + " : `" + itemAmount + "`\n";
       }
       
       //Check if the income is available
@@ -442,7 +442,7 @@ class char {
     }
 
     charData.balance += total;
-    superstring +=  clientManager.getEmoji("Gold") + " **__Total Gold :__** `" + total + "`\n";
+    superstring +=  ClientManager.getEmoji("Gold") + " **__Total Gold :__** `" + total + "`\n";
 
     for (let [resource, amount] of Object.entries(resourceMap)) {
       if (charData.inventory[resource]) {
@@ -450,7 +450,7 @@ class char {
       } else {
         charData.inventory[resource] = amount;
       }
-      superstring += clientManager.getEmoji(resource) + " **__Total " + resource + " :__** `" + amount + "`\n";
+      superstring += ClientManager.getEmoji(resource) + " **__Total " + resource + " :__** `" + amount + "`\n";
     }
 
     superstring += "\n";
@@ -557,7 +557,7 @@ class char {
     //   'Change Legitimacy (#)', 'Change Prestige (#)', 'Change Martial (#)', 'Change Intrigue (#)', 'Change Devotion (#)', 'Revive (Y/N)', 'Durability (#)'
     // ];
     let shopData = await dbm.loadCollection('shop');
-    itemName = await shop.findItemName(itemName, shopData);
+    itemName = await Shop.findItemName(itemName, shopData);
 
     if (!numToUse) {
       numToUse = 1;
@@ -571,7 +571,7 @@ class char {
     const shopCollection = 'shop';
     let itemData = await dbm.loadFile(shopCollection, itemName);
 
-    let user = await clientManager.getUser(charData.numericID);
+    let user = await ClientManager.getUser(charData.numericID);
 
     //Check if user has item
 
@@ -677,7 +677,7 @@ class char {
       //Add field for money loss/gain, with Gold emoji
       returnEmbed.addFields({ 
         name: '**Gold:**', 
-        value: clientManager.getEmoji("Gold") + " " + (totalGold < 0 ? totalGold : "+" + totalGold)
+        value: ClientManager.getEmoji("Gold") + " " + (totalGold < 0 ? totalGold : "+" + totalGold)
       })
     }
 
@@ -698,7 +698,7 @@ class char {
           charData.stats[stat] = 0;
         }
         statChanged = true;
-        statString += stat + ": " + clientManager.getEmoji(stat) + (parseInt(value) < 0 ? parseInt(value) : "+" + parseInt(value)) +  "\n";
+        statString += stat + ": " + ClientManager.getEmoji(stat) + (parseInt(value) < 0 ? parseInt(value) : "+" + parseInt(value)) +  "\n";
       }
 
       if (key.startsWith("Give Item")) {
@@ -1025,7 +1025,7 @@ class char {
 
 
   /*static async craft(charID, itemName) {
-    itemName = await shop.findItemName(itemName);
+    itemName = await Shop.findItemName(itemName);
     if (itemName === "ERROR") {
       return "Not a valid item";
     }
@@ -1137,7 +1137,7 @@ class char {
 
       for (let i = 0; i < finishedCrafts.length; i++) {
         let key = finishedCrafts[i];
-        key = await shop.findItemName(key);
+        key = await Shop.findItemName(key);
 
         if (key === "ERROR") {
           return "Somehow, this isn't a valid item. This is a problem. Contact Alex";
@@ -1164,7 +1164,7 @@ class char {
     } else if (numToUse < 1) {
       return "Must use at least 1";
     }
-    itemName = await shop.findItemName(itemName);
+    itemName = await Shop.findItemName(itemName);
     if (itemName === "ERROR") {
       return "Not a valid item";
     }
@@ -1425,7 +1425,7 @@ class char {
   static async addItemToPlayer(player, item, amount) {
     let collectionName = 'characters';
     let shopData = await dbm.loadCollection('shop');
-    item = await shop.findItemName(item, shopData);
+    item = await Shop.findItemName(item, shopData);
     let charData;
     [player, charData] = await this.findPlayerData(player);
     if (!player) {
@@ -1507,7 +1507,7 @@ class char {
   static async store(player, item, amount) {
     let collectionName = 'characters';
     let shopData = await dbm.loadCollection('shop');
-    item = await shop.findItemName(item, shopData);
+    item = await Shop.findItemName(item, shopData);
     let charData;
     [player, charData] = await this.findPlayerData(player);
     if (!player) {
@@ -1542,7 +1542,7 @@ class char {
   static async grab(player, item, amount) {
     let collectionName = 'characters';
     let shopData = await dbm.loadCollection('shop');
-    item = await shop.findItemName(item, shopData);
+    item = await Shop.findItemName(item, shopData);
     let charData;
     [player, charData] = await this.findPlayerData(player);
     if (!player) {
@@ -1634,7 +1634,7 @@ class char {
           name: charData.name,
           icon_url: charData.icon ? charData.icon : 'https://cdn.discordapp.com/attachments/890351376004157440/1332678517888126986/NEW_LOGO_CLEAN_smallish.png?ex=6798c416&is=67977296&hm=ada5afdd0bcb677d3a0a1ca6aabe55f554810e3044048ac4e5cd85d0d73e7f0d&',
         },
-        description: clientManager.getEmoji("Gold") + " **" + charData.bank + "**",
+        description: ClientManager.getEmoji("Gold") + " **" + charData.bank + "**",
       };
       return charEmbed;
     } else {
@@ -1656,7 +1656,7 @@ class char {
     let collectionName = 'characters';
     let shopData = await dbm.loadCollection('shop');
 
-    item = await shop.findItemName(item, shopData);
+    item = await Shop.findItemName(item, shopData);
     if (item === "ERROR") {
       return "Not a valid item";
     }
@@ -1760,4 +1760,4 @@ class char {
   }
 }
 
-module.exports = char;
+module.exports = Char;

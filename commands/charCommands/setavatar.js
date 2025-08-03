@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const char = require('../../char'); // Importing the database manager
+const Char = require('../../Char'); // Importing the database manager
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -15,7 +15,7 @@ module.exports = {
 		const userID = interaction.user.tag;
 
 		(async () => {
-			let replyString = await char.setAvatar(avatarURL, userID)
+			let replyString = await Char.setAvatar(avatarURL, userID)
 			await interaction.reply(replyString);
 		})()
 	},

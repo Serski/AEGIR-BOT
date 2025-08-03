@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const char = require('../../char'); // Importing the database manager
+const Char = require('../../Char'); // Importing the database manager
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -14,7 +14,7 @@ module.exports = {
         const stat = interaction.options.getString('stat');
         const value = interaction.options.getInteger('value');
         
-        const response = await char.changePlayerStats(player, stat, value);
+        const response = await Char.changePlayerStats(player, stat, value);
 
         if (response) {
             if (response == "Error: Player not found") {

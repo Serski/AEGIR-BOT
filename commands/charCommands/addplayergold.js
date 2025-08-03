@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const char = require('../../char'); // Importing the database manager
+const Char = require('../../Char'); // Importing the database manager
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -11,7 +11,7 @@ module.exports = {
     async execute(interaction) {
         const player = interaction.options.getUser('player').toString();
         const gold = interaction.options.getInteger('gold');
-        const response = await char.addPlayerGold(player, gold);
+        const response = await Char.addPlayerGold(player, gold);
 
         if (response) {
             //make below ephemeral

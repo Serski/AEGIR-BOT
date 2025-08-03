@@ -1,11 +1,11 @@
 const { SlashCommandBuilder } = require('discord.js');
-const shop = require('../../shop'); // Importing the database manager
+const Shop = require('../../Shop'); // Importing the database manager
 
 ///editfield <field number> <new value>
 module.exports = {
 	data: new SlashCommandBuilder()
         .setName('edititemfield')
-        .setDescription('Edit a field of an item in the shop. Use /edititemmenu first to see the fields of an item')
+        .setDescription('Edit a field of an item in the Shop. Use /edititemmenu first to see the fields of an item')
         .setDefaultMemberPermissions(0)
         .addIntegerOption((option) =>
             option.setName('fieldnumber')
@@ -23,7 +23,7 @@ module.exports = {
 
         console.log('new value: ' + newValue);
 
-        let reply = await shop.editItemField(interaction.user.tag, fieldNumber, newValue);
+        let reply = await Shop.editItemField(interaction.user.tag, fieldNumber, newValue);
         await interaction.reply(reply);
     }
 };

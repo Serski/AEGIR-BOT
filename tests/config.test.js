@@ -34,7 +34,7 @@ module.exports = { Client, GatewayIntentBits, Collection, Events };
     require.cache[filePath] = { id: filePath, filename: filePath, loaded: true, exports };
   };
   stubModule('interaction-handler.js', { handle: () => {} });
-  stubModule('char.js', { newChar: () => {}, resetIncomeCD: () => {} });
+  stubModule('Char.js', { newChar: () => {}, resetIncomeCD: () => {} });
   stubModule('database-manager.js', { loadFile: () => null, saveFile: () => {}, docDelete: () => {}, logData: () => {} });
   stubModule('admin.js', {});
 })();

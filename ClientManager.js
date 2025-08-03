@@ -1,4 +1,4 @@
-class clientManager {
+class ClientManager {
     static getEmoji(emojiName) {
         const bot = require('./bot');
 
@@ -42,4 +42,4 @@ class clientManager {
     
 }
 
-module.exports = clientManager;
+module.exports = ClientManager;

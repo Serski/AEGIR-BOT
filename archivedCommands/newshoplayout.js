@@ -1,6 +1,6 @@
 // //ADMIN COMMAND
 // const { SlashCommandBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-// //const shop = require('../../shop'); // Importing shop
+// //const Shop = require('../../Shop'); // Importing shop
 
 // module.exports = {
 // 	data: new SlashCommandBuilder()

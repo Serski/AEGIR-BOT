@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const shop = require('../../shop'); // Importing the database manager
+const Shop = require('../../Shop'); // Importing the database manager
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -20,7 +20,7 @@ module.exports = {
         const numberItems = interaction.options.getInteger('numbertobuy');
 
 		(async () => {
-            let reply = await shop.buyItem(itemName, interaction.user.tag, numberItems, interaction.channelId)
+            let reply = await Shop.buyItem(itemName, interaction.user.tag, numberItems, interaction.channelId)
             interaction.reply(reply);
 			// Call the addItem function from the Shop class
 		})()

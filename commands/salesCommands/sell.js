@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const marketplace = require('../../marketplace'); // Importing marketplace
+const Marketplace = require('../../Marketplace'); // Importing marketplace
 
-//use marketplace.postSale to post a sale
+//use Marketplace.postSale to post a sale
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('sell')
@@ -27,7 +27,7 @@ module.exports = {
         const price = interaction.options.getInteger('price');
 
         (async () => {
-            let reply = await marketplace.postSale(quantity, itemName, price, interaction.user.tag, interaction.user.id)
+            let reply = await Marketplace.postSale(quantity, itemName, price, interaction.user.tag, interaction.user.id)
             if (typeof (reply) == 'string') {
                 await interaction.reply(reply);
             } else {

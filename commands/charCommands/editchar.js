@@ -1,12 +1,12 @@
 const { SlashCommandBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const char = require('../../char'); // Importing char
+const Char = require('../../Char'); // Importing char
 
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('editchar')
 		.setDescription('Edit your character'),
 	async execute(interaction) {
-        placeholderArray = await char.editCharPlaceholders(interaction.user.tag);
+        placeholderArray = await Char.editCharPlaceholders(interaction.user.tag);
 
 		// Create the modal
 		const modal = new ModalBuilder()

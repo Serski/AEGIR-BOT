@@ -1,11 +1,11 @@
 //ADMIN COMMAND
 const { SlashCommandBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const shop = require('../shop'); // Importing shop
+const Shop = require('../Shop'); // Importing shop
 //Edits use case for item. Has default values with current values of use case and such. Based off of:
 
 // static async editUseCasePlaceholders(itemName) {
 //     itemName = await this.findItemName(itemName);
-//     let data = dbm.load('shop.json');
+//     let data = dbm.load('Shop.json');
 //     if (!data[itemName].usageCase) {
 //       return "ERROR! DOES NOT ALREADY HAVE A USE CASE. USE /addusecase FIRST"
 //     }
@@ -46,8 +46,8 @@ module.exports = {
 		),
 	async execute(interaction) {
 		let itemName = interaction.options.getString('itemname');
-		//Get default values from shop.editUseCasePlaceholders
-		const arrayPlaceholders = await shop.editUseCasePlaceholders(itemName);
+		//Get default values from Shop.editUseCasePlaceholders
+		const arrayPlaceholders = await Shop.editUseCasePlaceholders(itemName);
 		itemName = arrayPlaceholders[0];
 		const itemUseType = arrayPlaceholders[1];
 		const itemGives = arrayPlaceholders[2];

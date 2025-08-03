@@ -1,6 +1,6 @@
 const dbm = require('./database-manager');
 
-class dataGetters {
+class DataGetters {
     static async getCharFromNumericID(numericID) {
         let collectionName = 'characters';
         let data = await dbm.loadCollection(collectionName);
@@ -14,4 +14,4 @@ class dataGetters {
         return "ERROR";
     }
 }
-module.exports = dataGetters;
+module.exports = DataGetters;

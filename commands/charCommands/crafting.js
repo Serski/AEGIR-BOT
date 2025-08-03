@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const char = require('../../char'); // Importing the database manager
+const Char = require('../../Char'); // Importing the database manager
 
 module.exports = {
     data : new SlashCommandBuilder()
@@ -8,7 +8,7 @@ module.exports = {
     async execute(interaction) {
         try {
             const userID = interaction.user.tag;
-            var replyEmbed = await char.craftingCooldowns(userID);
+            var replyEmbed = await Char.craftingCooldowns(userID);
             await interaction.reply(({ embeds: [replyEmbed] }));
         } catch (error) {
             console.log(error);

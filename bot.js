@@ -42,7 +42,7 @@ if (!token || !clientId || !guildId) {
 // other module imports
 const Discord           = require('discord.js');
 const interactionHandler = require('./interaction-handler');
-const char               = require('./char');
+const Char = require('./Char');
 const dbm                = require('./database-manager');
 const admin              = require('./admin');
 
@@ -100,7 +100,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
 // ───── Guild member events, midnight loop, etc. ────────────────
 client.on('guildMemberAdd', member => {
-  char.newChar(member.user.tag, member.user.tag, 'A new member of Britannia!', member.id);
+  Char.newChar(member.user.tag, member.user.tag, 'A new member of Britannia!', member.id);
 });
 
 client.on('guildMemberRemove', member => {
@@ -127,7 +127,7 @@ function botMidnightLoop() {
     now.getUTCMilliseconds();
 
   setTimeout(() => {
-    char.resetIncomeCD();
+    Char.resetIncomeCD();
     dbm.logData();
     botMidnightLoop();
   }, msToMidnight);

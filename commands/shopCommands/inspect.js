@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const shop = require('../../shop'); // Importing the database manager
+const Shop = require('../../Shop'); // Importing the database manager
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -14,7 +14,7 @@ module.exports = {
 		const itemName = interaction.options.getString('itemname');
 
 		(async () => {
-            let replyEmbed = await shop.inspect(itemName);
+            let replyEmbed = await Shop.inspect(itemName);
             if (typeof(replyEmbed) == 'string') {
                 await interaction.reply({content: replyEmbed, ephemeral: true });
             } else {

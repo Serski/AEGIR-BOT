@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const shop = require('../../shop'); // Importing the database manager
+const Shop = require('../../Shop'); // Importing the database manager
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -14,7 +14,7 @@ module.exports = {
         const recipe = interaction.options.getString('recipe');
 
         (async () => {
-            let reply = await shop.inspectRecipe(recipe)
+            let reply = await Shop.inspectRecipe(recipe)
             if (typeof(reply) == 'string') {
                 // Ephemeral reply
                 await interaction.reply({content: reply, ephemeral: true });

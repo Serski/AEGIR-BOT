@@ -1,6 +1,6 @@
 //ADMIN COMMAND
 const { SlashCommandBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const shop = require('../../shop'); // Importing shop
+const Shop = require('../../Shop'); // Importing shop
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -15,7 +15,7 @@ module.exports = {
 	async execute(interaction) {
 		// Call the addItem function from the Shop class with the collected information
 		if (parseInt(interaction.options.getString('itemprice'))) {
-			shop.addItem(
+			Shop.addItem(
 				interaction.options.getString('itemname'), 
 				{ 
 					Icon: interaction.options.getString('itemicon'), 
@@ -26,7 +26,7 @@ module.exports = {
 				}
 			);
 		} else {
-			shop.addItem(
+			Shop.addItem(
 				interaction.options.getString('itemname'), 
 				{ 
 					Icon: interaction.options.getString('itemicon'), 
@@ -38,6 +38,6 @@ module.exports = {
 		}
 
 		// Show the modal to the user
-		await interaction.reply(`Item '${interaction.options.getString('itemname')}' has been added to the item list. Edit it using /edititemmenu. Give it a price to add to shop.`);
+		await interaction.reply(`Item '${interaction.options.getString('itemname')}' has been added to the item list. Edit it using /edititemmenu. Give it a price to add to Shop.`);
 	},
 };

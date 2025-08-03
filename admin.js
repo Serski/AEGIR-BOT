@@ -1,10 +1,10 @@
 const dbm = require('./database-manager'); // Importing the database manager
 const axios = require('axios');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, createWebhook, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
-const shop = require('./shop');
+const Shop = require('./Shop');
 const fs = require('node:fs');
 const path = require('node:path');
-const clientManager = require('./clientManager');
+const ClientManager = require('./ClientManager');
 
 const mapOptions = ["Name", "About", "Channels", "Image", "Emoji"]
 
@@ -20,7 +20,7 @@ class Admin {
       return "Kingdom not found!";
     }
 
-    let shireNames = Object.keys(shires).map(key => "- " + clientManager.getEmoji("Town") + " " + shires[key].name).join("\n");
+    let shireNames = Object.keys(shires).map(key => "- " + ClientManager.getEmoji("Town") + " " + shires[key].name).join("\n");
 
     let changed = false;
 
@@ -60,7 +60,7 @@ class Admin {
 
     //Send an embed with the title Massalia and the text Capital: Massalia \n The city has the following colonies \n and than a list of the colonies. There will also be a menu you can click to choose which colony. The colonies will come out of the shires.json file.
     let embed = new EmbedBuilder()
-      .setDescription("# " + clientManager.getEmoji(kingdom) + " " + kingdom +
+      .setDescription("# " + ClientManager.getEmoji(kingdom) + " " + kingdom +
         "\n- Capital: :star: " + kingdoms[kingdom].capital +
         "\n- This kingdom contains the following shires: " +
         "\n \u200B----------------------------------------" +
@@ -98,11 +98,11 @@ class Admin {
       Object.keys(tradeNodes).map(async key => {
         let itemsWithIcons = await Promise.all(
             tradeNodes[key].items.map(async item => {
-                let icon = await shop.getItemIcon(item, shopData);
+                let icon = await Shop.getItemIcon(item, shopData);
                 return `${item} ${icon}`;
             })
         );
-        return ` - ${clientManager.getEmoji("Polis")} ${tradeNodes[key].name} - ${itemsWithIcons.join(", ")}`;
+        return ` - ${ClientManager.getEmoji("Polis")} ${tradeNodes[key].name} - ${itemsWithIcons.join(", ")}`;
       })
     );
   
@@ -110,7 +110,7 @@ class Admin {
   
     //Send an embed with the title Trade Nodes of Massalia and the text The following trade nodes are available to trade in: and than a list of the trade nodes. There will also be a menu you can click to choose which trade node. The trade nodes will come out of the tradeNodes.json file.
     let embed = new EmbedBuilder()
-      .setDescription("# " + clientManager.getEmoji("Massalia") + " Trade Node Selection" +
+      .setDescription("# " + ClientManager.getEmoji("Massalia") + " Trade Node Selection" +
         "\n- Within the trade menu, you are afforded the opportunity to select only one (1) trade region to engage with. " +
         "\n- Eligibility for selection requires possession of the 'Trade Ship' role, symbolizing your maritime commercial capabilities." +
         "\n- Upon selection, you will be granted exclusive access to a specialized trade channel. This channel is a marketplace for unique resources and items, specific to your chosen trade region." +
@@ -208,9 +208,9 @@ When selected grants the:
     let embedText = "# Choose Your Starting Class" +
       "\n This is an era of opportunity for the ambitious. Begin your journey as a humble landowner or a modest trader." +
       "\n \u200B----------------------------------------" +
-      "\n" + clientManager.getEmoji("Wheat") + "  Landowner class: Unique resource Wheat - Used mainly for troops." +
+      "\n" + ClientManager.getEmoji("Wheat") + "  Landowner class: Unique resource Wheat - Used mainly for troops." +
       "\n \u200B----------------------------------------" +
-      "\n" + clientManager.getEmoji("Wine") + "  Trader class: Unique resource  Wine-versatile resource" +
+      "\n" + ClientManager.getEmoji("Wine") + "  Trader class: Unique resource  Wine-versatile resource" +
       "\n\nWhen selected grants the:" +
       "\n<@&1331650035628380241> and <@&1331613719385477140>" +
       "\n<@&1331650287877886073> and <@&1331613468897579130>";
@@ -261,7 +261,7 @@ When selected grants the:
     console.log("Adding shire " + shireName + " with resource " + resource);
     let shires = await dbm.loadFile("keys", "shires");
     let shopData = await dbm.loadCollection("shop");
-    resource = await shop.findItemName(resource, shopData);
+    resource = await Shop.findItemName(resource, shopData);
     if (resource == "ERROR") {
       return "Item not found";
     }
@@ -286,7 +286,7 @@ When selected grants the:
     let shire = {
       name: shireName,
       resource: resource,
-      resourceCode: await shop.getItemIcon(resource, shopData),
+      resourceCode: await Shop.getItemIcon(resource, shopData),
       roleCode: roleID
     };
     shires[shireName] = shire;
@@ -675,7 +675,7 @@ When selected grants the:
     }
 
     await user.roles.add(role);
-    char.tradeNodeID = selectedTradeNode;
+    Char.tradeNodeID = selectedTradeNode;
     await dbm.saveFile("characters", userTag, char);
 
     await interaction.reply({ 
@@ -715,7 +715,7 @@ When selected grants the:
     }
 
     await user.roles.add(role);
-    char.resourceID = selectedResource;
+    Char.resourceID = selectedResource;
     await dbm.saveFile("characters", userTag, char);
 
     await interaction.reply({ 
@@ -798,7 +798,7 @@ When selected grants the:
     }
 
     await user.roles.add(role);
-    char.partyID = selectedParty;
+    Char.partyID = selectedParty;
     await dbm.saveFile("characters", userTag, char);
 
     await interaction.reply({ 
@@ -988,19 +988,19 @@ When selected grants the:
       goldGiven: 0,
       itemGiven: "",
       itemAmount: 0,
-      emoji: clientManager.getEmoji("Gold"),
+      emoji: ClientManager.getEmoji("Gold"),
       roles: []
     };
     let incomeSplit = incomeString.split(" ");
     if (incomeSplit.length == 1) {
       income.goldGiven = parseInt(incomeSplit[0]);
     } else {
-      if (await shop.findItemName(income.itemGiven, shopData) == "ERROR") {
+      if (await Shop.findItemName(income.itemGiven, shopData) == "ERROR") {
         return "Item not found";
       } else {
-        income.itemGiven = await shop.findItemName(income.itemGiven, shopData);
+        income.itemGiven = await Shop.findItemName(income.itemGiven, shopData);
       }
-      income.itemGiven = await shop.findItemName(incomeSplit[1], shopData);
+      income.itemGiven = await Shop.findItemName(incomeSplit[1], shopData);
     }
     income.roles.push(roleID);
     incomeList[roleName] = income;
@@ -1061,12 +1061,12 @@ When selected grants the:
       }
       let givenString = "";
       if (incomeValue.goldGiven > 0) {
-        givenString += clientManager.getEmoji("Gold");
+        givenString += ClientManager.getEmoji("Gold");
         givenString += " " + incomeValue.goldGiven;
         givenString += " ";
       }
       if (incomeValue.itemGiven != "" && incomeValue.itemAmount != 0) {
-        givenString += await shop.getItemIcon(incomeValue.itemGiven, shopData);
+        givenString += await Shop.getItemIcon(incomeValue.itemGiven, shopData);
         givenString += " " + incomeValue.itemAmount + " " + incomeValue.itemGiven;
         if (!justGold) {
           justItem = true;
@@ -1203,7 +1203,7 @@ When selected grants the:
         break;
       case 2:
         if (newValue == "DELETEFIELD") {
-          newValue = clientManager.getEmoji("Gold");
+          newValue = ClientManager.getEmoji("Gold");
         }
         incomeValue.emoji = newValue;
         break;
@@ -1240,7 +1240,7 @@ When selected grants the:
           incomeValue.itemAmount = 0;
           break;
         }
-        let newItemName = await shop.findItemName(newValue, shopData);
+        let newItemName = await Shop.findItemName(newValue, shopData);
         if (newItemName == "ERROR") {
           return "Item not found";
         }

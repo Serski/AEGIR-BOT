@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
-const char = require('../../char'); // Importing the database manager
-const dataGetters = require('../../dataGetters');
+const Char = require('../../Char'); // Importing the database manager
+const DataGetters = require('../../DataGetters');
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -16,10 +16,10 @@ module.exports = {
 		const charResponse = interaction.options.getUser('character').toString();
 		//char is a string starting with <@ and ending with >
 		const charNumeric = charResponse.substring(2, charResponse.length - 1);
-		const charID = await dataGetters.getCharFromNumericID(charNumeric);
+		const charID = await DataGetters.getCharFromNumericID(charNumeric);
 
 		(async () => {
-            let replyEmbed = await char.char(charID);
+            let replyEmbed = await Char.char(charID);
             if (typeof(replyEmbed) == 'string') {
                 await interaction.reply(replyEmbed);
             } else {

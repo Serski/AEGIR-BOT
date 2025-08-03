@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const shop = require('../../shop'); // Importing the database manager
+const Shop = require('../../Shop'); // Importing the database manager
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -7,7 +7,7 @@ module.exports = {
 		.setDescription('Show your storage'),
 	async execute(interaction) {
         const userID = interaction.user.id;
-		var replyEmbed = await shop.storage(userID);
+		var replyEmbed = await Shop.storage(userID);
 		await interaction.reply(({ embeds: [replyEmbed] }));
 	},
 };

@@ -1,6 +1,6 @@
 // //ADMIN COMMAND
 // const { SlashCommandBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-// const shop = require('../../shop'); // Importing shop
+// const Shop = require('../../Shop'); // Importing shop
 
 // module.exports = {
 // 	data: new SlashCommandBuilder()
@@ -14,7 +14,7 @@
 // 		),
 // 	async execute(interaction) {
 // 		let categoryName = interaction.options.getString('categoryname');
-// 		let placeholders = await shop.editShopLayoutPlaceholders(categoryName);
+// 		let placeholders = await Shop.editShopLayoutPlaceholders(categoryName);
 
 // 		if (placeholders == "ERROR") {
 // 			await interaction.reply("Error! That category does not exist.");

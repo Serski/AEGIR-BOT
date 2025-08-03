@@ -1,8 +1,8 @@
 //Admin command
 
 const { SlashCommandBuilder } = require('discord.js');
-const char = require('../../char'); // Importing the database manager
-const clientManager = require('../../clientManager');
+const Char = require('../../Char'); // Importing the database manager
+const ClientManager = require('../../ClientManager');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -14,10 +14,10 @@ module.exports = {
         const playerGiving = interaction.user.toString();
         const player = interaction.options.getUser('player').toString();
         const amount = interaction.options.getInteger('amount');
-        const response = await char.giveGoldToPlayer(playerGiving, player, amount);
+        const response = await Char.giveGoldToPlayer(playerGiving, player, amount);
 
         if (response == true) {
-            return interaction.reply(`Gave ${clientManager.getEmoji("Gold")} ${amount} to ${player}`);
+            return interaction.reply(`Gave ${ClientManager.getEmoji("Gold")} ${amount} to ${player}`);
         } else if (response == false || !response) {
             return interaction.reply('Something went wrong');
         } else {

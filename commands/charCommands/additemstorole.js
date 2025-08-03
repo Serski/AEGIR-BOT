@@ -1,7 +1,7 @@
 //Admin command
 
 const { SlashCommandBuilder } = require('discord.js');
-const char = require('../../char'); // Importing the database manager
+const Char = require('../../Char'); // Importing the database manager
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -16,7 +16,7 @@ module.exports = {
         const item = interaction.options.getString('item');
         const amount = interaction.options.getInteger('amount');
 
-        const response = await char.addItemToRole(role, item, amount);
+        const response = await Char.addItemToRole(role, item, amount);
         console.log("response" + response);
         console.log(typeof response);
 

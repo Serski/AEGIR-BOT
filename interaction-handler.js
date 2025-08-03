@@ -1,6 +1,6 @@
-const shop = require('./shop');
-const char = require('./char');
-const marketplace = require('./marketplace');
+const Shop = require('./Shop');
+const Char = require('./Char');
+const Marketplace = require('./Marketplace');
 const admin = require('./admin');
 // Import guildId from config.js (environment variables take priority)
 const { guildId } = require('./config.js');
@@ -27,8 +27,8 @@ addItem = async (interaction) => {
 
   // Call the addItem function from the Shop class with the collected information
   if (itemName && parseInt(itemPrice)) {
-    shop.addItem(itemName, { Icon: itemIcon, Price: parseInt(itemPrice), Description: itemDescription, Category: itemCategory });
-    await interaction.reply(`Item '${itemName}' has been added to the item list. Use /shoplayout or ping Alex to add to shop.`);
+    Shop.addItem(itemName, { Icon: itemIcon, Price: parseInt(itemPrice), Description: itemDescription, Category: itemCategory });
+    await interaction.reply(`Item '${itemName}' has been added to the item list. Use /shoplayout or ping Alex to add to Shop.`);
   } else {
     // Handle missing information
     await interaction.reply({content: 'Item creation failed. Please provide a name and integer price.', ephemeral: true});
@@ -63,15 +63,15 @@ addItem = async (interaction) => {
 // //     let toReturn;
 // //     if (itemTakes != "Empty Field") {
 // //       if (itemCountdown != "Empty Field") {
-// //         toReturn = await shop.addUseCaseWithPriceAndCountdown(itemName, itemUseType, itemGives, itemTakes, itemCountdown);
+// //         toReturn = await Shop.addUseCaseWithPriceAndCountdown(itemName, itemUseType, itemGives, itemTakes, itemCountdown);
 // //       } else {
-// //         toReturn = await shop.addUseCaseWithPrice(itemName, itemUseType, itemGives, itemTakes);
+// //         toReturn = await Shop.addUseCaseWithPrice(itemName, itemUseType, itemGives, itemTakes);
 // //       }
 // //     } else {
 // //       if (itemCountdown != "Empty Field") {
-// //         toReturn = await shop.addUseCaseWithCountdown(itemName, itemUseType, itemGives, itemCountdown);
+// //         toReturn = await Shop.addUseCaseWithCountdown(itemName, itemUseType, itemGives, itemCountdown);
 // //       } else {
-// //         toReturn = await shop.addUseCase(itemName, itemUseType, itemGives);
+// //         toReturn = await Shop.addUseCase(itemName, itemUseType, itemGives);
 // //       }
 // //     }
 // //     interaction.reply(toReturn);
@@ -89,7 +89,7 @@ addItem = async (interaction) => {
 
 // //   // Call the addItem function from the Shop class with the collected information
 // //   if (itemName && itemTakes && itemCrafttime) {
-// //     toReturn = await shop.addRecipe(itemName, itemTakes, itemCrafttime);
+// //     toReturn = await Shop.addRecipe(itemName, itemTakes, itemCrafttime);
 // //     interaction.reply(toReturn);
 // //   } else {
 // //     // Handle missing information
@@ -104,7 +104,7 @@ addItem = async (interaction) => {
 // //   // Call the addItem function from the Shop class with the collected information
 // //   if (itemName && itemDescription) {
 // //     let toReturn;
-// //     toReturn = await shop.addUseDescription(itemName, itemDescription);
+// //     toReturn = await Shop.addUseDescription(itemName, itemDescription);
 // //     interaction.reply(toReturn);
 // //   } else {
 // //     // Handle missing information
@@ -150,7 +150,7 @@ newChar = async (interaction) => {
 
   // Call the newChar function from the char class with the info
   if (charName && charBio) {
-    char.newChar(userID, charName, charBio, numericID);
+    Char.newChar(userID, charName, charBio, numericID);
     await interaction.reply(`Character '${charName}' has been created.`);
   } else {
     // Handle missing information
@@ -162,12 +162,12 @@ shopLayout = async (interaction) => {
   const categoryToEdit = interaction.fields.getTextInputValue('categorytoedit');
   const layoutString = interaction.fields.getTextInputValue('layoutstring');
 
-  await interaction.reply(await shop.shopLayout(categoryToEdit, layoutString));
+  await interaction.reply(await Shop.shopLayout(categoryToEdit, layoutString));
 }
 
 //BUTTONS
 shopSwitch = async (interaction) => {
-  let [edittedEmbed, rows] = await shop.createShopEmbed(interaction.customId.slice(11), interaction);
+  let [edittedEmbed, rows] = await Shop.createShopEmbed(interaction.customId.slice(11), interaction);
   console.log(interaction);
   await interaction.update({ embeds: [edittedEmbed], components: rows});
 }
@@ -177,19 +177,19 @@ incomeSwitch = async (interaction) => {
   await interaction.editReply({ embeds: [edittedEmbed], components: rows});
 }
 salesSwitch = async (interaction) => {
-  let [edittedEmbed, rows] = await marketplace.createSalesEmbed(interaction.customId.slice(11));
+  let [edittedEmbed, rows] = await Marketplace.createSalesEmbed(interaction.customId.slice(11));
   await interaction.update({ embeds: [edittedEmbed], components: rows});
 }
 allItemSwitch = async (interaction) => {
-  let [edittedEmbed, rows] = await shop.createAllItemsEmbed(interaction.customId.slice(11), interaction);
+  let [edittedEmbed, rows] = await Shop.createAllItemsEmbed(interaction.customId.slice(11), interaction);
   await interaction.update({ embeds: [edittedEmbed], components: rows});
 }
 itemSwitch = async (interaction) => {
-  let [edittedEmbed, rows] = await shop.editItemMenu(interaction.customId.substring(12), interaction.customId[11], interaction.user.tag);
+  let [edittedEmbed, rows] = await Shop.editItemMenu(interaction.customId.substring(12), interaction.customId[11], interaction.user.tag);
   await interaction.update({ embeds: [edittedEmbed], components: [rows]});
 }
 balaSwitch = async (interaction) => {
-  let [edittedEmbed, rows] = await char.balanceAll(interaction.customId[11])
+  let [edittedEmbed, rows] = await Char.balanceAll(interaction.customId[11])
   await interaction.update({ embeds: [edittedEmbed], components: rows});
 }
 helpSwitch = async (interaction) => {

@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const char = require('../../char'); // Importing the database manager
+const Char = require('../../Char'); // Importing the database manager
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -9,7 +9,7 @@ module.exports = {
 	execute(interaction) {
 
 		(async () => {
-            let [replyEmbed, replyRows] = await char.balanceAll(1);
+            let [replyEmbed, replyRows] = await Char.balanceAll(1);
             if (typeof(replyEmbed) == 'string') {
                 await interaction.reply(replyEmbed);
             } else {

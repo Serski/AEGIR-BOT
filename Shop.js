@@ -1,10 +1,10 @@
 const dbm = require('./database-manager'); // Importing the database manager
 const Discord = require('discord.js');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
-const clientManager = require('./clientManager');
-const dataGetters = require('./dataGetters');
+const ClientManager = require('./ClientManager');
+const DataGetters = require('./DataGetters');
 
-class shop {
+class Shop {
   //Declare constants for class 
   static infoOptions = ['Name', 'Icon', 'Category', 'Image', 'Description', 'Transferrable (Y/N)'];
   static shopOptions = ['Price (#)', 'Need Role', 'Give Role', 'Take Role', 'Quantity (#)', 'Channels'];
@@ -276,7 +276,7 @@ class shop {
     const channelID = interaction.channelId;
     page = Number(page);
     const itemsPerPage = 25;
-    // Load data from shop.json and shoplayout.json
+    // Load data from Shop.json and shoplayout.json
     const shopData = await dbm.loadCollection('shop');
     // Convert the shop data to a an array of maps of category to items
     let shopLayoutData = {};
@@ -327,7 +327,7 @@ class shop {
     );
 
     const embed = new Discord.EmbedBuilder()
-      .setTitle(clientManager.getEmoji("Gold") + ' Shop')
+      .setTitle(ClientManager.getEmoji("Gold") + ' Shop')
       .setColor(0x36393e);
 
     //If there are no items in the shop, set description as "No items have prices!" and return
@@ -353,7 +353,7 @@ class shop {
             alignSpaces = ' '.repeat(30 - item.length - ("" + price).length);
           }
           // Create the formatted line
-          return `${icon} \`${item}${alignSpaces}${price}\` ${clientManager.getEmoji("Gold")}`;
+          return `${icon} \`${item}${alignSpaces}${price}\` ${ClientManager.getEmoji("Gold")}`;
         })
         .join('\n');
       descriptionText += '\n';
@@ -407,7 +407,7 @@ class shop {
   static async createAllItemsEmbed(page) {
     page = Number(page);
     const itemsPerPage = 25;
-    // Load data from shop.json and shoplayout.json
+    // Load data from Shop.json and shoplayout.json
     const shopData = await dbm.loadCollection('shop');
     //Turn shopData into an array of keys
     let itemArray = Object.keys(shopData);
@@ -512,8 +512,8 @@ class shop {
 
   //function to create an embed of player inventory
   static async createInventoryEmbed(charID) {
-    charID = await dataGetters.getCharFromNumericID(charID);
-    // load data from characters.json and shop.json
+    charID = await DataGetters.getCharFromNumericID(charID);
+    // load data from characters.json and Shop.json
     const charData = await dbm.loadCollection('characters');
     const shopData = await dbm.loadCollection('shop');
 
@@ -584,8 +584,8 @@ class shop {
   }
 
   static async storage(charID) {
-    charID = await dataGetters.getCharFromNumericID(charID);
-    // load data from characters.json and shop.json
+    charID = await DataGetters.getCharFromNumericID(charID);
+    // load data from characters.json and Shop.json
     const charData = await dbm.loadCollection('characters');
     const shopData = await dbm.loadCollection('shop');
 
@@ -759,7 +759,7 @@ class shop {
     if (itemData) {
       let aboutString = "";
       if (itemData.shopOptions["Price (#)"] != "") {
-        aboutString = "Price: " + clientManager.getEmoji("Gold") + " " + itemData.shopOptions["Price (#)"] + "\n";
+        aboutString = "Price: " + ClientManager.getEmoji("Gold") + " " + itemData.shopOptions["Price (#)"] + "\n";
       }
       let descriptionString = "**Description:\n**" + itemData.infoOptions.Description;
       console.log(itemData.usageOptions["Is Usable (Y/N)"] == "Yes");
@@ -774,7 +774,7 @@ class shop {
           }
           if (key == "Give/Take Money (#)") {
             if (itemData.usageOptions[key] > 0) {
-              aboutString += ("\n- " + clientManager.getEmoji("Gold") + " " + itemData.usageOptions[key]);
+              aboutString += ("\n- " + ClientManager.getEmoji("Gold") + " " + itemData.usageOptions[key]);
             }
           }
           if (key.startsWith("Give Item")) {
@@ -787,7 +787,7 @@ class shop {
           if (key.startsWith("Change")) {
             let quantity = itemData.usageOptions[key];
             if (quantity > 0) {
-              let icon = clientManager.getEmoji(key.split(" ")[1]);
+              let icon = ClientManager.getEmoji(key.split(" ")[1]);
               aboutString += ("\n- " + icon + " " + key.split(" ")[1] + ": " + quantity);
             }
           }
@@ -804,7 +804,7 @@ class shop {
           }
           if (key == "Give/Take Money (#)") {
             if (itemData.usageOptions[key] < 0) {
-              aboutString += ("\n- " + clientManager.getEmoji("Gold") + " " + itemData.usageOptions[key]);
+              aboutString += ("\n- " + ClientManager.getEmoji("Gold") + " " + itemData.usageOptions[key]);
             }
           }
           if (key.startsWith("Take Item")) {
@@ -817,7 +817,7 @@ class shop {
           if (key.startsWith("Change")) {
             let quantity = itemData.usageOptions[key];
             if (quantity < 0) {
-              let icon = clientManager.getEmoji(key.split(" ")[1]);
+              let icon = ClientManager.getEmoji(key.split(" ")[1]);
               aboutString += ("\n- " + icon + " " + key.split(" ")[1] + ": " + quantity);
             }
           }
@@ -900,7 +900,7 @@ class shop {
         let splitString = ingredient.split(" ");
         let quantity = splitString[0];
         let name = splitString.slice(1).join(" ");
-        let icon = await shop.getItemIcon(name, shopData);
+        let icon = await Shop.getItemIcon(name, shopData);
         if (icon == "ERROR") {
           icon = "";
         }
@@ -914,7 +914,7 @@ class shop {
         let splitString = result.split(" ");
         let quantity = splitString[0];
         let name = splitString.slice(1).join(" ");
-        let icon = await shop.getItemIcon(name, shopData);
+        let icon = await Shop.getItemIcon(name, shopData);
         if (icon == "ERROR") {
           icon = "";
         }
@@ -1476,7 +1476,7 @@ class shop {
     let charData = await dbm.loadFile(charCollection, charID);
 
     //Get user object from clientmanager
-    let user = await clientManager.getUser(charData.numericID);
+    let user = await ClientManager.getUser(charData.numericID);
 
     let returnString;
     if (charData.balance < (price * numToBuy)) {
@@ -1719,4 +1719,4 @@ class shop {
   }
 }
 
-module.exports = shop;
+module.exports = Shop;

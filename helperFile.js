@@ -1,5 +1,5 @@
 const dbm = require('./database-manager');
-const clientManager = require('./clientManager');
+const ClientManager = require('./ClientManager');
 
 // Load the shop collection, add the "Need None Of Roles" field to each document's usageOptions, and save the collection back to the database
 // This is a one-time script to add the "Need None Of Roles" field to each document's usageOptions
@@ -40,7 +40,7 @@ async function getResourceEmojis() {
     const resources = await dbm.loadFile('keys', 'resources');
     
     for (let resource in resources) {
-        let emoji = clientManager.getEmoji(resource);
+        let emoji = ClientManager.getEmoji(resource);
         if (!emoji || emoji == null) {
             console.log(`Resource ${resource} does not have an emoji`);
             continue;
