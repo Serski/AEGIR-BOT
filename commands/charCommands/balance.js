@@ -9,9 +9,9 @@ module.exports = {
 		const charID = interaction.user.tag;
             let replyEmbed = await char.balance(charID);
             if (typeof(replyEmbed) == 'string') {
-                await interaction.reply(replyEmbed);
+                await interaction.reply({ content: replyEmbed, ephemeral: true });
             } else {
-                await interaction.reply({ embeds: [replyEmbed] });
+                await interaction.reply({ embeds: [replyEmbed], ephemeral: true });
             }
 	},
 };
