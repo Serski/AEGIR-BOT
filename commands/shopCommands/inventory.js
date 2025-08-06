@@ -7,7 +7,7 @@ module.exports = {
 		.setDescription('Show your inventory'),
 	async execute(interaction) {
         const userID = interaction.user.id;
-		var replyEmbed = await shop.createInventoryEmbed(userID);
-		await interaction.reply(({ embeds: [replyEmbed] }));
-	},
+                const [replyEmbed, rows] = await shop.createInventoryEmbed(userID, 1);
+                await interaction.reply({ embeds: [replyEmbed], components: rows });
+        },
 };

@@ -512,8 +512,10 @@ class shop {
   }
 
   //function to create an embed of player inventory
-  static async createInventoryEmbed(charID) {
+  static async createInventoryEmbed(charID, page = 1) {
     charID = await dataGetters.getCharFromNumericID(charID);
+    page = Number(page);
+    const itemsPerPage = 25;
     // load data from characters.json and shop.json
     const charData = await dbm.loadCollection('characters');
     const shopData = await dbm.loadCollection('shop');
@@ -541,19 +543,45 @@ class shop {
     if (deleted) {
       await dbm.saveCollection('characters', charData);
     }
-    // let inventory = [];
-    // for (const item in charData[charID].inventory) {
-    //   const category = shopData[item].category;
-    //   if (!inventory[category]) {
-    //     inventory[category] = [];
-    //   }
-    //   inventory[category].push(item);
-    // }
+
+    const inventoryCategories = Object.keys(inventory);
+    inventoryCategories.sort();
+
+    let startIndices = [];
+    startIndices[0] = 0;
+    let currIndice = 0;
+    let currPageLength = 0;
+    let i = 0;
+    for (const category of inventoryCategories) {
+      let length = inventory[category].length;
+      currPageLength += length;
+      if (currPageLength > itemsPerPage) {
+        currPageLength = length;
+        currIndice++;
+        startIndices[currIndice] = i;
+      }
+      i++;
+    }
+
+    const pages = Math.ceil(startIndices.length);
+    const pageItems = inventoryCategories.slice(
+      startIndices[page - 1],
+      startIndices[page] ? startIndices[page] : undefined
+    );
+
+    const embed = new Discord.EmbedBuilder()
+      .setTitle('Inventory')
+      .setColor(0x36393e);
+
+    if (pageItems.length === 0) {
+      embed.setDescription('No items in inventory!');
+      return [embed, []];
+    }
 
     //create description text from the 2d array
     let descriptionText = '';
-    for (const category in inventory) {
-      let endSpaces = "-"
+    for (const category of pageItems) {
+      let endSpaces = "-";
       if ((20 - category.length - 2)> 0) {
         endSpaces = "-".repeat(20 - category.length - 2);
       }
@@ -563,11 +591,11 @@ class shop {
           const icon = shopData[item].infoOptions.Icon;
           const quantity = charData[charID].inventory[item];
 
-          let alignSpaces = ' ' 
+          let alignSpaces = ' ';
           if ((30 - item.length - ("" + quantity).length) > 0){
             alignSpaces = ' '.repeat(30 - item.length - ("" + quantity).length);
           }
-  
+
           // Create the formatted line
           return `${icon} \`${item}${alignSpaces}${quantity}\``;
         })
@@ -575,17 +603,38 @@ class shop {
       descriptionText += '\n';
     }
 
-    // create an embed
-    const embed = new Discord.EmbedBuilder()
-      .setTitle('Inventory')
-      .setColor(0x36393e)
-      .setDescription('**Items:** \n' + descriptionText);
+    embed.setDescription('**Items:** \n' + descriptionText);
 
-    return embed;
+    if (pages > 1) {
+      embed.setFooter({ text: `Page ${page} of ${pages}` });
+    }
+
+    const rows = [];
+    if (pages > 1) {
+      const prevButton = new ButtonBuilder()
+        .setCustomId('panel_inv_page' + (page - 1))
+        .setLabel('<')
+        .setStyle(ButtonStyle.Secondary);
+      if (page === 1) {
+        prevButton.setDisabled(true);
+      }
+      const nextButton = new ButtonBuilder()
+        .setCustomId('panel_inv_page' + (page + 1))
+        .setLabel('>')
+        .setStyle(ButtonStyle.Secondary);
+      if (page === pages) {
+        nextButton.setDisabled(true);
+      }
+      rows.push(new ActionRowBuilder().addComponents(prevButton, nextButton));
+    }
+
+    return [embed, rows];
   }
 
-  static async storage(charID) {
+  static async storage(charID, page = 1) {
     charID = await dataGetters.getCharFromNumericID(charID);
+    page = Number(page);
+    const itemsPerPage = 25;
     // load data from characters.json and shop.json
     const charData = await dbm.loadCollection('characters');
     const shopData = await dbm.loadCollection('shop');
@@ -613,19 +662,45 @@ class shop {
     if (deleted) {
       await dbm.saveCollection('characters', charData);
     }
-    // let inventory = [];
-    // for (const item in charData[charID].inventory) {
-    //   const category = shopData[item].category;
-    //   if (!inventory[category]) {
-    //     inventory[category] = [];
-    //   }
-    //   inventory[category].push(item);
-    // }
+
+    const storageCategories = Object.keys(storage);
+    storageCategories.sort();
+
+    let startIndices = [];
+    startIndices[0] = 0;
+    let currIndice = 0;
+    let currPageLength = 0;
+    let i = 0;
+    for (const category of storageCategories) {
+      let length = storage[category].length;
+      currPageLength += length;
+      if (currPageLength > itemsPerPage) {
+        currPageLength = length;
+        currIndice++;
+        startIndices[currIndice] = i;
+      }
+      i++;
+    }
+
+    const pages = Math.ceil(startIndices.length);
+    const pageItems = storageCategories.slice(
+      startIndices[page - 1],
+      startIndices[page] ? startIndices[page] : undefined
+    );
+
+    const embed = new Discord.EmbedBuilder()
+      .setTitle('Storage')
+      .setColor(0x36393e);
+
+    if (pageItems.length === 0) {
+      embed.setDescription('No items in storage!');
+      return [embed, []];
+    }
 
     //create description text from the 2d array
     let descriptionText = '';
-    for (const category in storage) {
-      let endSpaces = "-"
+    for (const category of pageItems) {
+      let endSpaces = "-";
       if ((20 - category.length - 2)> 0) {
         endSpaces = "-".repeat(20 - category.length - 2);
       }
@@ -635,11 +710,11 @@ class shop {
           const icon = shopData[item].infoOptions.Icon;
           const quantity = charData[charID].storage[item];
 
-          let alignSpaces = ' ' 
+          let alignSpaces = ' ';
           if ((30 - item.length - ("" + quantity).length) > 0){
             alignSpaces = ' '.repeat(30 - item.length - ("" + quantity).length);
           }
-  
+
           // Create the formatted line
           return `${icon} \`${item}${alignSpaces}${quantity}\``;
         })
@@ -647,13 +722,32 @@ class shop {
       descriptionText += '\n';
     }
 
-    // create an embed
-    const embed = new Discord.EmbedBuilder()
-      .setTitle('Storage')
-      .setColor(0x36393e)
-      .setDescription('**Items:** \n' + descriptionText);
+    embed.setDescription('**Items:** \n' + descriptionText);
 
-    return embed;
+    if (pages > 1) {
+      embed.setFooter({ text: `Page ${page} of ${pages}` });
+    }
+
+    const rows = [];
+    if (pages > 1) {
+      const prevButton = new ButtonBuilder()
+        .setCustomId('panel_store_page' + (page - 1))
+        .setLabel('<')
+        .setStyle(ButtonStyle.Secondary);
+      if (page === 1) {
+        prevButton.setDisabled(true);
+      }
+      const nextButton = new ButtonBuilder()
+        .setCustomId('panel_store_page' + (page + 1))
+        .setLabel('>')
+        .setStyle(ButtonStyle.Secondary);
+      if (page === pages) {
+        nextButton.setDisabled(true);
+      }
+      rows.push(new ActionRowBuilder().addComponents(prevButton, nextButton));
+    }
+
+    return [embed, rows];
   }
 
   // Function to print item list
