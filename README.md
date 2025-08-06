@@ -36,3 +36,15 @@ You can also provide them inline for a one‑off command:
 ```bash
 DISCORD_TOKEN=abcdef CLIENT_ID=1234567890 GUILD_ID=0987654321 node bot.js
 ```
+
+## /panel command
+
+Use `/panel` to open a personal control panel. The response is ephemeral and visible only to the invoking user. The panel features a select menu with:
+
+- **Inventory** – view your inventory.
+- **Resources** – view stored resources.
+- **Ships** – view your ships and cargo.
+- **Back** – return to the main panel.
+
+Inventory, resource storage, and ship views support pagination. Use the `<` and `>` buttons to move between pages.
+
