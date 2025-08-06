@@ -5,11 +5,12 @@ const path = require('node:path');
 
 const rootDir = path.resolve(__dirname, '..');
 const botPath = path.join(rootDir, 'bot.js');
-const configPath = path.join(rootDir, 'config.json');
+const configPath = path.join(rootDir, 'config.js');
 const nodeModulesPath = path.join(rootDir, 'node_modules');
 
 // ── stub discord.js and other local modules ──────────────────────
 (function setupStubs() {
+  fs.rmSync(nodeModulesPath, { recursive: true, force: true });
   const discordDir = path.join(nodeModulesPath, 'discord.js');
   fs.mkdirSync(discordDir, { recursive: true });
   fs.writeFileSync(
@@ -50,18 +51,19 @@ after(() => {
   fs.readdirSync = originalReaddirSync;
   fs.rmSync(nodeModulesPath, { recursive: true, force: true });
   if (fs.existsSync(configPath)) fs.rmSync(configPath);
+  if (require.cache[configPath]) delete require.cache[configPath];
 });
 
 // ── tests ────────────────────────────────────────────────────────
 
-test('Environment variables override config.json', () => {
+test('Environment variables override config.js', () => {
   global.__capturedToken = null;
   process.env.DISCORD_TOKEN = 'env-token';
   process.env.CLIENT_ID = 'env-client';
   process.env.GUILD_ID = 'env-guild';
   fs.writeFileSync(
     configPath,
-    JSON.stringify({ token: 'file-token', clientId: 'file-client', guildId: 'file-guild' })
+    "module.exports = { token: 'file-token', clientId: 'file-client', guildId: 'file-guild' };"
   );
 
   delete require.cache[require.resolve(botPath)];
@@ -74,9 +76,10 @@ test('Environment variables override config.json', () => {
   delete process.env.CLIENT_ID;
   delete process.env.GUILD_ID;
   fs.rmSync(configPath);
+  if (require.cache[configPath]) delete require.cache[configPath];
 });
 
-test('Absence of config.json does not cause errors', () => {
+test('Absence of config.js does not cause errors', () => {
   global.__capturedToken = null;
   assert.doesNotThrow(() => {
     delete require.cache[require.resolve(botPath)];
