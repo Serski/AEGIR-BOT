@@ -56,6 +56,7 @@ class char {
         inventory: {
           "Adventure Token": 1
         },
+        ships: {},
         incomeList: {},
         incomeAvailable: true,
         stats: {
@@ -130,6 +131,19 @@ class char {
     } else {
       return "You haven't made a character! Use /newchar first";
     }
+  }
+
+  static async getShips(userID) {
+    let collectionName = 'characters';
+    let charData = await dbm.loadFile(collectionName, userID);
+    if (!charData) {
+      return {};
+    }
+    if (!charData.ships) {
+      charData.ships = {};
+      await dbm.saveFile(collectionName, userID, charData);
+    }
+    return charData.ships;
   }
 
   static async stats(userID) {

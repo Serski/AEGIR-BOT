@@ -2,6 +2,7 @@ const shop = require('./shop');
 const char = require('./char');
 const marketplace = require('./marketplace');
 const admin = require('./admin');
+const panel = require('./panel');
 // Import guildId from config.js (environment variables take priority)
 const { guildId } = require('./config.js');
 const logger = require('./logger');
@@ -207,6 +208,40 @@ helpSwitch = async (interaction) => {
   await interaction.update({ embeds: [edittedEmbed], components: rows});
 }
 
+panelInvSwitch = async (interaction) => {
+  const page = parseInt(interaction.customId.slice(15));
+  let [edittedEmbed, rows] = await panel.inventoryEmbed(interaction.user.id, page);
+  await interaction.update({ embeds: [edittedEmbed], components: rows, ephemeral: true });
+}
+
+panelStoreSwitch = async (interaction) => {
+  const page = parseInt(interaction.customId.slice(16));
+  let [edittedEmbed, rows] = await panel.storageEmbed(interaction.user.id, page);
+  await interaction.update({ embeds: [edittedEmbed], components: rows, ephemeral: true });
+}
+
+panelShipSwitch = async (interaction) => {
+  const page = parseInt(interaction.customId.slice(15));
+  let [edittedEmbed, rows] = await panel.shipsEmbed(interaction.user.id, page);
+  await interaction.update({ embeds: [edittedEmbed], components: rows, ephemeral: true });
+}
+
+panelSelect = async (interaction) => {
+  const choice = interaction.values[0];
+  let edittedEmbed;
+  let rows;
+  if (choice === 'inventory') {
+    [edittedEmbed, rows] = await panel.inventoryEmbed(interaction.user.id, 1);
+  } else if (choice === 'resources') {
+    [edittedEmbed, rows] = await panel.storageEmbed(interaction.user.id, 1);
+  } else if (choice === 'ships') {
+    [edittedEmbed, rows] = await panel.shipsEmbed(interaction.user.id, 1);
+  } else {
+    [edittedEmbed, rows] = await panel.mainEmbed(interaction.user.id);
+  }
+  await interaction.update({ embeds: [edittedEmbed], components: rows, ephemeral: true });
+}
+
 exports.handle = async (interaction) => {
   logger.debug(interaction.customId);
   if (interaction.isModalSubmit()) {
@@ -249,6 +284,12 @@ exports.handle = async (interaction) => {
       balaSwitch(interaction);
     } else if (interaction.customId.substring(0, 11) === 'partySelect') {
       await admin.selectParty(interaction);
+    } else if (interaction.customId.substring(0, 15) === 'panel_inv_page') {
+      panelInvSwitch(interaction);
+    } else if (interaction.customId.substring(0, 16) === 'panel_store_page') {
+      panelStoreSwitch(interaction);
+    } else if (interaction.customId.substring(0, 15) === 'panel_ship_page') {
+      panelShipSwitch(interaction);
     }
   } else if (interaction.isSelectMenu()) {
     if (interaction.customId === 'shireSelect') {
@@ -262,6 +303,9 @@ exports.handle = async (interaction) => {
     }
     if (interaction.customId === 'classSelect') {
       await admin.selectClass(interaction);
+    }
+    if (interaction.customId === 'panel_select') {
+      panelSelect(interaction);
     }
   }
 }

@@ -7,7 +7,7 @@ module.exports = {
 		.setDescription('Show your storage'),
 	async execute(interaction) {
         const userID = interaction.user.id;
-		var replyEmbed = await shop.storage(userID);
-		await interaction.reply(({ embeds: [replyEmbed] }));
-	},
+                const [replyEmbed, rows] = await shop.storage(userID, 1);
+                await interaction.reply({ embeds: [replyEmbed], components: rows });
+        },
 };
