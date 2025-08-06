@@ -1,7 +1,7 @@
 const db = require('./pg-client');
 const logger = require('./logger');
 
-const tables = ['characters', 'keys', 'shop', 'recipes', 'marketplace', 'shoplayout'];
+const tables = ['characters', 'keys', 'shop', 'recipes', 'marketplace', 'shoplayout', 'balances', 'inventories', 'cooldowns'];
 
 function assertTable(name) {
   if (!tables.includes(name)) throw new Error(`Unknown table ${name}`);
@@ -9,9 +9,31 @@ function assertTable(name) {
 }
 
 async function init() {
-  for (const t of tables) {
+  // tables storing JSON blobs
+  const jsonTables = ['characters', 'keys', 'shop', 'recipes', 'marketplace', 'shoplayout'];
+  for (const t of jsonTables) {
     await db.query(`CREATE TABLE IF NOT EXISTS ${t} (id TEXT PRIMARY KEY, data JSONB)`);
   }
+
+  // normalized tables for balances, inventories and cooldowns
+  await db.query('CREATE TABLE IF NOT EXISTS balances (id TEXT PRIMARY KEY, amount INTEGER DEFAULT 0)');
+  await db.query(
+    `CREATE TABLE IF NOT EXISTS inventories (
+       id   TEXT,
+       item TEXT,
+       qty  INTEGER,
+       PRIMARY KEY (id, item)
+     )`
+  );
+  await db.query(
+    `CREATE TABLE IF NOT EXISTS cooldowns (
+       id         TEXT,
+       action     TEXT,
+       expires_at TIMESTAMPTZ,
+       PRIMARY KEY (id, action)
+     )`
+  );
+
   logger.debug('[database-manager] tables ensured.');
 }
 init().catch(err => logger.error(err));
@@ -81,6 +103,58 @@ async function logData() {
   logger.debug('[database-manager] logData skipped (db backend).');
 }
 
+// --- balance helpers ---
+async function getBalance(id) {
+  const res = await db.query('SELECT amount FROM balances WHERE id=$1', [id]);
+  return res.rows[0] ? Number(res.rows[0].amount) : 0;
+}
+
+async function setBalance(id, amount) {
+  await db.query(
+    `INSERT INTO balances (id, amount) VALUES ($1, $2)
+     ON CONFLICT (id) DO UPDATE SET amount = EXCLUDED.amount`,
+    [id, amount]
+  );
+}
+
+async function getAllBalances() {
+  const res = await db.query('SELECT id, amount FROM balances');
+  return res.rows;
+}
+
+// --- inventory helpers ---
+async function getInventory(id) {
+  const res = await db.query('SELECT item, qty FROM inventories WHERE id=$1', [id]);
+  return res.rows.reduce((acc, row) => ((acc[row.item] = Number(row.qty)), acc), {});
+}
+
+async function updateInventory(id, item, delta) {
+  await db.query(
+    `INSERT INTO inventories (id, item, qty) VALUES ($1, $2, $3)
+     ON CONFLICT (id, item) DO UPDATE SET qty = inventories.qty + EXCLUDED.qty`,
+    [id, item, delta]
+  );
+  await db.query('DELETE FROM inventories WHERE id=$1 AND item=$2 AND qty <= 0', [id, item]);
+}
+
+// --- cooldown helpers ---
+async function getCooldown(id, action) {
+  const res = await db.query('SELECT expires_at FROM cooldowns WHERE id=$1 AND action=$2', [id, action]);
+  return res.rows[0] ? res.rows[0].expires_at : null;
+}
+
+async function setCooldown(id, action, expiresAt) {
+  await db.query(
+    `INSERT INTO cooldowns (id, action, expires_at) VALUES ($1,$2,$3)
+     ON CONFLICT (id, action) DO UPDATE SET expires_at = EXCLUDED.expires_at`,
+    [id, action, expiresAt]
+  );
+}
+
+async function clearCooldown(id, action) {
+  await db.query('DELETE FROM cooldowns WHERE id=$1 AND action=$2', [id, action]);
+}
+
 module.exports = {
   saveCollection,
   loadCollection,
@@ -90,4 +164,12 @@ module.exports = {
   docDelete,
   fieldDelete,
   logData,
+  getBalance,
+  setBalance,
+  getAllBalances,
+  getInventory,
+  updateInventory,
+  getCooldown,
+  setCooldown,
+  clearCooldown,
 };

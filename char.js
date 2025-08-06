@@ -52,10 +52,6 @@ class char {
       charData = {
         name: charName,
         bio: charBio,
-        balance: 200,
-        inventory: {
-          "Adventure Token": 1
-        },
         ships: {},
         incomeList: {},
         incomeAvailable: true,
@@ -66,16 +62,15 @@ class char {
           Devotion: 0,
           Legitimacy: 0
         },
-        cooldowns: {
-          craftSlots: {},
-          usageCooldowns: {}
-        },
         shireID: 0,
         numericID: numericID,
       };
+      // initialise balance, inventory and starting cooldowns in dedicated tables
+      await dbm.setBalance(playerID, 200);
+      await dbm.updateInventory(playerID, 'Adventure Token', 1);
     }
 
-    // Save the character data
+    // Save the character core data
     await dbm.saveFile(collectionName, playerID, charData);
   }
 
@@ -119,13 +114,14 @@ class char {
     let collectionName = 'characters';
     let charData = await dbm.loadFile(collectionName, userID);
     if (charData) {
+      const balance = await dbm.getBalance(userID);
       const charEmbed = {
         color: 0x36393e,
         author: {
           name: charData.name,
           icon_url: charData.icon ? charData.icon : 'https://cdn.discordapp.com/attachments/890351376004157440/1332678517888126986/NEW_LOGO_CLEAN_smallish.png?ex=6798c416&is=67977296&hm=ada5afdd0bcb677d3a0a1ca6aabe55f554810e3044048ac4e5cd85d0d73e7f0d&',
         },
-        description: clientManager.getEmoji("Gold") + " **" + charData.balance + "**",
+        description: clientManager.getEmoji("Gold") + " **" + balance + "**",
       };
       return charEmbed;
     } else {
@@ -177,12 +173,14 @@ class char {
     const maxPerPage = 25;
 
     let collectionName = 'characters';
-    let charData = await dbm.loadCollection(collectionName);
-    let charArray = [];
-    for (let [key, value] of Object.entries(charData)) {
-      charArray.push({ key, value });
-    }
-    charArray.sort((a, b) => b.value.balance - a.value.balance);
+    const charData = await dbm.loadCollection(collectionName);
+    const balanceRows = await dbm.getAllBalances();
+    let charArray = balanceRows.map(row => ({
+      key: row.id,
+      balance: Number(row.amount),
+      numericID: charData[row.id] ? charData[row.id].numericID : '0'
+    }));
+    charArray.sort((a, b) => b.balance - a.balance);
 
     let totalPages = Math.ceil(charArray.length / maxPerPage);
     if (pageNumber > totalPages) {
@@ -194,8 +192,8 @@ class char {
 
     let superstring = "";
     for (let i = start; i < end; i++) {
-      let char = charArray[i];
-      superstring += "** <@" + char.value.numericID + "> **: " + char.value.balance + "\n";
+      const char = charArray[i];
+      superstring += "** <@" + char.numericID + "> **: " + char.balance + "\n";
     }
 
     const balanceEmbed = {
@@ -213,6 +211,39 @@ class char {
     rows.push(buttonRow);
 
     return [balanceEmbed, rows];
+  }
+
+  // Inventory helpers backed by inventories table
+  static async getInventoryData(userID) {
+    return await dbm.getInventory(userID);
+  }
+
+  static async changeInventory(userID, item, qty) {
+    await dbm.updateInventory(userID, item, qty);
+  }
+
+  // Cooldown helpers backed by cooldowns table
+  static async getCooldown(userID, action) {
+    return await dbm.getCooldown(userID, action);
+  }
+
+  static async setCooldown(userID, action, expiresAt) {
+    await dbm.setCooldown(userID, action, expiresAt);
+  }
+
+  static async getBalanceAmount(userID) {
+    return await dbm.getBalance(userID);
+  }
+
+  static async setBalanceAmount(userID, amount) {
+    await dbm.setBalance(userID, amount);
+  }
+
+  static async changeBalance(userID, delta) {
+    const current = await dbm.getBalance(userID);
+    const updated = current + delta;
+    await dbm.setBalance(userID, updated);
+    return updated;
   }
 
   static async me(userID) {
@@ -248,7 +279,10 @@ class char {
         description: bioString,
         fields: [
           {
-            name: clientManager.getEmoji("Gold") + " Balance: " + (charData.balance ? charData.balance : 0),
+            name:
+              clientManager.getEmoji("Gold") +
+              " Balance: " +
+              (await dbm.getBalance(userID)),
             value: await this.getStatsBlock(charData, userID),
           },
         ],
@@ -450,15 +484,11 @@ class char {
       superstring += "\n";
     }
 
-    charData.balance += total;
+    await this.changeBalance(userID, total);
     superstring +=  clientManager.getEmoji("Gold") + " **__Total Gold :__** `" + total + "`\n";
 
     for (let [resource, amount] of Object.entries(resourceMap)) {
-      if (charData.inventory[resource]) {
-        charData.inventory[resource] += amount;
-      } else {
-        charData.inventory[resource] = amount;
-      }
+      await this.changeInventory(userID, resource, amount);
       superstring += clientManager.getEmoji(resource) + " **__Total " + resource + " :__** `" + amount + "`\n";
     }
 
@@ -670,10 +700,11 @@ class char {
     if (itemData.usageOptions["Give/Take Money (#)"] && itemData.usageOptions["Give/Take Money (#)"] != 0 && itemData.usageOptions["Give/Take Money (#)"] != "") {
       //If they are taking money, make sure they have enough
       let totalGold = parseInt(itemData.usageOptions["Give/Take Money (#)"]) * numToUse;
-      if (charData.balance + totalGold < 0 && totalGold < 0) {
+      const bal = await dbm.getBalance(userID);
+      if (bal + totalGold < 0 && totalGold < 0) {
         return "You do not have enough money to use this item!";
       }
-      charData.balance += totalGold;
+      await this.changeBalance(userID, totalGold);
       //Add field for money loss/gain, with Gold emoji
       returnEmbed.addFields({ 
         name: '**Gold:**', 
@@ -1352,15 +1383,13 @@ class char {
   }*/
 
   static async addPlayerGold(player, gold) {
-    let collectionName = 'characters';
     let charData;
     [player, charData] = await this.findPlayerData(player);
     if (!player) {
       return "Error: Player not found";
     }
     if (charData) {
-      charData.balance += gold;
-      await dbm.saveFile(collectionName, player, charData);
+      await this.changeBalance(player, gold);
       return true;
     } else {
       return false;
@@ -1368,15 +1397,13 @@ class char {
   }
 
   static async setPlayerGold(player, gold) {
-    let collectionName = 'characters';
     let charData;
     [player, charData] = await this.findPlayerData(player);
     if (!player) {
       return "Error: Player not found";
     }
     if (charData) {
-      charData.balance = gold;
-      await dbm.saveFile(collectionName, player, charData);
+      await this.setBalanceAmount(player, gold);
       return true;
     } else {
       return false;
@@ -1576,8 +1603,9 @@ class char {
       charData.bank = 0;
     }
     if (charData) {
-      if (charData.balance >= gold) {
-        charData.balance -= gold;
+      const bal = await dbm.getBalance(player);
+      if (bal >= gold) {
+        await this.changeBalance(player, -gold);
         charData.bank += gold;
         await dbm.saveFile(collectionName, player, charData);
         return true;
@@ -1599,7 +1627,7 @@ class char {
     }
     if (charData) {
       if (charData.bank >= gold) {
-        charData.balance += gold;
+        await this.changeBalance(player, gold);
         charData.bank -= gold;
         await dbm.saveFile(collectionName, player, charData);
         return true;
@@ -1702,11 +1730,10 @@ class char {
       return "Error: Player not found";
     }
     if (charData && charData2) {
-      if (charData.balance >= gold) {
-        charData.balance -= gold;
-        charData2.balance += gold;
-        await dbm.saveFile(collectionName, playerGiving, charData);
-        await dbm.saveFile(collectionName, player, charData2);
+      const balGiving = await dbm.getBalance(playerGiving);
+      if (balGiving >= gold) {
+        await this.changeBalance(playerGiving, -gold);
+        await this.changeBalance(player, gold);
         return true;
       } else {
         return "You don't have enough gold!";
