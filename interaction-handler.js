@@ -6,7 +6,7 @@ const panel = require('./panel');
 const logger = require('./logger');
 
 // MODALS
-addItem = async (interaction) => {
+const addItem = async (interaction) => {
   // Get the data entered by the user
   const itemName = interaction.fields.getTextInputValue('itemname');
   let itemIcon = interaction.fields.getTextInputValue('itemicon');
@@ -113,7 +113,7 @@ addItem = async (interaction) => {
 // // }
 // }
 
-newChar = async (interaction) => {
+const newChar = async (interaction) => {
   // Get the data entered by the user
   const userID = interaction.user.tag;
   const numericID = interaction.user.id;
@@ -158,41 +158,41 @@ newChar = async (interaction) => {
   }
 };
 
-shopLayout = async (interaction) => {
+const shopLayout = async (interaction) => {
   const categoryToEdit = interaction.fields.getTextInputValue('categorytoedit');
   const layoutString = interaction.fields.getTextInputValue('layoutstring');
 
   await interaction.reply(await shop.shopLayout(categoryToEdit, layoutString));
-}
+};
 
 //BUTTONS
-shopSwitch = async (interaction) => {
+const shopSwitch = async (interaction) => {
   let [edittedEmbed, rows] = await shop.createShopEmbed(interaction.customId.slice(11), interaction);
   logger.debug(interaction);
   await interaction.update({ embeds: [edittedEmbed], components: rows});
-}
-incomeSwitch = async (interaction) => {
+};
+const incomeSwitch = async (interaction) => {
   interaction.deferUpdate();
   let [edittedEmbed, rows] = await admin.allIncomes(interaction.customId.slice(11));
   await interaction.editReply({ embeds: [edittedEmbed], components: rows});
-}
-salesSwitch = async (interaction) => {
+};
+const salesSwitch = async (interaction) => {
   let [edittedEmbed, rows] = await marketplace.createSalesEmbed(interaction.customId.slice(11));
   await interaction.update({ embeds: [edittedEmbed], components: rows});
-}
-allItemSwitch = async (interaction) => {
+};
+const allItemSwitch = async (interaction) => {
   let [edittedEmbed, rows] = await shop.createAllItemsEmbed(interaction.customId.slice(11), interaction);
   await interaction.update({ embeds: [edittedEmbed], components: rows});
-}
-itemSwitch = async (interaction) => {
+};
+const itemSwitch = async (interaction) => {
   let [edittedEmbed, rows] = await shop.editItemMenu(interaction.customId.substring(12), interaction.customId[11], interaction.user.tag);
   await interaction.update({ embeds: [edittedEmbed], components: [rows]});
-}
-balaSwitch = async (interaction) => {
+};
+const balaSwitch = async (interaction) => {
   let [edittedEmbed, rows] = await char.balanceAll(interaction.customId[11])
   await interaction.update({ embeds: [edittedEmbed], components: rows});
-}
-helpSwitch = async (interaction) => {
+};
+const helpSwitch = async (interaction) => {
   //This one is odder, will either have the 11th character be "A" or "R" for admin or regular help. The 12th character will be the page number.
   let isAdmin = false;
   if (interaction.customId[11] == "A") {
@@ -204,7 +204,7 @@ helpSwitch = async (interaction) => {
   }
   let [edittedEmbed, rows] = await admin.generalHelpMenu(interaction.customId[12], isAdmin);
   await interaction.update({ embeds: [edittedEmbed], components: rows});
-}
+};
 
 const panelInvSwitch = async (interaction) => {
   const page = parseInt(interaction.customId.slice(15));
@@ -240,14 +240,29 @@ const panelSelect = async (interaction) => {
   await interaction.update({ embeds: [edittedEmbed], components: rows, ephemeral: true });
 };
 
+const handleInteractionError = async (interaction, error) => {
+  logger.error(error);
+  if (!interaction.deferred && !interaction.replied) {
+    await interaction.reply({ content: 'An error occurred while processing this interaction.', ephemeral: true });
+  }
+};
+
 exports.handle = async (interaction) => {
   logger.debug(interaction.customId);
   if (interaction.isModalSubmit()) {
     if (interaction.customId === 'additemmodal') {
-      addItem(interaction);
+      try {
+        await addItem(interaction);
+      } catch (error) {
+        await handleInteractionError(interaction, error);
+      }
     }
     if (interaction.customId === 'newcharmodal') {
-      newChar(interaction);
+      try {
+        await newChar(interaction);
+      } catch (error) {
+        await handleInteractionError(interaction, error);
+      }
     }
     // if (interaction.customId === 'addusecasemodal') {
     //   addUseCase(interaction);
@@ -256,54 +271,126 @@ exports.handle = async (interaction) => {
     //   addRecipe(interaction);
     // }
     if (interaction.customId === 'shoplayoutmodal') {
-      shopLayout(interaction);
+      try {
+        await shopLayout(interaction);
+      } catch (error) {
+        await handleInteractionError(interaction, error);
+      }
     }
     //Check if it starts with editmapaboutmodal
     if (interaction.customId.substring(0, 17) === 'editmapaboutmodal') {
-      admin.editMapAbout(interaction);
+      try {
+        await admin.editMapAbout(interaction);
+      } catch (error) {
+        await handleInteractionError(interaction, error);
+      }
     }
     // if (interaction.customId === 'addusedescriptionmodal') {
     //   addUseDescription(interaction);
     // }
   } else if (interaction.isButton()) {
     if (interaction.customId.substring(0, 11) == 'switch_page') {
-      shopSwitch(interaction);
+      try {
+        await shopSwitch(interaction);
+      } catch (error) {
+        await handleInteractionError(interaction, error);
+      }
     } else if (interaction.customId.substring(0, 11) == 'switch_sale') {
-      salesSwitch(interaction);
+      try {
+        await salesSwitch(interaction);
+      } catch (error) {
+        await handleInteractionError(interaction, error);
+      }
     } else if (interaction.customId.substring(0, 11) == 'switch_item') {
-      itemSwitch(interaction);
+      try {
+        await itemSwitch(interaction);
+      } catch (error) {
+        await handleInteractionError(interaction, error);
+      }
     } else if (interaction.customId.substring(0, 11) == 'switch_help') {
-      helpSwitch(interaction);
+      try {
+        await helpSwitch(interaction);
+      } catch (error) {
+        await handleInteractionError(interaction, error);
+      }
     } else if (interaction.customId.substring(0, 11) == 'switch_inco') {
-      incomeSwitch(interaction);
+      try {
+        await incomeSwitch(interaction);
+      } catch (error) {
+        await handleInteractionError(interaction, error);
+      }
     } else if (interaction.customId.substring(0, 11) === 'switch_alit') {
-      allItemSwitch(interaction);
+      try {
+        await allItemSwitch(interaction);
+      } catch (error) {
+        await handleInteractionError(interaction, error);
+      }
     } else if (interaction.customId.substring(0, 11) === 'switch_bala') {
-      balaSwitch(interaction);
+      try {
+        await balaSwitch(interaction);
+      } catch (error) {
+        await handleInteractionError(interaction, error);
+      }
     } else if (interaction.customId.substring(0, 11) === 'partySelect') {
-      await admin.selectParty(interaction);
+      try {
+        await admin.selectParty(interaction);
+      } catch (error) {
+        await handleInteractionError(interaction, error);
+      }
     } else if (interaction.customId.substring(0, 15) === 'panel_inv_page') {
-      panelInvSwitch(interaction);
+      try {
+        await panelInvSwitch(interaction);
+      } catch (error) {
+        await handleInteractionError(interaction, error);
+      }
     } else if (interaction.customId.substring(0, 16) === 'panel_store_page') {
-      panelStoreSwitch(interaction);
+      try {
+        await panelStoreSwitch(interaction);
+      } catch (error) {
+        await handleInteractionError(interaction, error);
+      }
     } else if (interaction.customId.substring(0, 15) === 'panel_ship_page') {
-      panelShipSwitch(interaction);
+      try {
+        await panelShipSwitch(interaction);
+      } catch (error) {
+        await handleInteractionError(interaction, error);
+      }
     }
   } else if (interaction.isSelectMenu()) {
     if (interaction.customId === 'shireSelect') {
-      await admin.selectShire(interaction);
+      try {
+        await admin.selectShire(interaction);
+      } catch (error) {
+        await handleInteractionError(interaction, error);
+      }
     }
     if (interaction.customId === 'resourceSelect') {
-      await admin.selectResource(interaction);
+      try {
+        await admin.selectResource(interaction);
+      } catch (error) {
+        await handleInteractionError(interaction, error);
+      }
     }
     if (interaction.customId === 'tradeNodeSelect') {
-      await admin.selectTradeNode(interaction);
+      try {
+        await admin.selectTradeNode(interaction);
+      } catch (error) {
+        await handleInteractionError(interaction, error);
+      }
     }
     if (interaction.customId === 'classSelect') {
-      await admin.selectClass(interaction);
+      try {
+        await admin.selectClass(interaction);
+      } catch (error) {
+        await handleInteractionError(interaction, error);
+      }
     }
     if (interaction.customId === 'panel_select') {
-      panelSelect(interaction);
+      try {
+        await panelSelect(interaction);
+      } catch (error) {
+        await handleInteractionError(interaction, error);
+      }
     }
   }
 }
