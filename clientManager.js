@@ -33,7 +33,13 @@ class clientManager {
             logger.warn("Guild not found");
             return null;
         }
-        const foundUser = await guild.members.fetch(userID);
+        let foundUser;
+        try {
+            foundUser = await guild.members.fetch(userID);
+        } catch (err) {
+            logger.warn("Error fetching user", err);
+            return null;
+        }
         if (!foundUser) {
             logger.warn("User not found");
             return null;
