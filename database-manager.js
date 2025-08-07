@@ -2,8 +2,9 @@ const db = require('./pg-client');
 const logger = require('./logger');
 const fs = require('fs');
 const path = require('path');
+const { randomUUID } = require('crypto');
 
-const tables = ['characters', 'keys', 'shop', 'recipes', 'shoplayout', 'balances', 'inventories', 'cooldowns'];
+const tables = ['characters', 'keys', 'shop', 'recipes', 'shoplayout', 'items', 'balances', 'inventories', 'inventory_items', 'cooldowns'];
 
 function assertTable(name) {
   if (!tables.includes(name)) throw new Error(`Unknown table ${name}`);
@@ -14,7 +15,7 @@ async function init() {
   logger.info('[database-manager] initializing tables...');
 
   // tables storing JSON blobs
-  const jsonTables = ['characters', 'keys', 'shop', 'recipes', 'shoplayout'];
+  const jsonTables = ['characters', 'keys', 'shop', 'recipes', 'shoplayout', 'items'];
   for (const t of jsonTables) {
     await db.query(`CREATE TABLE IF NOT EXISTS ${t} (id TEXT PRIMARY KEY, data JSONB)`);
   }
@@ -31,7 +32,7 @@ async function init() {
      )`
   );
 
-  // normalized tables for balances, inventories and cooldowns
+  // normalized tables for balances, inventories, inventory items and cooldowns
   await db.query('CREATE TABLE IF NOT EXISTS balances (id TEXT PRIMARY KEY, amount INTEGER DEFAULT 0)');
   await db.query(
     `CREATE TABLE IF NOT EXISTS inventories (
@@ -39,6 +40,15 @@ async function init() {
        item TEXT,
        qty  INTEGER,
        PRIMARY KEY (id, item)
+     )`
+  );
+  await db.query(
+    `CREATE TABLE IF NOT EXISTS inventory_items (
+       instance_id TEXT PRIMARY KEY,
+       owner_id    TEXT,
+       item_id     TEXT,
+       durability  INTEGER,
+       metadata    JSONB
      )`
   );
   await db.query(
@@ -174,6 +184,39 @@ async function updateInventory(id, item, delta) {
   await db.query('DELETE FROM inventories WHERE id=$1 AND item=$2 AND qty <= 0', [id, item]);
 }
 
+// --- item definition helpers ---
+async function getItemDefinition(id) {
+  const res = await db.query('SELECT data FROM items WHERE id=$1', [id]);
+  return res.rows[0] ? res.rows[0].data : undefined;
+}
+
+async function saveItemDefinition(id, data) {
+  await db.query(
+    `INSERT INTO items (id, data) VALUES ($1,$2)
+     ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data`,
+    [id, data]
+  );
+}
+
+// --- inventory item instance helpers ---
+async function addInventoryItem(ownerId, itemId, { instanceId = randomUUID(), durability = null, metadata = {} } = {}) {
+  await db.query(
+    `INSERT INTO inventory_items (instance_id, owner_id, item_id, durability, metadata)
+     VALUES ($1,$2,$3,$4,$5)`,
+    [instanceId, ownerId, itemId, durability, metadata]
+  );
+  return instanceId;
+}
+
+async function getInventoryItems(ownerId) {
+  const res = await db.query('SELECT * FROM inventory_items WHERE owner_id=$1', [ownerId]);
+  return res.rows;
+}
+
+async function removeInventoryItem(instanceId) {
+  await db.query('DELETE FROM inventory_items WHERE instance_id=$1', [instanceId]);
+}
+
 // --- cooldown helpers ---
 async function getCooldown(id, action) {
   const res = await db.query('SELECT expires_at FROM cooldowns WHERE id=$1 AND action=$2', [id, action]);
@@ -206,6 +249,11 @@ module.exports = {
   getAllBalances,
   getInventory,
   updateInventory,
+  getItemDefinition,
+  saveItemDefinition,
+  addInventoryItem,
+  getInventoryItems,
+  removeInventoryItem,
   getCooldown,
   setCooldown,
   clearCooldown,
