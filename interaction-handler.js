@@ -3,8 +3,6 @@ const char = require('./char');
 const marketplace = require('./marketplace');
 const admin = require('./admin');
 const panel = require('./panel');
-// Import guildId from config.js (environment variables take priority)
-const { guildId } = require('./config.js');
 const logger = require('./logger');
 
 // MODALS
