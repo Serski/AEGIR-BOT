@@ -11,6 +11,8 @@ function assertTable(name) {
 }
 
 async function init() {
+  logger.info('[database-manager] initializing tables...');
+
   // tables storing JSON blobs
   const jsonTables = ['characters', 'keys', 'shop', 'recipes', 'shoplayout'];
   for (const t of jsonTables) {
@@ -50,8 +52,9 @@ async function init() {
 
   await seedTableIfEmpty('shop', path.join(__dirname, 'seed-data', 'shop.json'));
   await seedTableIfEmpty('recipes', path.join(__dirname, 'seed-data', 'recipes.json'));
+  await seedTableIfEmpty('keys', path.join(__dirname, 'seed-data', 'keys.json'));
 
-  logger.debug('[database-manager] tables ensured.');
+  logger.info('[database-manager] initialization complete.');
 }
 init().catch(err => logger.error(err));
 
@@ -132,6 +135,8 @@ async function seedTableIfEmpty(table, filePath) {
     } catch (err) {
       logger.error(`[database-manager] failed seeding ${table} from ${filePath}: ${err.message}`);
     }
+  } else {
+    logger.info(`[database-manager] ${table} already populated`);
   }
 }
 
