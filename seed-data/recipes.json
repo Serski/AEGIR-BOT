@@ -1,0 +1,30 @@
+{
+  "Wooden Plank": {
+    "recipeOptions": {
+      "Name": "Wooden Plank",
+      "Icon": "🪵",
+      "Show Image": "",
+      "Show Message": "",
+      "Ingredient 1": "1 Wood",
+      "Ingredient 2": "",
+      "Ingredient 3": "",
+      "Ingredient 4": "",
+      "Ingredient 5": "",
+      "Ingredient 6": "",
+      "Ingredient 7": "",
+      "Ingredient 8": "",
+      "Ingredient 9": "",
+      "Ingredient 10": "",
+      "Result 1": "1 Wooden Plank",
+      "Result 2": "",
+      "Result 3": "",
+      "Result 4": "",
+      "Result 5": "",
+      "Craft Time in Hours (#)": 1,
+      "Need None Of Roles": "",
+      "Need All Of Roles": "",
+      "Need Any Of Roles": "",
+      "Is Public (Y/N)": "No"
+    }
+  }
+}
