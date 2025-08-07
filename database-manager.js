@@ -1,7 +1,7 @@
 const db = require('./pg-client');
 const logger = require('./logger');
 
-const tables = ['characters', 'keys', 'shop', 'recipes', 'marketplace', 'shoplayout', 'balances', 'inventories', 'cooldowns'];
+const tables = ['characters', 'keys', 'shop', 'recipes', 'shoplayout', 'balances', 'inventories', 'cooldowns'];
 
 function assertTable(name) {
   if (!tables.includes(name)) throw new Error(`Unknown table ${name}`);
@@ -10,10 +10,22 @@ function assertTable(name) {
 
 async function init() {
   // tables storing JSON blobs
-  const jsonTables = ['characters', 'keys', 'shop', 'recipes', 'marketplace', 'shoplayout'];
+  const jsonTables = ['characters', 'keys', 'shop', 'recipes', 'shoplayout'];
   for (const t of jsonTables) {
     await db.query(`CREATE TABLE IF NOT EXISTS ${t} (id TEXT PRIMARY KEY, data JSONB)`);
   }
+
+  await db.query(
+    `CREATE TABLE IF NOT EXISTS marketplace (
+       id       SERIAL PRIMARY KEY,
+       item     TEXT,
+       category TEXT,
+       price    INTEGER,
+       number   INTEGER,
+       seller   TEXT,
+       seller_id TEXT
+     )`
+  );
 
   // normalized tables for balances, inventories and cooldowns
   await db.query('CREATE TABLE IF NOT EXISTS balances (id TEXT PRIMARY KEY, amount INTEGER DEFAULT 0)');
