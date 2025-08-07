@@ -13,6 +13,16 @@ Environment variables always take precedence over entries in `config.json`. The 
 - `DISCORD_TOKEN` – your bot token
 - `CLIENT_ID` – the application/client ID
 - `GUILD_ID` – the test server used for slash‑command registration
+- `DATABASE_URL` – PostgreSQL connection string (Railway sets this automatically)
+
+### Optional variables
+
+The PostgreSQL pool can be tuned via:
+
+- `PGPOOL_MAX` – maximum number of connections
+- `PGPOOL_MIN` – minimum number of idle connections
+- `PGPOOL_IDLE` – idle timeout in milliseconds
+- `PGPOOL_CLIENT_TIMEOUT` – connection timeout in milliseconds
 
 ### Setting environment variables
 
@@ -36,6 +46,8 @@ You can also provide them inline for a one‑off command:
 ```bash
 DISCORD_TOKEN=abcdef CLIENT_ID=1234567890 GUILD_ID=0987654321 node bot.js
 ```
+On Railway, configure these variables in the project settings. Adding a PostgreSQL service will supply `DATABASE_URL`, and you may
+set `PGPOOL_*` variables to adjust connection pooling.
 
 ## /panel command
 
