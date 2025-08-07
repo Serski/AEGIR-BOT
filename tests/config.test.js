@@ -6,39 +6,40 @@ const path = require('node:path');
 const rootDir = path.resolve(__dirname, '..');
 const botPath = path.join(rootDir, 'bot.js');
 const configPath = path.join(rootDir, 'config.js');
-const nodeModulesPath = path.join(rootDir, 'node_modules');
+const discordModulePath = require.resolve('discord.js');
+let pool;
 
 // ── stub discord.js and other local modules ──────────────────────
 (function setupStubs() {
-  fs.rmSync(nodeModulesPath, { recursive: true, force: true });
-  const discordDir = path.join(nodeModulesPath, 'discord.js');
-  fs.mkdirSync(discordDir, { recursive: true });
-  fs.writeFileSync(
-    path.join(discordDir, 'index.js'),
-`class Client {
-  constructor() {
-    this.user = { tag: 'stub' };
-    this.commands = new Map();
-  }
-  login(token) { global.__capturedToken = token; return Promise.resolve(); }
-  on() {}
-  once(event, fn) { if (event === 'ready') fn(); }
-}
-const GatewayIntentBits = { Guilds:1, GuildMessages:2, GuildMembers:4, MessageContent:8 };
-class Collection extends Map {}
-const Events = { InteractionCreate: 'interactionCreate' };
-module.exports = { Client, GatewayIntentBits, Collection, Events };
-`);
+  const discordStub = {
+    Client: class Client {
+      constructor() {
+        this.user = { tag: 'stub' };
+        this.commands = new Map();
+      }
+      login(token) { global.__capturedToken = token; return Promise.resolve(); }
+      on() {}
+      once(event, fn) { if (event === 'ready') fn(); }
+    },
+    GatewayIntentBits: { Guilds:1, GuildMessages:2, GuildMembers:4, MessageContent:8 },
+    Collection: class Collection extends Map {},
+    Events: { InteractionCreate: 'interactionCreate' }
+  };
+  require.cache[discordModulePath] = { id: discordModulePath, filename: discordModulePath, loaded: true, exports: discordStub };
 
   const stubModule = (file, exports) => {
     const filePath = path.join(rootDir, file);
     require.cache[filePath] = { id: filePath, filename: filePath, loaded: true, exports };
   };
-  stubModule('interaction-handler.js', { handle: () => {} });
-  stubModule('char.js', { newChar: () => {}, resetIncomeCD: () => {} });
-  stubModule('database-manager.js', { loadFile: () => null, saveFile: () => {}, docDelete: () => {}, logData: () => {} });
-  stubModule('admin.js', {});
-})();
+    stubModule('interaction-handler.js', { handle: () => {} });
+    stubModule('char.js', { newChar: () => {}, resetIncomeCD: () => {} });
+    const { newDb } = require('pg-mem');
+    const mem = newDb();
+    const pgMem = mem.adapters.createPg();
+    pool = new pgMem.Pool();
+    stubModule('pg-client.js', { query: (text, params) => pool.query(text, params), pool });
+    stubModule('admin.js', {});
+  })();
 
 // stub fs.readdirSync to avoid loading command files
 const originalReaddirSync = fs.readdirSync;
@@ -49,9 +50,10 @@ fs.readdirSync = function(p, opts) {
 
 after(() => {
   fs.readdirSync = originalReaddirSync;
-  fs.rmSync(nodeModulesPath, { recursive: true, force: true });
+  if (require.cache[discordModulePath]) delete require.cache[discordModulePath];
   if (fs.existsSync(configPath)) fs.rmSync(configPath);
   if (require.cache[configPath]) delete require.cache[configPath];
+  if (pool) pool.end();
 });
 
 // ── tests ────────────────────────────────────────────────────────
@@ -75,7 +77,7 @@ test('Environment variables override config.js', () => {
   delete process.env.DISCORD_TOKEN;
   delete process.env.CLIENT_ID;
   delete process.env.GUILD_ID;
-  fs.rmSync(configPath);
+  fs.rmSync(configPath, { force: true });
   if (require.cache[configPath]) delete require.cache[configPath];
 });
 
