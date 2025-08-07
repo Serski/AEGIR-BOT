@@ -14,7 +14,7 @@ const addItem = async (interaction) => {
   const itemDescription = interaction.fields.getTextInputValue('itemdescription');
   const itemCategory = interaction.fields.getTextInputValue('itemcategory');
   
-  colonCounter = 0;
+  let colonCounter = 0;
   for (let i = 0; i < itemIcon.length; i++) {
     if (itemIcon[i] == ":") {
       colonCounter++;
@@ -27,7 +27,7 @@ const addItem = async (interaction) => {
 
   // Call the addItem function from the Shop class with the collected information
   if (itemName && parseInt(itemPrice)) {
-    shop.addItem(itemName, { Icon: itemIcon, Price: parseInt(itemPrice), Description: itemDescription, Category: itemCategory });
+    await shop.addItem(itemName, { Icon: itemIcon, Price: parseInt(itemPrice), Description: itemDescription, Category: itemCategory });
     await interaction.reply(`Item '${itemName}' has been added to the item list. Use /shoplayout or ping Alex to add to shop.`);
   } else {
     // Handle missing information
@@ -150,7 +150,7 @@ const newChar = async (interaction) => {
 
   // Call the newChar function from the char class with the info
   if (charName && charBio) {
-    char.newChar(userID, charName, charBio, numericID);
+    await char.newChar(userID, charName, charBio, numericID);
     await interaction.reply(`Character '${charName}' has been created.`);
   } else {
     // Handle missing information
