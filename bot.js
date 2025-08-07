@@ -141,9 +141,9 @@ function botMidnightLoop() {
     now.getUTCSeconds()  *     1_000 -
     now.getUTCMilliseconds();
 
-  setTimeout(() => {
-    char.resetIncomeCD();
-    dbm.logData();
+  setTimeout(async () => {
+    await char.resetIncomeCD();
+    await dbm.logData();
     botMidnightLoop();
   }, msToMidnight);
 }
