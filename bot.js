@@ -109,21 +109,26 @@ client.on(Events.InteractionCreate, async interaction => {
 });
 
 // ───── Guild member events, midnight loop, etc. ────────────────
-client.on('guildMemberAdd', member => {
-  char.newChar(member.user.tag, member.user.tag, 'A new member of Britannia!', member.id);
+client.on('guildMemberAdd', async member => {
+  await char.newChar(
+    member.user.tag,
+    member.user.tag,
+    'A new member of Britannia!',
+    member.id
+  );
 });
 
 client.on('guildMemberRemove', member => {
   logger.info('Member left:', member.id);
 });
 
-client.on('userUpdate', (oldUser, newUser) => {
+client.on('userUpdate', async (oldUser, newUser) => {
   const oldName = oldUser.tag;
   const newName = newUser.tag;
-  const data    = dbm.loadFile('characters', oldName);
+  const data = await dbm.loadFile('characters', oldName);
   if (data) {
-    dbm.saveFile('characters', newName, data);
-    dbm.docDelete('characters', oldName);
+    await dbm.saveFile('characters', newName, data);
+    await dbm.docDelete('characters', oldName);
   }
 });
 
