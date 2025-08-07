@@ -114,7 +114,7 @@ function panelSelectTest(choice, expectedFn) {
       ships: ['shipRow'],
       main: ['mainRow']
     }[expectedFn];
-    assert.deepEqual(interaction.updated, { embeds: [expectedEmbed], components: expectedRow, ephemeral: true });
+    assert.deepEqual(interaction.updated, { embeds: [expectedEmbed], components: expectedRow });
   };
 }
 
@@ -147,7 +147,7 @@ function paginationTest(customId, expectedFn, expectedPage) {
       storage: ['storeRow'],
       ships: ['shipRow']
     }[expectedFn];
-    assert.deepEqual(interaction.updated, { embeds: [expectedEmbed], components: expectedRow, ephemeral: true });
+    assert.deepEqual(interaction.updated, { embeds: [expectedEmbed], components: expectedRow });
   };
 }
 

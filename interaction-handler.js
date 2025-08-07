@@ -172,7 +172,7 @@ const shopSwitch = async (interaction) => {
   await interaction.update({ embeds: [edittedEmbed], components: rows});
 };
 const incomeSwitch = async (interaction) => {
-  interaction.deferUpdate();
+  await interaction.deferUpdate();
   let [edittedEmbed, rows] = await admin.allIncomes(interaction.customId.slice(11));
   await interaction.editReply({ embeds: [edittedEmbed], components: rows});
 };
@@ -209,19 +209,19 @@ const helpSwitch = async (interaction) => {
 const panelInvSwitch = async (interaction) => {
   const page = parseInt(interaction.customId.slice(15));
   let [edittedEmbed, rows] = await panel.inventoryEmbed(interaction.user.id, page);
-  await interaction.update({ embeds: [edittedEmbed], components: rows, ephemeral: true });
+  await interaction.update({ embeds: [edittedEmbed], components: rows });
 };
 
 const panelStoreSwitch = async (interaction) => {
   const page = parseInt(interaction.customId.slice(16));
   let [edittedEmbed, rows] = await panel.storageEmbed(interaction.user.id, page);
-  await interaction.update({ embeds: [edittedEmbed], components: rows, ephemeral: true });
+  await interaction.update({ embeds: [edittedEmbed], components: rows });
 };
 
 const panelShipSwitch = async (interaction) => {
   const page = parseInt(interaction.customId.slice(15));
   let [edittedEmbed, rows] = await panel.shipsEmbed(interaction.user.id, page);
-  await interaction.update({ embeds: [edittedEmbed], components: rows, ephemeral: true });
+  await interaction.update({ embeds: [edittedEmbed], components: rows });
 };
 
 const panelSelect = async (interaction) => {
@@ -237,7 +237,7 @@ const panelSelect = async (interaction) => {
   } else {
     [edittedEmbed, rows] = await panel.mainEmbed(interaction.user.id);
   }
-  await interaction.update({ embeds: [edittedEmbed], components: rows, ephemeral: true });
+  await interaction.update({ embeds: [edittedEmbed], components: rows });
 };
 
 const handleInteractionError = async (interaction, error) => {
