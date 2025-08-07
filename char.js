@@ -35,6 +35,37 @@ class char {
     }
   }
 
+  static async addItem(userID, itemId, options = {}) {
+    const def = await dbm.getItemDefinition(itemId);
+    if (!def || def.stackable !== false) {
+      const qty = options.qty || 1;
+      await dbm.updateInventory(userID, itemId, qty);
+      return;
+    }
+    await dbm.addInventoryItem(userID, itemId, {
+      instanceId: options.instanceId,
+      durability: options.durability ?? def.durability ?? null,
+      metadata: options.metadata || {},
+    });
+  }
+
+  static async removeItem(userID, itemId, options = {}) {
+    const def = await dbm.getItemDefinition(itemId);
+    if (!def || def.stackable !== false) {
+      const qty = options.qty || 1;
+      await dbm.updateInventory(userID, itemId, -qty);
+      return;
+    }
+    if (!options.instanceId) throw new Error('instanceId required for non-stackable items');
+    await dbm.removeInventoryItem(options.instanceId);
+  }
+
+  static async getInventory(userID) {
+    const stacks = await dbm.getInventory(userID);
+    const instances = await dbm.getInventoryItems(userID);
+    return { stacks, instances };
+  }
+
   // Function to add items
   static async newChar(playerID, charName, charBio, numericID) {
     // Set the collection name
@@ -67,7 +98,7 @@ class char {
       };
       // initialise balance, inventory and starting cooldowns in dedicated tables
       await dbm.setBalance(playerID, 200);
-      await dbm.updateInventory(playerID, 'Adventure Token', 1);
+      await this.addItem(playerID, 'Adventure Token');
     }
 
     // Save the character core data
