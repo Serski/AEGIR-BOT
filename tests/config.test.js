@@ -31,7 +31,7 @@ let pool;
     const filePath = path.join(rootDir, file);
     require.cache[filePath] = { id: filePath, filename: filePath, loaded: true, exports };
   };
-    stubModule('interaction-handler.js', { handle: () => {} });
+    stubModule('interaction-handler.js', { handle: async () => {} });
     stubModule('char.js', { newChar: () => {}, resetIncomeCD: () => {} });
     const { newDb } = require('pg-mem');
     const mem = newDb();
@@ -81,10 +81,10 @@ test('Environment variables override config.js', () => {
   if (require.cache[configPath]) delete require.cache[configPath];
 });
 
-test('Absence of config.js does not cause errors', () => {
+test('Missing config.js and env vars throws error', () => {
   global.__capturedToken = null;
-  assert.doesNotThrow(() => {
+  assert.throws(() => {
     delete require.cache[require.resolve(botPath)];
     require(botPath);
-  });
+  }, /Missing required environment variables/);
 });

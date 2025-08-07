@@ -38,6 +38,15 @@ if (!token || !clientId || !guildId) {
     );
   }
 }
+
+if (!token || !clientId || !guildId) {
+  const missing = [
+    !token && 'DISCORD_TOKEN',
+    !clientId && 'CLIENT_ID',
+    !guildId && 'GUILD_ID',
+  ].filter(Boolean).join(', ');
+  throw new Error(`Missing required environment variables: ${missing}`);
+}
 // ────────────────────────────────────────────────────────────────
 
 // other module imports
@@ -95,7 +104,7 @@ client.on(Events.InteractionCreate, async interaction => {
         : interaction.reply(reply);
     }
   } else {
-    interactionHandler.handle(interaction);
+    await interactionHandler.handle(interaction);
   }
 });
 
