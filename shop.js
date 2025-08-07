@@ -1,4 +1,5 @@
 const dbm = require('./database-manager'); // Importing the database manager
+const db = require('./pg-client');
 const Discord = require('discord.js');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const clientManager = require('./clientManager');
@@ -25,14 +26,9 @@ class shop {
 
   // Function to find an item by name in the shop
   //THIS IS INEFFICIENT BECAUSE IT MEANS CALLING IT MEANS TWO CALLS TO THE DATABASE- FIX LATER
-  static async findItemName(itemName, data) {
-    let dataKeys = Object.keys(data);
-    for (let i = 0; i < dataKeys.length; i++) {
-      if (dataKeys[i].toLowerCase() == itemName.toLowerCase()) {
-        return dataKeys[i];
-      }
-    }
-    return "ERROR";
+  static async findItemName(itemName) {
+    const res = await db.query('SELECT id FROM shop WHERE LOWER(id)=LOWER($1)', [itemName]);
+    return res.rows[0] ? res.rows[0].id : "ERROR";
   }
 
   static async convertToShopMap(rawShopLayoutData) {
@@ -87,31 +83,27 @@ class shop {
   }
 
   static async addRecipe(recipeName) {
-    //Go into the recipes file. First check if another copy of this recipe exists. If it does, add a space and number to recipe name and check again
-    let data = await dbm.loadCollection('recipes');
-    let shopData = await dbm.loadCollection('shop');
-    let recipeNames = Object.keys(data);
+    // First check for duplicate recipe names and adjust if needed
     let i = 1;
     let newRecipeName = recipeName;
-    while (recipeNames.includes(newRecipeName)) {
+    while (await dbm.loadFile('recipes', newRecipeName)) {
       newRecipeName = recipeName + " " + i;
       i++;
     }
+
     //Create a new recipe object with all fields blank
     let recipeData = {
       "recipeOptions": this.recipeOptions.reduce((acc, option) => {
         acc[option] = "";
         return acc;
-      }
-      , {}),
+      }, {}),
     };
 
     //Set option "Is Public (Y/N)" to No
-
     recipeData.recipeOptions["Is Public (Y/N)"] = "No";
-    let itemName = await this.findItemName(newRecipeName, shopData);
+    let itemName = await this.findItemName(newRecipeName);
     if (itemName != "ERROR") {
-      let itemData = shopData[itemName];
+      const itemData = await dbm.loadFile('shop', itemName);
       newRecipeName = itemName;
       recipeData.recipeOptions.Name = itemName;
       recipeData.recipeOptions.Icon = itemData.infoOptions.Icon;
@@ -121,7 +113,7 @@ class shop {
       recipeData.recipeOptions.Icon = ":hammer:";
     }
     recipeData.recipeOptions["Craft Time in Hours (#)"] = 1;
-    await dbm.saveFile('recipes', newRecipeName, recipeData); 
+    await dbm.saveFile('recipes', newRecipeName, recipeData);
 
     return newRecipeName;
   }
@@ -798,39 +790,24 @@ class shop {
   }
 
   static async getItemPrice(itemName) {
-    let data = await dbm.loadCollection('shop');
-    var price;
-    if (data[itemName]) {
-      if (data[itemName].shopOptions["Price (#)"] == undefined) {
-        return "No Price Item!";
-      }
-      price = data[itemName].shopOptions["Price (#)"];
-    } else {
+    const res = await db.query("SELECT data->'shopOptions'->>'Price (#)' AS price FROM shop WHERE LOWER(id)=LOWER($1)", [itemName]);
+    if (!res.rows[0]) {
       return "ERROR";
     }
-    return price;
+    return res.rows[0].price === null ? "No Price Item!" : res.rows[0].price;
   }
 
   static async getItemCategory(itemName) {
-    let data = await dbm.loadCollection('shop');
-    var category;
-    if (data[itemName]) {
-      category = data[itemName].infoOptions.Category;
-    } else {
+    const res = await db.query("SELECT data->'infoOptions'->>'Category' AS category FROM shop WHERE LOWER(id)=LOWER($1)", [itemName]);
+    if (!res.rows[0]) {
       return "ERROR";
     }
-    return category;
+    return res.rows[0].category;
   }
 
-  static async getItemIcon(itemName, shopData) {
-    let data = shopData;
-    var icon;
-    if (data[itemName]) {
-      icon = data[itemName].infoOptions.Icon;
-    } else {
-      return "ERROR";
-    }
-    return icon;
+  static async getItemIcon(itemName) {
+    const res = await db.query("SELECT data->'infoOptions'->>'Icon' AS icon FROM shop WHERE LOWER(id)=LOWER($1)", [itemName]);
+    return res.rows[0] ? res.rows[0].icon : "ERROR";
   }
 
   static async inspect(itemName) {
@@ -1197,7 +1174,6 @@ class shop {
   }
 
   static async editItemField(userTag, fieldNumber, newValue) {
-    let shopData = await dbm.loadCollection('shop');
     // Load user data
     let userData = await dbm.loadCollection('characters');
     let itemName;
@@ -1206,13 +1182,13 @@ class shop {
     } else {
       itemName = userData[userTag].editingFields["Item Edited"];
     }
-    itemName = await this.findItemName(itemName, shopData);
+    itemName = await this.findItemName(itemName);
     if (itemName == "ERROR") {
       return "Item not found!";
     }
 
     // Load the item data
-    let itemData = shopData[itemName];
+    let itemData = await dbm.loadFile('shop', itemName);
 
     const infoOptions = this.infoOptions;
     const shopOptions = this.shopOptions;
@@ -1285,7 +1261,7 @@ class shop {
         }
         //Check if item name is valid
         let itemName = splitString.slice(1).join(" ");
-        itemName = await this.findItemName(itemName, shopData);
+        itemName = await this.findItemName(itemName);
         if (itemName == "ERROR") {
           return "Invalid value for item name! This should be given in the form <Number> <Item Name>";
         }
@@ -1342,9 +1318,6 @@ class shop {
       await dbm.saveFile('shop', itemName, itemData);
     }
 
-    // Save the updated item data
-    await dbm.saveFile('shop', itemName, itemData);
-
     if (nullValue) {
       return `Field ${fieldName} reset to blank for item ${itemName}`;
     }
@@ -1363,8 +1336,6 @@ class shop {
 
     // Load the recipe data
     let recipeData = await dbm.loadFile('recipes', recipeName);
-
-    let shopData = await dbm.loadCollection('shop');
 
     const recipeOptions = this.recipeOptions;
 
@@ -1464,12 +1435,12 @@ class shop {
       }
       //Check if item name is valid
       let itemName = splitString.slice(1).join(" ");
-      let foundItemName = await this.findItemName(itemName, shopData);
+      let foundItemName = await this.findItemName(itemName);
       if (foundItemName == "ERROR") {
         return "Invalid value for item name! This should be given in the form <Number> <Item Name>";
       } else {
         newValue = num + " " + foundItemName;
-      } 
+      }
     }
 
     logger.debug(recipeData);
@@ -1482,10 +1453,10 @@ class shop {
       let result = newValue.split(" ").slice(1).join(" ");
 
       if (!recipeData[result]) {
-        let data = await dbm.loadCollection('shop');
-        if (data[result]) {
+        const item = await dbm.loadFile('shop', result);
+        if (item) {
           recipeData.recipeOptions["Name"] = result;
-          recipeData.recipeOptions["Icon"] = data[result].infoOptions.Icon;
+          recipeData.recipeOptions["Icon"] = item.infoOptions.Icon;
           
           //Save new recipe
           await dbm.saveFile('recipes', result, recipeData);

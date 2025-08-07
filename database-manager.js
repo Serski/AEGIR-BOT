@@ -1,5 +1,7 @@
 const db = require('./pg-client');
 const logger = require('./logger');
+const fs = require('fs');
+const path = require('path');
 
 const tables = ['characters', 'keys', 'shop', 'recipes', 'shoplayout', 'balances', 'inventories', 'cooldowns'];
 
@@ -45,6 +47,9 @@ async function init() {
        PRIMARY KEY (id, action)
      )`
   );
+
+  await seedTableIfEmpty('shop', path.join(__dirname, 'seed-data', 'shop.json'));
+  await seedTableIfEmpty('recipes', path.join(__dirname, 'seed-data', 'recipes.json'));
 
   logger.debug('[database-manager] tables ensured.');
 }
@@ -113,6 +118,21 @@ async function fieldDelete(collection, doc, field) {
 
 async function logData() {
   logger.debug('[database-manager] logData skipped (db backend).');
+}
+
+async function seedTableIfEmpty(table, filePath) {
+  const countRes = await db.query(`SELECT COUNT(*) FROM ${table}`);
+  if (Number(countRes.rows[0].count) === 0) {
+    try {
+      const seed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      for (const [id, data] of Object.entries(seed)) {
+        await db.query(`INSERT INTO ${table} (id, data) VALUES ($1, $2)`, [id, data]);
+      }
+      logger.info(`[database-manager] seeded ${table} from ${filePath}`);
+    } catch (err) {
+      logger.error(`[database-manager] failed seeding ${table} from ${filePath}: ${err.message}`);
+    }
+  }
 }
 
 // --- balance helpers ---
