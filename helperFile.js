@@ -19,24 +19,6 @@ async function addNeedNoneOfRolesToShop() {
     await dbm.saveCollection('shop', shopCollection);
 }
 
-async function loadResourcesJSON() {
-    const resources = await dbm.loadFile('keys', 'resources');
-    
-    //Save as json
-    const fs = require('fs');
-    fs.writeFileSync('resources.json', JSON.stringify(resources, null, 2));
-
-    logger.info("Resources saved to resources.json");
-}
-
-async function saveResourcesJSON() {
-    const fs = require('fs');
-    const resources = JSON.parse(fs.readFileSync('resources.json'));
-
-    await dbm.saveFile('keys', 'resources', resources);
-    logger.info("Resources saved to database");
-}
-
 async function getResourceEmojis() {
     const resources = await dbm.loadFile('keys', 'resources');
     
@@ -172,7 +154,5 @@ resetIncomeCD();
 
 module.exports = {
     addNeedNoneOfRolesToShop,
-    loadResourcesJSON,
-    saveResourcesJSON,
     getResourceEmojis
 }

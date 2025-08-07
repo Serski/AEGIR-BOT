@@ -6,7 +6,9 @@ const path = require('node:path');
 const rootDir = path.resolve(__dirname, '..');
 const handlerPath = path.join(rootDir, 'interaction-handler.js');
 const configPath = path.join(rootDir, 'config.js');
-const stubbed = new Set();
+const discordModulePath = require.resolve('discord.js');
+const stubbed = new Set([discordModulePath]);
+let pool;
 
 function stubModule(file, exports) {
   const filePath = path.join(rootDir, file);
@@ -15,6 +17,14 @@ function stubModule(file, exports) {
 }
 
 function setupHandler(panelImpl) {
+  const discordStub = {
+    Client: class Client { constructor() { this.user = { tag: 'stub' }; this.commands = new Map(); } login() { return Promise.resolve(); } on() {} once(_, fn) { fn(); } },
+    GatewayIntentBits: { Guilds:1, GuildMessages:2, GuildMembers:4, MessageContent:8 },
+    Collection: class Collection extends Map {},
+    Events: { InteractionCreate: 'interactionCreate' }
+  };
+  require.cache[discordModulePath] = { id: discordModulePath, filename: discordModulePath, loaded: true, exports: discordStub };
+
   fs.writeFileSync(configPath, 'module.exports = { guildId: "test" };');
   delete require.cache[configPath];
   stubModule('shop.js', {});
@@ -22,6 +32,11 @@ function setupHandler(panelImpl) {
   stubModule('marketplace.js', {});
   stubModule('admin.js', {});
   stubModule('logger.js', { debug: () => {} });
+  const { newDb } = require('pg-mem');
+  const mem = newDb();
+  const pgMem = mem.adapters.createPg();
+  pool = new pgMem.Pool();
+  stubModule('pg-client.js', { query: (text, params) => pool.query(text, params), pool });
   stubModule('panel.js', panelImpl);
   delete require.cache[handlerPath];
   return require(handlerPath);
@@ -68,6 +83,7 @@ after(() => {
   delete require.cache[handlerPath];
   delete require.cache[configPath];
   fs.rmSync(configPath, { force: true });
+  if (pool) pool.end();
 });
 
 // panel_select switching

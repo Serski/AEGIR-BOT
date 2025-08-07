@@ -2,8 +2,6 @@ const dbm = require('./database-manager'); // Importing the database manager
 const axios = require('axios');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, createWebhook, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
 const shop = require('./shop');
-const fs = require('node:fs');
-const path = require('node:path');
 const clientManager = require('./clientManager');
 const logger = require('./logger');
 
@@ -871,25 +869,13 @@ When selected grants the:
         break;
     }
 
-    const foldersPath = path.join(__dirname, 'commands');
-    const commandFolders = fs.readdirSync(foldersPath);
-
-    for (const folder of commandFolders) {
-      const commandsPath = path.join(foldersPath, folder);
-      const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
-      if (folder == folderToHelp) {
-        for (const file of commandFiles) {
-          const filePath = path.join(commandsPath, file);
-          const command = require(filePath);
-          if ('data' in command && 'execute' in command) {
-            if ((command.data.default_member_permissions == 0) == isAdminMenu) {
-              let description = "";
-              if (command.data.description != undefined) {
-                description = command.data.description;
-              }
-              embed.addFields({ name: "/" + command.data.name, value: description });
-            }
-          }
+    const commandList = await dbm.loadFile('keys', 'commandList') || {};
+    for (const [name, command] of Object.entries(commandList)) {
+      if (command.category === folderToHelp) {
+        const isAdmin = (command.default_member_permissions === 0);
+        if (isAdmin === isAdminMenu) {
+          let description = command.description || "";
+          embed.addFields({ name: "/" + name, value: description });
         }
       }
     }
