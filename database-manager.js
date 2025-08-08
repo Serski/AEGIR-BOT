@@ -20,6 +20,11 @@ async function init() {
     await db.query(`CREATE TABLE IF NOT EXISTS ${t} (id TEXT PRIMARY KEY, data JSONB)`);
   }
 
+  // index for quick lookups by numericID
+  await db.query(
+    "CREATE INDEX IF NOT EXISTS idx_characters_numericID ON characters ((data->>'numericID'))"
+  );
+
   await db.query(
     `CREATE TABLE IF NOT EXISTS marketplace (
        id       SERIAL PRIMARY KEY,
@@ -133,6 +138,14 @@ async function logData() {
   logger.debug('[database-manager] logData skipped (db backend).');
 }
 
+async function findCharacterByNumericID(numericID) {
+  const res = await db.query(
+    "SELECT id FROM characters WHERE data->>'numericID' = $1",
+    [String(numericID)]
+  );
+  return res.rows[0] ? res.rows[0].id : undefined;
+}
+
 async function seedTableIfEmpty(table, filePath) {
   const countRes = await db.query(`SELECT COUNT(*) FROM ${table}`);
   if (Number(countRes.rows[0].count) === 0) {
@@ -241,6 +254,7 @@ module.exports = {
   loadCollectionFileNames,
   saveFile,
   loadFile,
+  findCharacterByNumericID,
   docDelete,
   fieldDelete,
   logData,
