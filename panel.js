@@ -41,10 +41,13 @@ module.exports = {
   mainEmbed: async function (charID) {
     charID = await dataGetters.getCharFromNumericID(charID);
     const charData = await dbm.loadCollection('characters');
-    let balance = 0;
-    if (charData[charID]) {
-      balance = charData[charID].balance;
+    if (charID === 'ERROR' || !charData[charID]) {
+      const embed = new EmbedBuilder()
+        .setColor(0x36393e)
+        .setDescription('Character not found.');
+      return [embed, []];
     }
+    const balance = charData[charID].balance || 0;
     const embed = new EmbedBuilder()
       .setColor(0x36393e)
       .setDescription(`Classification accepted.\nBalance: ${clientManager.getEmoji('Gold')} **${balance}**\nAEGIR PANEL SYSTEM`);
@@ -65,6 +68,13 @@ module.exports = {
 
   shipsEmbed: async function (charID, page = 1) {
     charID = await dataGetters.getCharFromNumericID(charID);
+    const charData = await dbm.loadCollection('characters');
+    if (charID === 'ERROR' || !charData[charID]) {
+      const embed = new EmbedBuilder()
+        .setColor(0x36393e)
+        .setDescription('Character not found.');
+      return [embed, []];
+    }
     const ships = await char.getShips(charID);
     const shopData = await dbm.loadCollection('shop');
     const itemsPerPage = 25;
