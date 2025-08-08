@@ -150,7 +150,15 @@ function botMidnightLoop() {
 botMidnightLoop();
 
 // ───── Login & exports ─────────────────────────────────────────
-client.login(token);
+async function start() {
+  try {
+    await client.login(token);
+  } catch (err) {
+    logger.error('Failed to login:', err);
+    process.exit(1);
+  }
+}
+start();
 
 function getClient()   { return client;   }
 function getGuildID()  { return guildId;  }
