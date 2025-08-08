@@ -15,6 +15,15 @@ class marketplace {
   static async postSale(numberItems, itemName, price, userTag, userID) {
     let charData = await dbm.loadFile('characters', userTag);
     let shopData = await dbm.loadCollection('shop');
+    if (!charData) {
+      return "Character not found!";
+    }
+    if (numberItems <= 0) {
+      return "You must sell at least one item!";
+    }
+    if (price < 0) {
+      return "Price must be at least 0!";
+    }
     // Find the item name using shop.findItemName
     itemName = await shop.findItemName(itemName, shopData);
     if (itemName == "ERROR") {
@@ -142,6 +151,12 @@ class marketplace {
     const sale = await marketplace.getSale(saleID);
     if (!sale) {
       return "That sale doesn't exist!";
+    }
+    if (!charData[userTag] || !charData[sale.seller]) {
+      return "Character not found!";
+    }
+    if (sale.number < 0 || sale.price < 0) {
+      return "That sale has invalid data!";
     }
     const itemName = sale.item;
     if (sale.seller_id == userID) {
