@@ -242,8 +242,16 @@ const panelSelect = async (interaction) => {
 
 const handleInteractionError = async (interaction, error) => {
   logger.error(error);
-  if (!interaction.deferred && !interaction.replied) {
-    await interaction.reply({ content: 'An error occurred while processing this interaction.', ephemeral: true });
+  try {
+    if (interaction.replied) {
+      await interaction.followUp({ content: 'An error occurred while processing this interaction.', ephemeral: true });
+    } else if (interaction.deferred) {
+      await interaction.editReply({ content: 'An error occurred while processing this interaction.' });
+    } else {
+      await interaction.reply({ content: 'An error occurred while processing this interaction.', ephemeral: true });
+    }
+  } catch (followUpError) {
+    logger.error(followUpError);
   }
 };
 
