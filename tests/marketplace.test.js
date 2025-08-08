@@ -95,3 +95,43 @@ test('posting and buying a sale updates inventories and balances', async () => {
   assert.equal(remaining.length, 0);
   assert.ok(buyEmbed.description.includes('bought'));
 });
+
+test('postSale validates input', async () => {
+  charData = {
+    'Seller#1234': { inventory: { 'Iron Sword': 5 }, balance: 100 }
+  };
+  await pool.query('DELETE FROM marketplace');
+
+  const badNumber = await marketplace.postSale(0, 'iron sword', 10, 'Seller#1234', 'sellerId');
+  assert.equal(badNumber, 'You must sell at least one item!');
+
+  const badPrice = await marketplace.postSale(1, 'iron sword', -5, 'Seller#1234', 'sellerId');
+  assert.equal(badPrice, 'Price must be at least 0!');
+
+  const noChar = await marketplace.postSale(1, 'iron sword', 10, 'Unknown#0000', 'id');
+  assert.equal(noChar, 'Character not found!');
+});
+
+test('buySale validates characters and sale data', async () => {
+  charData = {
+    'Seller#1234': { inventory: { 'Iron Sword': 5 }, balance: 100 },
+    'Buyer#5678': { inventory: {}, balance: 200 }
+  };
+  await pool.query('DELETE FROM marketplace');
+
+  // insert sale with negative price
+  let { rows } = await pool.query("INSERT INTO marketplace (item, category, price, number, seller, seller_id) VALUES ('Iron Sword','Weapons',-10,1,'Seller#1234','sellerId') RETURNING id");
+  let res = await marketplace.buySale(rows[0].id, 'Buyer#5678', 'buyerId');
+  assert.equal(res, 'That sale has invalid data!');
+
+  await pool.query('DELETE FROM marketplace');
+  rows = await pool.query("INSERT INTO marketplace (item, category, price, number, seller, seller_id) VALUES ('Iron Sword','Weapons',10,-1,'Seller#1234','sellerId') RETURNING id");
+  res = await marketplace.buySale(rows.rows[0].id, 'Buyer#5678', 'buyerId');
+  assert.equal(res, 'That sale has invalid data!');
+
+  await pool.query('DELETE FROM marketplace');
+  rows = await pool.query("INSERT INTO marketplace (item, category, price, number, seller, seller_id) VALUES ('Iron Sword','Weapons',10,1,'Seller#1234','sellerId') RETURNING id");
+  delete charData['Buyer#5678'];
+  res = await marketplace.buySale(rows.rows[0].id, 'Buyer#5678', 'buyerId');
+  assert.equal(res, 'Character not found!');
+});
