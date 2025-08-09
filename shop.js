@@ -6,6 +6,20 @@ const clientManager = require('./clientManager');
 const dataGetters = require('./dataGetters');
 const logger = require('./logger');
 
+const SHOP_DATA = {
+  Ships: [
+    { emoji: ':corvette_emoji:', name: 'Corvette', price: 1500, description: 'Fast attack craft.' },
+    { emoji: ':frigate_emoji:', name: 'Frigate', price: 5000, description: 'Versatile medium ship.' },
+  ],
+  Resources: [
+    { emoji: ':alloy_frame_emoji:', name: 'Alloy Frame', price: 100, description: 'Durable ship plating.' },
+    { emoji: ':quantum_core_emoji:', name: 'Quantum Core', price: 400, description: 'Powers advanced systems.' },
+  ],
+  Specials: [
+    { emoji: ':ancient_relic_emoji:', name: 'Ancient Relic', price: 10000, description: 'Mysterious artifact.' },
+  ],
+};
+
 class shop {
   //Declare constants for class 
   static infoOptions = ['Name', 'Icon', 'Category', 'Image', 'Description', 'Transferrable (Y/N)', 'Attack', 'Defence', 'Speed', 'HP'];
@@ -265,124 +279,38 @@ class shop {
     }
   }
 
-  static async createShopEmbed(page, interaction) {
-    const channelID = interaction.channelId;
-    page = Number(page);
-    const itemsPerPage = 25;
-    // Load data from shop.json and shoplayout.json
-    const shopData = await dbm.loadCollection('shop');
-    // Convert the shop data to a an array of maps of category to items
-    let shopLayoutData = {};
-    for (let [key, value] of Object.entries(shopData)) {
-      let price = value.shopOptions["Price (#)"];
-      //Turn price into number
-      price = parseInt(price);
-      if (!(price == undefined || price == "" || price == null || isNaN(price) || price == 0)) {
-        let channels = value.shopOptions.Channels;
-        logger.debug(channels);
-        if (channels.includes("#")) {
-          if (!channels.includes(channelID)) {
-            continue;
-          }
-        }
-        if (!shopLayoutData[value.infoOptions.Category]) {
-          shopLayoutData[value.infoOptions.Category] = [];
-        }
-        shopLayoutData[value.infoOptions.Category].push(key);
-      }
+  static async createShopEmbed() {
+    const embed = new EmbedBuilder()
+      .setTitle('**Galactic Bazaar**')
+      .setColor(0x2c3e50);
+
+    const divider = '────────────────────────';
+
+    for (const [category, items] of Object.entries(SHOP_DATA)) {
+      const headerEmoji = category === 'Ships' ? '🚀' : category === 'Resources' ? '📦' : '✨';
+      const maxName = Math.max(...items.map(i => i.name.length));
+      const maxPrice = Math.max(...items.map(i => i.price != null ? i.price.toString().length : 0));
+
+      const valueLines = items.map(item => {
+        const namePart = item.name.padEnd(maxName + 2);
+        const pricePart = item.price != null ? item.price.toString().padStart(maxPrice) : ''.padStart(maxPrice);
+        return `${item.emoji} \`${namePart}${pricePart}\` ⚙ Credits\n*${item.description}*`;
+      }).join('\n');
+
+      embed.addFields({
+        name: `${headerEmoji} **${category}**`,
+        value: `${valueLines}\n${divider}`,
+        inline: false,
+      });
     }
 
-    let startIndices = [];
-    startIndices[0] = 0;
-    const shopCategories = Object.keys(shopLayoutData);
-    //Sort categories alphabetically
-    shopCategories.sort();
-
-    let currIndice = 0;
-    let currPageLength = 0;
-    let i = 0;
-    for (const category of shopCategories) {
-      let length = shopLayoutData[category].length;
-      currPageLength += length;
-      if (currPageLength > itemsPerPage) {
-        currPageLength = length;
-        currIndice++;
-        startIndices[currIndice] = i;
-      }
-      i++;
-    }
-
-    const pages = Math.ceil(startIndices.length);
-
-    const pageItems = shopCategories.slice(
-      startIndices[page-1],
-      startIndices[page] ? startIndices[page] : undefined
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId('shop_buy').setLabel('Buy').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId('shop_info').setLabel('Info').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId('shop_close').setLabel('Close').setStyle(ButtonStyle.Primary)
     );
 
-    const embed = new Discord.EmbedBuilder()
-      .setTitle(clientManager.getEmoji("Gold") + ' Shop')
-      .setColor(0x36393e);
-
-    //If there are no items in the shop, set description as "No items have prices!" and return
-    if (pageItems.length == 0) {
-      embed.setDescription("No items have prices!");
-      return [embed, []];
-    }
-
-    let descriptionText = '';
-    for (const category of pageItems) {
-      let endSpaces = "-";
-      if ((20 - category.length - 2) > 0) {
-        endSpaces = "-".repeat(20 - category.length - 2);
-      }
-      descriptionText += `**\`--${category}${endSpaces}\`**\n`;
-      descriptionText += shopLayoutData[category]
-        .map((item) => {
-          const icon = shopData[item].infoOptions.Icon;
-          const price = shopData[item].shopOptions["Price (#)"];
-
-          let alignSpaces = ' '
-          if ((30 - item.length - ("" + price).length) > 0) {
-            alignSpaces = ' '.repeat(30 - item.length - ("" + price).length);
-          }
-          // Create the formatted line
-          return `${icon} \`${item}${alignSpaces}${price}\` ${clientManager.getEmoji("Gold")}`;
-        })
-        .join('\n');
-      descriptionText += '\n';
-    }
-    // Set the accumulated description
-    embed.setDescription(descriptionText);
-
-    if (pages > 1) {
-      embed.setFooter({text: `Page ${page} of ${pages}`});
-    }
-
-    const rows = [];
-
-    // Create a "Previous Page" button
-    const prevButton = new ButtonBuilder()
-      .setCustomId('switch_page' + (page-1))
-      .setLabel('<')
-      .setStyle(ButtonStyle.Secondary); // You can change the style to your preference
-
-    // Disable the button on the first page
-    if (page == 1) {
-      prevButton.setDisabled(true);
-    }
-
-    const nextButton = new ButtonBuilder()
-          .setCustomId('switch_page' + (page+1))
-          .setLabel('>')
-          .setStyle(ButtonStyle.Secondary); // You can change the style to your preference
-
-    // Create a "Next Page" button if not on the last page
-    if (page == pages) {
-      nextButton.setDisabled(true);
-    }
-    rows.push(new ActionRowBuilder().addComponents(prevButton, nextButton));
-
-    return [embed, rows];
+    return [embed, [row]];
   }
 
   static async renameCategory(oldCategory, newCategory) {
