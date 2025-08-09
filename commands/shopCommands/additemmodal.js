@@ -35,20 +35,48 @@ module.exports = {
 			.setLabel('Item Description')
 			.setStyle(TextInputStyle.Paragraph);
 
-		const itemCategoryInput = new TextInputBuilder()
-			.setCustomId('itemcategory')
-			.setLabel('Item Category')
-			.setStyle(TextInputStyle.Short);
+                const itemCategoryInput = new TextInputBuilder()
+                        .setCustomId('itemcategory')
+                        .setLabel('Item Category')
+                        .setStyle(TextInputStyle.Short);
+
+                const attackInput = new TextInputBuilder()
+                        .setCustomId('attack')
+                        .setLabel('Attack (Warships only)')
+                        .setRequired(false)
+                        .setStyle(TextInputStyle.Short);
+
+                const defenceInput = new TextInputBuilder()
+                        .setCustomId('defence')
+                        .setLabel('Defence (Warships only)')
+                        .setRequired(false)
+                        .setStyle(TextInputStyle.Short);
+
+                const speedInput = new TextInputBuilder()
+                        .setCustomId('speed')
+                        .setLabel('Speed (Warships only)')
+                        .setRequired(false)
+                        .setStyle(TextInputStyle.Short);
+
+                const hpInput = new TextInputBuilder()
+                        .setCustomId('hp')
+                        .setLabel('HP (Warships only)')
+                        .setRequired(false)
+                        .setStyle(TextInputStyle.Short);
 
 		// Create action rows for each input
-		const nameActionRow = new ActionRowBuilder().addComponents(itemNameInput);
-		const iconActionRow = new ActionRowBuilder().addComponents(itemIconInput);
-		const priceActionRow = new ActionRowBuilder().addComponents(itemPriceInput);
-		const descriptionActionRow = new ActionRowBuilder().addComponents(itemDescriptionInput);
-		const categoryActionRow = new ActionRowBuilder().addComponents(itemCategoryInput);
+                const nameActionRow = new ActionRowBuilder().addComponents(itemNameInput);
+                const iconActionRow = new ActionRowBuilder().addComponents(itemIconInput);
+                const priceActionRow = new ActionRowBuilder().addComponents(itemPriceInput);
+                const descriptionActionRow = new ActionRowBuilder().addComponents(itemDescriptionInput);
+                const categoryActionRow = new ActionRowBuilder().addComponents(itemCategoryInput);
+                const attackActionRow = new ActionRowBuilder().addComponents(attackInput);
+                const defenceActionRow = new ActionRowBuilder().addComponents(defenceInput);
+                const speedActionRow = new ActionRowBuilder().addComponents(speedInput);
+                const hpActionRow = new ActionRowBuilder().addComponents(hpInput);
 
 		// Add the action rows to the modal
-		modal.addComponents(nameActionRow, iconActionRow, priceActionRow, descriptionActionRow, categoryActionRow);
+                modal.addComponents(nameActionRow, iconActionRow, priceActionRow, descriptionActionRow, categoryActionRow, attackActionRow, defenceActionRow, speedActionRow, hpActionRow);
 
 		// Show the modal to the user
 		await interaction.showModal(modal);
