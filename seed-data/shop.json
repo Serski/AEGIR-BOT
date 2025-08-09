@@ -47,5 +47,103 @@
       "Revive (Y/N)": "",
       "Durability (#)": ""
     }
+  },
+  "Alloy Frame Modules": {
+    "infoOptions": {
+      "Name": "Alloy Frame Modules",
+      "Icon": "⚙️",
+      "Category": "Resource",
+      "Image": "",
+      "Description": "Durable modular segments used to reinforce starship frames.",
+      "Transferrable (Y/N)": "Yes"
+    },
+    "shopOptions": {
+      "Price (#)": 10,
+      "Need Role": "",
+      "Give Role": "",
+      "Take Role": "",
+      "Quantity (#)": "",
+      "Channels": ""
+    },
+    "usageOptions": {
+      "Is Usable (Y/N)": "No",
+      "Removed on Use (Y/N)": "No",
+      "Can Use Multiple (Y/N)": "Yes",
+      "Need Any Of Roles": "",
+      "Need All Of Roles": "",
+      "Need None Of Roles": "",
+      "Give Role": "",
+      "Take Role": "",
+      "Show Image": "",
+      "Show Message": "",
+      "Give/Take Money (#)": "",
+      "Cooldown in Hours (#)": "",
+      "Give Item": "",
+      "Give Item 2": "",
+      "Give Item 3": "",
+      "Give Item 4": "",
+      "Give Item 5": "",
+      "Take Item": "",
+      "Take Item 2": "",
+      "Take Item 3": "",
+      "Take Item 4": "",
+      "Take Item 5": "",
+      "Change Legitimacy (#)": "",
+      "Change Prestige (#)": "",
+      "Change Martial (#)": "",
+      "Change Intrigue (#)": "",
+      "Change Devotion (#)": "",
+      "Revive (Y/N)": "",
+      "Durability (#)": ""
+    }
+  },
+  "Plasma Core Cells": {
+    "infoOptions": {
+      "Name": "Plasma Core Cells",
+      "Icon": "🔋",
+      "Category": "Resource",
+      "Image": "",
+      "Description": "High-density energy cells designed to fuel plasma-based systems.",
+      "Transferrable (Y/N)": "Yes"
+    },
+    "shopOptions": {
+      "Price (#)": 10,
+      "Need Role": "",
+      "Give Role": "",
+      "Take Role": "",
+      "Quantity (#)": "",
+      "Channels": ""
+    },
+    "usageOptions": {
+      "Is Usable (Y/N)": "No",
+      "Removed on Use (Y/N)": "No",
+      "Can Use Multiple (Y/N)": "Yes",
+      "Need Any Of Roles": "",
+      "Need All Of Roles": "",
+      "Need None Of Roles": "",
+      "Give Role": "",
+      "Take Role": "",
+      "Show Image": "",
+      "Show Message": "",
+      "Give/Take Money (#)": "",
+      "Cooldown in Hours (#)": "",
+      "Give Item": "",
+      "Give Item 2": "",
+      "Give Item 3": "",
+      "Give Item 4": "",
+      "Give Item 5": "",
+      "Take Item": "",
+      "Take Item 2": "",
+      "Take Item 3": "",
+      "Take Item 4": "",
+      "Take Item 5": "",
+      "Change Legitimacy (#)": "",
+      "Change Prestige (#)": "",
+      "Change Martial (#)": "",
+      "Change Intrigue (#)": "",
+      "Change Devotion (#)": "",
+      "Revive (Y/N)": "",
+      "Durability (#)": ""
+    }
   }
 }
