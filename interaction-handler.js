@@ -10,14 +10,14 @@ const addItem = async (interaction) => {
   // Get the data entered by the user
   const itemName = interaction.fields.getTextInputValue('itemname');
   let itemIcon = interaction.fields.getTextInputValue('itemicon');
-  const itemPrice = interaction.fields.getTextInputValue('itemprice') || undefined;
+  const itemPrice = interaction.fields.getTextInputValue('itemprice');
   const itemDescription = interaction.fields.getTextInputValue('itemdescription');
   const itemCategory = interaction.fields.getTextInputValue('itemcategory');
   const attack = interaction.fields.getTextInputValue('attack');
   const defence = interaction.fields.getTextInputValue('defence');
   const speed = interaction.fields.getTextInputValue('speed');
   const hp = interaction.fields.getTextInputValue('hp');
-  
+
   let colonCounter = 0;
   for (let i = 0; i < itemIcon.length; i++) {
     if (itemIcon[i] == ":") {
@@ -29,9 +29,23 @@ const addItem = async (interaction) => {
     }
   }
 
+  const priceInt = itemPrice ? parseInt(itemPrice) : undefined;
+  if (itemPrice && isNaN(priceInt)) {
+    await interaction.reply({content: 'Item creation failed. Price must be an integer.', ephemeral: true});
+    return;
+  }
+
   // Call the addItem function from the Shop class with the collected information
-  if (itemName && parseInt(itemPrice)) {
-    const itemData = { Icon: itemIcon, Price: parseInt(itemPrice), Description: itemDescription, Category: itemCategory };
+  if (itemName) {
+    const itemData = {
+      Icon: itemIcon,
+      Description: itemDescription,
+      Category: itemCategory,
+      "Transferrable (Y/N)": "Yes",
+    };
+    if (priceInt !== undefined) {
+      itemData["Price (#)"] = priceInt;
+    }
     if (itemCategory && itemCategory.toLowerCase() === 'warships') {
       itemData.Attack = attack ? parseInt(attack) : undefined;
       itemData.Defence = defence ? parseInt(defence) : undefined;
@@ -39,10 +53,10 @@ const addItem = async (interaction) => {
       itemData.HP = hp ? parseInt(hp) : undefined;
     }
     await shop.addItem(itemName, itemData);
-    await interaction.reply(`Item '${itemName}' has been added to the item list. Use /shoplayout or ping Alex to add to shop.`);
+    await interaction.reply({content: `Item '${itemName}' has been added to the item list. Use /shoplayout or ping Alex to add to shop.`, ephemeral: true});
   } else {
     // Handle missing information
-    await interaction.reply({content: 'Item creation failed. Please provide a name and integer price.', ephemeral: true});
+    await interaction.reply({content: 'Item creation failed. Please provide a name.', ephemeral: true});
   }
 };
 // {
