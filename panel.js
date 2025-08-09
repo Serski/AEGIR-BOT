@@ -47,7 +47,7 @@ module.exports = {
         .setDescription('Character not found.');
       return [embed, []];
     }
-    const balance = charData[charID].balance || 0;
+    const balance = await dbm.getBalance(charID);
     const embed = new EmbedBuilder()
       .setColor(0x36393e)
       .setDescription(`Classification accepted.\nBalance: ${clientManager.getEmoji('Gold')} **${balance}**\nAEGIR PANEL SYSTEM`);
