@@ -5,6 +5,20 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('
 const clientManager = require('./clientManager');
 const dataGetters = require('./dataGetters');
 const logger = require('./logger');
+// Static item catalog for the Galactic Bazaar embed
+const SHOP_DATA = {
+  Ships: [
+    { emoji: ':corvette_emoji:', name: 'Corvette', price: 1500, description: 'Fast attack craft.' },
+    { emoji: ':frigate_emoji:', name: 'Frigate', price: 5000, description: 'Versatile medium ship.' },
+  ],
+  Resources: [
+    { emoji: ':alloy_frame_emoji:', name: 'Alloy Frame', price: 100, description: 'Durable ship plating.' },
+    { emoji: ':quantum_core_emoji:', name: 'Quantum Core', price: 400, description: 'Powers advanced systems.' },
+  ],
+  Specials: [
+    { emoji: ':ancient_relic_emoji:', name: 'Ancient Relic', price: 10000, description: 'Mysterious artifact.' },
+  ],
+};
 
 const SHOP_DATA = {
   Ships: [
