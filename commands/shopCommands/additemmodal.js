@@ -2,6 +2,8 @@
 const { SlashCommandBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 //const shop = require('../../shop'); // Importing shop
 
+const sanitizeCategory = (category) => (category || '').trim().toLowerCase();
+
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('additemmodal')
@@ -82,3 +84,5 @@ module.exports = {
 		await interaction.showModal(modal);
 	},
 };
+
+module.exports.sanitizeCategory = sanitizeCategory;
