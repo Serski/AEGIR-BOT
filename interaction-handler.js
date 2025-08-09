@@ -9,25 +9,10 @@ const logger = require('./logger');
 const addItem = async (interaction) => {
   // Get the data entered by the user
   const itemName = interaction.fields.getTextInputValue('itemname');
-  let itemIcon = interaction.fields.getTextInputValue('itemicon');
   const itemPrice = interaction.fields.getTextInputValue('itemprice');
   const itemDescription = interaction.fields.getTextInputValue('itemdescription');
   const itemCategory = interaction.fields.getTextInputValue('itemcategory');
-  const attack = interaction.fields.getTextInputValue('attack');
-  const defence = interaction.fields.getTextInputValue('defence');
-  const speed = interaction.fields.getTextInputValue('speed');
-  const hp = interaction.fields.getTextInputValue('hp');
-
-  let colonCounter = 0;
-  for (let i = 0; i < itemIcon.length; i++) {
-    if (itemIcon[i] == ":") {
-      colonCounter++;
-      if (colonCounter >= 3) {
-        await interaction.reply({content: `Item creation failed. Invalid icon format.`, ephemeral: true});
-        return;
-      }
-    }
-  }
+  const warshipStats = interaction.fields.getTextInputValue('warshipstats');
 
   const priceInt = itemPrice ? parseInt(itemPrice) : undefined;
   if (itemPrice && isNaN(priceInt)) {
@@ -38,7 +23,6 @@ const addItem = async (interaction) => {
   // Call the addItem function from the Shop class with the collected information
   if (itemName) {
     const itemData = {
-      Icon: itemIcon,
       Description: itemDescription,
       Category: itemCategory,
       "Transferrable (Y/N)": "Yes",
@@ -46,11 +30,12 @@ const addItem = async (interaction) => {
     if (priceInt !== undefined) {
       itemData["Price (#)"] = priceInt;
     }
-    if (itemCategory && itemCategory.toLowerCase() === 'warships') {
-      itemData.Attack = attack ? parseInt(attack) : undefined;
-      itemData.Defence = defence ? parseInt(defence) : undefined;
-      itemData.Speed = speed ? parseInt(speed) : undefined;
-      itemData.HP = hp ? parseInt(hp) : undefined;
+    if (warshipStats) {
+      const stats = warshipStats.split(/[\s,]+/).filter(Boolean).map(v => parseInt(v));
+      if (stats[0] !== undefined && !isNaN(stats[0])) itemData.Attack = stats[0];
+      if (stats[1] !== undefined && !isNaN(stats[1])) itemData.Defence = stats[1];
+      if (stats[2] !== undefined && !isNaN(stats[2])) itemData.Speed = stats[2];
+      if (stats[3] !== undefined && !isNaN(stats[3])) itemData.HP = stats[3];
     }
     await shop.addItem(itemName, itemData);
     await interaction.reply({content: `Item '${itemName}' has been added to the item list. Use /shoplayout or ping Alex to add to shop.`, ephemeral: true});
