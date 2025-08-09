@@ -1,6 +1,8 @@
 //ADMIN COMMAND
 const { SlashCommandBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 
+const sanitizeCategory = (category) => (category || '').trim().toLowerCase();
+
 module.exports = {
         data: new SlashCommandBuilder()
                 .setName('additem')
@@ -54,4 +56,6 @@ module.exports = {
                 await interaction.showModal(modal);
         },
 };
+
+module.exports.sanitizeCategory = sanitizeCategory;
 

@@ -1573,7 +1573,8 @@ class shop {
     }
     charData.balance -= (price * numToBuy);
 
-    if (itemData.infoOptions.Category === "Ships") {
+    const category = (itemData.infoOptions.Category || '').trim().toLowerCase();
+    if (category === 'ships' || category === 'ship') {
       const char = require('./char');
       for (let i = 0; i < numToBuy; i++) {
         char.addShip(charData, itemName);

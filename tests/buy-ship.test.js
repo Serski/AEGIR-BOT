@@ -1,4 +1,23 @@
 const { test } = require('node:test');
+const Module = require('module');
+
+// Simple mock import utility since node:test mocking is unavailable
+async function mockImport(modulePath, mocks) {
+  const resolvedPath = require.resolve(modulePath);
+  const originalLoad = Module._load;
+  Module._load = function(request, parent, isMain) {
+    if (Object.prototype.hasOwnProperty.call(mocks, request)) {
+      return mocks[request];
+    }
+    return originalLoad(request, parent, isMain);
+  };
+  delete require.cache[resolvedPath];
+  try {
+    return require(resolvedPath);
+  } finally {
+    Module._load = originalLoad;
+  }
+}
 const assert = require('node:assert/strict');
 const path = require('node:path');
 
@@ -19,8 +38,9 @@ test('buying a ship stores it and appears in ships panel', async (t) => {
     loadFile: async () => charData,
     saveFile: async (col, id, data) => { charData = data; }
   };
-  const shopModule = await t.mock.import(shopPath, {
+  const shopModule = await mockImport(shopPath, {
     './database-manager': dbmShopStub,
+    './pg-client': { query: async () => ({ rows: [{ id: 'Longboat' }] }) },
     './clientManager': { getUser: async () => ({ roles: { cache: { some: () => false }, add: () => {} } }) },
     './logger': { debug() {}, info() {}, error() {} },
     './char': { addShip: (data, name) => { if (!data.ships) data.ships = {}; data.ships[name] = {}; } }
@@ -32,9 +52,10 @@ test('buying a ship stores it and appears in ships panel', async (t) => {
   assert.ok(charData.ships['Longboat']);
   assert.strictEqual(charData.inventory['Longboat'], undefined);
 
-  const panelModule = await t.mock.import(panelPath, {
+  const panelModule = await mockImport(panelPath, {
     './dataGetters': { getCharFromNumericID: async () => 'player1' },
     './database-manager': { loadCollection: async (col) => col === 'shop' ? shopData : { 'player1': charData } },
+    './pg-client': { query: async () => ({ rows: [{ id: 'Longboat' }] }) },
     './char': { getShips: async () => charData.ships },
     './shop': {},
     './clientManager': { getEmoji: () => ':coin:' },
@@ -56,4 +77,36 @@ test('buying a ship stores it and appears in ships panel', async (t) => {
 
   const [embed] = await panelModule.shipsEmbed('usernum', 1);
   assert.ok(embed.description.includes('Longboat'));
+});
+
+test('buying ship items with varied category casing routes to ships list', async (t) => {
+  for (const category of ['Ship', 'ships']) {
+    await t.test(category, async () => {
+      let charData = { numericID: 'usernum', balance: 100, inventory: {}, ships: {} };
+      const shopData = {
+        'Longboat': {
+          infoOptions: { Category: category, Icon: ':ship:' },
+          shopOptions: { 'Price (#)': 10, Channels: '', 'Need Role': '', 'Give Role': '' }
+        }
+      };
+      const dbmShopStub = {
+        loadCollection: async (col) => col === 'shop' ? shopData : { 'player1': charData },
+        loadFile: async () => charData,
+        saveFile: async (col, id, data) => { charData = data; }
+      };
+      const shopModule = await mockImport(shopPath, {
+        './database-manager': dbmShopStub,
+        './pg-client': { query: async () => ({ rows: [{ id: 'Longboat' }] }) },
+        './clientManager': { getUser: async () => ({ roles: { cache: { some: () => false }, add: () => {} } }) },
+        './logger': { debug() {}, info() {}, error() {} },
+        './char': { addShip: (data, name) => { if (!data.ships) data.ships = {}; data.ships[name] = {}; } }
+      });
+
+      const reply = await shopModule.buyItem('Longboat', 'player1', 1, 'channel');
+      assert.equal(reply, 'Succesfully bought 1 Longboat');
+      assert.equal(charData.balance, 90);
+      assert.ok(charData.ships['Longboat']);
+      assert.strictEqual(charData.inventory['Longboat'], undefined);
+    });
+  }
 });

@@ -5,13 +5,18 @@ const admin = require('./admin');
 const panel = require('./panel');
 const logger = require('./logger');
 
+const sanitizeCategory = (category) => {
+  const sanitized = (category || '').trim().toLowerCase();
+  return sanitized === 'ship' ? 'ships' : sanitized;
+};
+
 // MODALS
 const addItem = async (interaction) => {
   // Get the data entered by the user
   const itemName = interaction.fields.getTextInputValue('itemname');
   const itemPrice = interaction.fields.getTextInputValue('itemprice');
   const itemDescription = interaction.fields.getTextInputValue('itemdescription');
-  const itemCategory = interaction.fields.getTextInputValue('itemcategory');
+  const itemCategory = sanitizeCategory(interaction.fields.getTextInputValue('itemcategory'));
   const warshipStats = interaction.fields.getTextInputValue('warshipstats');
 
   const priceInt = itemPrice ? parseInt(itemPrice) : undefined;
