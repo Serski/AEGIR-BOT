@@ -173,6 +173,20 @@ class char {
     return charData.ships;
   }
 
+  static addShip(charData, shipName) {
+    if (!charData.ships) {
+      charData.ships = {};
+    }
+    let newName = shipName;
+    let i = 2;
+    while (charData.ships[newName]) {
+      newName = `${shipName} ${i}`;
+      i++;
+    }
+    charData.ships[newName] = {};
+    return newName;
+  }
+
   static async stats(userID) {
     let collectionName = 'characters';
     let charData;

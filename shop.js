@@ -1573,10 +1573,18 @@ class shop {
     }
     charData.balance -= (price * numToBuy);
 
-    if (!charData.inventory[itemName]) {
-      charData.inventory[itemName] = 0;
+    if (itemData.infoOptions.Category === "Ships") {
+      const char = require('./char');
+      for (let i = 0; i < numToBuy; i++) {
+        char.addShip(charData, itemName);
+      }
+    } else {
+      charData.inventory = charData.inventory || {};
+      if (!charData.inventory[itemName]) {
+        charData.inventory[itemName] = 0;
+      }
+      charData.inventory[itemName] += numToBuy;
     }
-    charData.inventory[itemName] += numToBuy;
 
     returnString = "Succesfully bought " + numToBuy + " " + itemName;
 
