@@ -8,7 +8,7 @@ const logger = require('./logger');
 
 class shop {
   //Declare constants for class 
-  static infoOptions = ['Name', 'Icon', 'Category', 'Image', 'Description', 'Transferrable (Y/N)'];
+  static infoOptions = ['Name', 'Icon', 'Category', 'Image', 'Description', 'Transferrable (Y/N)', 'Attack', 'Defence', 'Speed', 'HP'];
   static shopOptions = ['Price (#)', 'Need Role', 'Give Role', 'Take Role', 'Quantity (#)', 'Channels'];
   static usageOptions = [
       'Is Usable (Y/N)', 'Removed on Use (Y/N)', 'Can Use Multiple (Y/N)', 'Need Any Of Roles', 'Need All Of Roles', 'Need None Of Roles', 'Give Role', 'Take Role',

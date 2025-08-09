@@ -13,6 +13,10 @@ const addItem = async (interaction) => {
   const itemPrice = interaction.fields.getTextInputValue('itemprice') || undefined;
   const itemDescription = interaction.fields.getTextInputValue('itemdescription');
   const itemCategory = interaction.fields.getTextInputValue('itemcategory');
+  const attack = interaction.fields.getTextInputValue('attack');
+  const defence = interaction.fields.getTextInputValue('defence');
+  const speed = interaction.fields.getTextInputValue('speed');
+  const hp = interaction.fields.getTextInputValue('hp');
   
   let colonCounter = 0;
   for (let i = 0; i < itemIcon.length; i++) {
@@ -27,7 +31,14 @@ const addItem = async (interaction) => {
 
   // Call the addItem function from the Shop class with the collected information
   if (itemName && parseInt(itemPrice)) {
-    await shop.addItem(itemName, { Icon: itemIcon, Price: parseInt(itemPrice), Description: itemDescription, Category: itemCategory });
+    const itemData = { Icon: itemIcon, Price: parseInt(itemPrice), Description: itemDescription, Category: itemCategory };
+    if (itemCategory && itemCategory.toLowerCase() === 'warships') {
+      itemData.Attack = attack ? parseInt(attack) : undefined;
+      itemData.Defence = defence ? parseInt(defence) : undefined;
+      itemData.Speed = speed ? parseInt(speed) : undefined;
+      itemData.HP = hp ? parseInt(hp) : undefined;
+    }
+    await shop.addItem(itemName, itemData);
     await interaction.reply(`Item '${itemName}' has been added to the item list. Use /shoplayout or ping Alex to add to shop.`);
   } else {
     // Handle missing information
