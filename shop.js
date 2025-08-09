@@ -287,13 +287,17 @@ class shop {
     const divider = '────────────────────────';
 
     for (const [category, items] of Object.entries(SHOP_DATA)) {
+      const filteredItems = items.filter(i => i.price != null);
+      if (filteredItems.length === 0) {
+        continue;
+      }
       const headerEmoji = category === 'Ships' ? '🚀' : category === 'Resources' ? '📦' : '✨';
-      const maxName = Math.max(...items.map(i => i.name.length));
-      const maxPrice = Math.max(...items.map(i => i.price != null ? i.price.toString().length : 0));
+      const maxName = Math.max(...filteredItems.map(i => i.name.length));
+      const maxPrice = Math.max(...filteredItems.map(i => i.price.toString().length));
 
-      const valueLines = items.map(item => {
+      const valueLines = filteredItems.map(item => {
         const namePart = item.name.padEnd(maxName + 2);
-        const pricePart = item.price != null ? item.price.toString().padStart(maxPrice) : ''.padStart(maxPrice);
+        const pricePart = item.price.toString().padStart(maxPrice);
         return `${item.emoji} \`${namePart}${pricePart}\` ⚙ Credits\n*${item.description}*`;
       }).join('\n');
 
