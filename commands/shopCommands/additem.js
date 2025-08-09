@@ -18,11 +18,6 @@ module.exports = {
                         .setLabel('Item Name')
                         .setStyle(TextInputStyle.Short);
 
-                const itemIconInput = new TextInputBuilder()
-                        .setCustomId('itemicon')
-                        .setLabel('Item Icon- Emoji to go before name in shop')
-                        .setStyle(TextInputStyle.Short);
-
                 const itemPriceInput = new TextInputBuilder()
                         .setCustomId('itemprice')
                         .setLabel('Item Price (Leave blank for none)')
@@ -39,43 +34,21 @@ module.exports = {
                         .setLabel('Item Category')
                         .setStyle(TextInputStyle.Short);
 
-                const attackInput = new TextInputBuilder()
-                        .setCustomId('attack')
-                        .setLabel('Attack (Warships only)')
-                        .setRequired(false)
-                        .setStyle(TextInputStyle.Short);
-
-                const defenceInput = new TextInputBuilder()
-                        .setCustomId('defence')
-                        .setLabel('Defence (Warships only)')
-                        .setRequired(false)
-                        .setStyle(TextInputStyle.Short);
-
-                const speedInput = new TextInputBuilder()
-                        .setCustomId('speed')
-                        .setLabel('Speed (Warships only)')
-                        .setRequired(false)
-                        .setStyle(TextInputStyle.Short);
-
-                const hpInput = new TextInputBuilder()
-                        .setCustomId('hp')
-                        .setLabel('HP (Warships only)')
+                const warshipStatsInput = new TextInputBuilder()
+                        .setCustomId('warshipstats')
+                        .setLabel('Warship Stats (attack, defence, speed, hp)')
                         .setRequired(false)
                         .setStyle(TextInputStyle.Short);
 
                 // Create action rows for each input
                 const nameActionRow = new ActionRowBuilder().addComponents(itemNameInput);
-                const iconActionRow = new ActionRowBuilder().addComponents(itemIconInput);
                 const priceActionRow = new ActionRowBuilder().addComponents(itemPriceInput);
                 const descriptionActionRow = new ActionRowBuilder().addComponents(itemDescriptionInput);
                 const categoryActionRow = new ActionRowBuilder().addComponents(itemCategoryInput);
-                const attackActionRow = new ActionRowBuilder().addComponents(attackInput);
-                const defenceActionRow = new ActionRowBuilder().addComponents(defenceInput);
-                const speedActionRow = new ActionRowBuilder().addComponents(speedInput);
-                const hpActionRow = new ActionRowBuilder().addComponents(hpInput);
+                const warshipStatsActionRow = new ActionRowBuilder().addComponents(warshipStatsInput);
 
                 // Add the action rows to the modal
-                modal.addComponents(nameActionRow, iconActionRow, priceActionRow, descriptionActionRow, categoryActionRow, attackActionRow, defenceActionRow, speedActionRow, hpActionRow);
+                modal.addComponents(nameActionRow, priceActionRow, descriptionActionRow, categoryActionRow, warshipStatsActionRow);
 
                 // Show the modal to the user
                 await interaction.showModal(modal);
