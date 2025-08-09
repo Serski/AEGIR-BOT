@@ -182,9 +182,9 @@ const shopLayout = async (interaction) => {
 
 //BUTTONS
 const shopSwitch = async (interaction) => {
-  let [edittedEmbed, rows] = await shop.createShopEmbed(interaction.customId.slice(11), interaction);
+  const [embed, rows] = await shop.createShopEmbed();
   logger.debug(interaction);
-  await interaction.update({ embeds: [edittedEmbed], components: rows});
+  await interaction.update({ embeds: [embed], components: rows });
 };
 const incomeSwitch = async (interaction) => {
   await interaction.deferUpdate();
