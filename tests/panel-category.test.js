@@ -45,7 +45,8 @@ test('resources and ships appear only in their submenus', async () => {
   };
   const dbmStub = {
     loadCollection: async (col) => col === 'characters' ? charData : shopData,
-    saveCollection: async () => {}
+    saveCollection: async () => {},
+    getInventory: async (id) => (charData[id] ? charData[id].inventory : {})
   };
   const dataGettersStub = { getCharFromNumericID: async (id) => id };
 

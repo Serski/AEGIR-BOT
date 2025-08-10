@@ -1738,31 +1738,26 @@ class char {
     }
 
     if (charData && charData2) {
+      // Ensure legacy inventories reflect the current normalized inventory
+      charData.inventory = await dbm.getInventory(playerGiving);
+      charData2.inventory = await dbm.getInventory(player);
+
       if (charData.inventory[item] && charData.inventory[item] >= amount) {
         const category = (shopData[item].infoOptions.Category || '').trim().toLowerCase();
 
-        charData.inventory[item] -= amount;
-        if (charData.inventory[item] <= 0) {
-          delete charData.inventory[item];
-        }
-
+        // Update the normalized inventory tables
+        await this.removeItem(playerGiving, item, { qty: amount });
         if (category === 'ships' || category === 'ship') {
           for (let i = 0; i < amount; i++) {
             char.addShip(charData2, item);
           }
-          if (charData2.inventory[item] && charData2.inventory[item] <= 0) {
-            delete charData2.inventory[item];
-          }
         } else {
-          if (charData2.inventory[item]) {
-            charData2.inventory[item] += amount;
-          } else {
-            charData2.inventory[item] = amount;
-          }
-          if (charData2.inventory[item] <= 0) {
-            delete charData2.inventory[item];
-          }
+          await this.addItem(player, item, { qty: amount });
         }
+
+        // Refresh legacy inventory fields after updates
+        charData.inventory = await dbm.getInventory(playerGiving);
+        charData2.inventory = await dbm.getInventory(player);
 
         await dbm.saveFile(collectionName, playerGiving, charData);
         await dbm.saveFile(collectionName, player, charData2);

@@ -48,7 +48,18 @@ test('transferring a ship gives it to ships collection only', async () => {
     saveFile: async (col, id, data) => {
       if (id === 'giver') giver = data;
       if (id === 'receiver') receiver = data;
-    }
+    },
+    getInventory: async (id) => {
+      if (id === 'giver') return giver.inventory;
+      if (id === 'receiver') return receiver.inventory;
+      return {};
+    },
+    updateInventory: async (id, item, delta) => {
+      const target = id === 'giver' ? giver : receiver;
+      target.inventory[item] = (target.inventory[item] || 0) + delta;
+      if (target.inventory[item] <= 0) delete target.inventory[item];
+    },
+    getItemDefinition: async () => ({})
   };
 
   const shopStub = { findItemName: async (name) => name };
