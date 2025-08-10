@@ -1,7 +1,9 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
-const panelPath = path.join(__dirname, '..', 'panel.js');
+
+const root = path.join(__dirname, '..');
+const panelPath = path.join(root, 'panel.js');
 
 function discordStub() {
   return {
@@ -20,42 +22,54 @@ function discordStub() {
   };
 }
 
-test('mainEmbed returns error when character lookup fails', async (t) => {
-  const panel = await t.mock.import(panelPath, {
-    './dataGetters': { getCharFromNumericID: async () => 'ERROR' },
-    './database-manager': { loadCollection: async () => ({}) },
-    './clientManager': { getEmoji: () => ':coin:' },
-    './shop': {},
-    './char': {},
+function mockModule(modulePath, mock) {
+  let resolved;
+  try {
+    resolved = require.resolve(modulePath);
+  } catch {
+    resolved = modulePath;
+  }
+  require.cache[resolved] = { id: resolved, filename: resolved, loaded: true, exports: mock };
+}
+
+function loadPanel(overrides = {}) {
+  const baseMocks = {
+    [path.join(root, 'dataGetters.js')]: { getCharFromNumericID: async () => 'ERROR' },
+    [path.join(root, 'database-manager.js')]: { loadCollection: async () => ({}) },
+    [path.join(root, 'clientManager.js')]: { getEmoji: () => ':coin:' },
+    [path.join(root, 'shop.js')]: {},
+    [path.join(root, 'char.js')]: { getShips: async () => ({}) },
     'discord.js': discordStub(),
+  };
+  const mocks = { ...baseMocks, ...overrides };
+  for (const [mod, mock] of Object.entries(mocks)) {
+    mockModule(mod, mock);
+  }
+  delete require.cache[require.resolve(panelPath)];
+  return require(panelPath);
+}
+
+test('mainEmbed returns error when character lookup fails', async () => {
+  const panel = loadPanel({
+    [path.join(root, 'dataGetters.js')]: { getCharFromNumericID: async () => 'ERROR' },
   });
   const [embed, rows] = await panel.mainEmbed('123');
   assert.equal(embed.description, 'Character not found.');
   assert.deepEqual(rows, []);
 });
 
-test('mainEmbed returns error when character data missing', async (t) => {
-  const panel = await t.mock.import(panelPath, {
-    './dataGetters': { getCharFromNumericID: async () => 'user1' },
-    './database-manager': { loadCollection: async () => ({}) },
-    './clientManager': { getEmoji: () => ':coin:' },
-    './shop': {},
-    './char': {},
-    'discord.js': discordStub(),
+test('mainEmbed returns error when character data missing', async () => {
+  const panel = loadPanel({
+    [path.join(root, 'dataGetters.js')]: { getCharFromNumericID: async () => 'user1' },
   });
   const [embed, rows] = await panel.mainEmbed('123');
   assert.equal(embed.description, 'Character not found.');
   assert.deepEqual(rows, []);
 });
 
-test('shipsEmbed returns error when character lookup fails', async (t) => {
-  const panel = await t.mock.import(panelPath, {
-    './dataGetters': { getCharFromNumericID: async () => 'ERROR' },
-    './database-manager': { loadCollection: async () => ({}) },
-    './clientManager': { getEmoji: () => ':coin:' },
-    './shop': {},
-    './char': { getShips: async () => ({}) },
-    'discord.js': discordStub(),
+test('shipsEmbed returns error when character lookup fails', async () => {
+  const panel = loadPanel({
+    [path.join(root, 'dataGetters.js')]: { getCharFromNumericID: async () => 'ERROR' },
   });
   const [embed, rows] = await panel.shipsEmbed('123', 1);
   assert.equal(embed.description, 'Character not found.');

@@ -24,7 +24,12 @@ function discordStub() {
 }
 
 function mockModule(modulePath, mock) {
-  const resolved = require.resolve(modulePath);
+  let resolved;
+  try {
+    resolved = require.resolve(modulePath);
+  } catch {
+    resolved = modulePath;
+  }
   require.cache[resolved] = { id: resolved, filename: resolved, loaded: true, exports: mock };
 }
 
