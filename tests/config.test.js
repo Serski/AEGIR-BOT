@@ -8,6 +8,8 @@ const botPath = path.join(rootDir, 'bot.js');
 const configPath = path.join(rootDir, 'config.js');
 const discordModulePath = require.resolve('discord.js');
 let pool;
+const originalSetTimeout = global.setTimeout;
+global.setTimeout = () => ({ ref() {}, unref() {} });
 
 // ── stub discord.js and other local modules ──────────────────────
 (function setupStubs() {
@@ -50,6 +52,7 @@ fs.readdirSync = function(p, opts) {
 
 after(() => {
   fs.readdirSync = originalReaddirSync;
+  global.setTimeout = originalSetTimeout;
   if (require.cache[discordModulePath]) delete require.cache[discordModulePath];
   if (fs.existsSync(configPath)) fs.rmSync(configPath);
   if (require.cache[configPath]) delete require.cache[configPath];
