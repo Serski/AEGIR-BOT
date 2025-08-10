@@ -5,20 +5,6 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('
 const clientManager = require('./clientManager');
 const dataGetters = require('./dataGetters');
 const logger = require('./logger');
-// Static item catalog for the Galactic Bazaar embed
-const SHOP_DATA = {
-  Ships: [
-    { emoji: '🚀', name: 'Corvette', price: 1500, description: 'Fast attack craft.' },
-    { emoji: '🛰️', name: 'Frigate', price: 5000, description: 'Versatile medium ship.' },
-  ],
-  Resources: [
-    { emoji: '🔧', name: 'Alloy Frame', price: 100, description: 'Durable ship plating.' },
-    { emoji: '⚡', name: 'Quantum Core', price: 400, description: 'Powers advanced systems.' },
-  ],
-  Specials: [
-    { emoji: '📿', name: 'Ancient Relic', price: 10000, description: 'Mysterious artifact.' },
-  ],
-};
 
 class shop {
   //Declare constants for class 
@@ -286,16 +272,33 @@ class shop {
 
     const divider = '────────────────────────';
 
-    for (const [category, items] of Object.entries(SHOP_DATA)) {
-      const filteredItems = items.filter(i => i.price != null);
-      if (filteredItems.length === 0) {
+    const shopData = await dbm.loadCollection('shop');
+    const categories = {};
+
+    for (const [itemName, itemData] of Object.entries(shopData)) {
+      const price = itemData.shopOptions['Price (#)'];
+      if (price === '' || price === undefined || price === null) {
         continue;
       }
-      const headerEmoji = category === 'Ships' ? '🚀' : category === 'Resources' ? '📦' : '✨';
-      const maxName = Math.max(...filteredItems.map(i => i.name.length));
-      const maxPrice = Math.max(...filteredItems.map(i => i.price.toString().length));
+      const category = itemData.infoOptions.Category || 'Misc';
+      if (!categories[category]) {
+        categories[category] = [];
+      }
+      categories[category].push({
+        emoji: itemData.infoOptions.Icon || '',
+        name: itemData.infoOptions.Name || itemName,
+        price: price,
+        description: itemData.infoOptions.Description || '',
+      });
+    }
 
-      const valueLines = filteredItems.map(item => {
+    for (const category of Object.keys(categories).sort()) {
+      const items = categories[category];
+      const headerEmoji = category === 'Ships' ? '🚀' : category === 'Resources' ? '📦' : '✨';
+      const maxName = Math.max(...items.map(i => i.name.length));
+      const maxPrice = Math.max(...items.map(i => i.price.toString().length));
+
+      const valueLines = items.map(item => {
         const namePart = item.name.padEnd(maxName + 2);
         const pricePart = item.price.toString().padStart(maxPrice);
         return `${item.emoji} \`${namePart}${pricePart}\` ⚙ Credits\n*${item.description}*`;
