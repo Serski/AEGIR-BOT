@@ -317,13 +317,14 @@ class shop {
       });
     }
 
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('shop_buy').setLabel('Buy').setStyle(ButtonStyle.Primary),
-      new ButtonBuilder().setCustomId('shop_info').setLabel('Info').setStyle(ButtonStyle.Primary),
-      new ButtonBuilder().setCustomId('shop_close').setLabel('Close').setStyle(ButtonStyle.Primary)
-    );
+    // Buttons removed: previously created an ActionRowBuilder with Buy, Info, Close buttons
+    // const row = new ActionRowBuilder().addComponents(
+    //   new ButtonBuilder().setCustomId('shop_buy').setLabel('Buy').setStyle(ButtonStyle.Primary),
+    //   new ButtonBuilder().setCustomId('shop_info').setLabel('Info').setStyle(ButtonStyle.Primary),
+    //   new ButtonBuilder().setCustomId('shop_close').setLabel('Close').setStyle(ButtonStyle.Primary)
+    // );
 
-    return [embed, [row]];
+    return [embed, []];
   }
 
   static async renameCategory(oldCategory, newCategory) {
