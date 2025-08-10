@@ -458,7 +458,7 @@ class shop {
     return [embed, rows];
   }
 
-  static async createCategoryEmbed(charID, category, page = 1, idPrefix = 'panel_cat_page') {
+  static async createCategoryEmbed(charID, category, page = 1, idPrefix = 'panel_cat_page', source = 'inventory') {
     charID = await dataGetters.getCharFromNumericID(charID);
     page = Number(page);
     const itemsPerPage = 25;
@@ -476,15 +476,21 @@ class shop {
     const items = [];
     const target = category.toLowerCase();
 
-    for (const item in charData[charID].inventory) {
-      if (charData[charID].inventory[item] == 0) {
+    const sourceData = source === 'ships'
+      ? (charData[charID].ships || {})
+      : source === 'storage'
+        ? (charData[charID].storage || {})
+        : (charData[charID].inventory || {});
+
+    for (const item in sourceData) {
+      if (source !== 'ships' && sourceData[item] == 0) {
         deleted = true;
-        delete charData[charID].inventory[item];
+        delete sourceData[item];
         continue;
       }
       if (!shopData[item]) {
         deleted = true;
-        delete charData[charID].inventory[item];
+        delete sourceData[item];
         continue;
       }
       const itemCat = (shopData[item].infoOptions.Category || '').toLowerCase();
@@ -500,6 +506,13 @@ class shop {
     }
 
     if (deleted) {
+      if (source === 'ships') {
+        charData[charID].ships = sourceData;
+      } else if (source === 'storage') {
+        charData[charID].storage = sourceData;
+      } else {
+        charData[charID].inventory = sourceData;
+      }
       await dbm.saveCollection('characters', charData);
     }
 
@@ -521,7 +534,7 @@ class shop {
     const descriptionText = pageItems
       .map((item) => {
         const icon = shopData[item].infoOptions.Icon;
-        const quantity = charData[charID].inventory[item];
+        const quantity = source === 'ships' ? 1 : sourceData[item];
         let alignSpaces = ' ';
         if ((30 - item.length - ('' + quantity).length) > 0) {
           alignSpaces = ' '.repeat(30 - item.length - ('' + quantity).length);

@@ -25,7 +25,13 @@ function discordStub() {
 
 test('resources and ships appear only in their submenus', async (t) => {
   const charData = {
-    player1: { inventory: { Longboat: 1, Iron: 5, Sword: 2 }, balance: 0, numericID: 'player1' }
+    player1: {
+      inventory: { Sword: 2 },
+      storage: { Iron: 5 },
+      ships: { Longboat: {} },
+      balance: 0,
+      numericID: 'player1'
+    }
   };
   const shopData = {
     Longboat: { infoOptions: { Category: 'Ships', Icon: ':ship:' } },
