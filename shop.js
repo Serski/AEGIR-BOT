@@ -458,6 +458,106 @@ class shop {
     return [embed, rows];
   }
 
+  static async createCategoryEmbed(charID, category, page = 1, idPrefix = 'panel_cat_page') {
+    charID = await dataGetters.getCharFromNumericID(charID);
+    page = Number(page);
+    const itemsPerPage = 25;
+    const charData = await dbm.loadCollection('characters');
+    const shopData = await dbm.loadCollection('shop');
+
+    if (!charData[charID]) {
+      const embed = new Discord.EmbedBuilder()
+        .setColor(0x36393e)
+        .setDescription('Character not found.');
+      return [embed, []];
+    }
+
+    let deleted = false;
+    const items = [];
+    const target = category.toLowerCase();
+
+    for (const item in charData[charID].inventory) {
+      if (charData[charID].inventory[item] == 0) {
+        deleted = true;
+        delete charData[charID].inventory[item];
+        continue;
+      }
+      if (!shopData[item]) {
+        deleted = true;
+        delete charData[charID].inventory[item];
+        continue;
+      }
+      const itemCat = (shopData[item].infoOptions.Category || '').toLowerCase();
+      const matches = (cat) => {
+        if (target === 'ships') return cat === 'ships' || cat === 'ship';
+        if (target === 'resources') return cat === 'resources' || cat === 'resource';
+        return cat === target;
+      };
+      if (!matches(itemCat)) {
+        continue;
+      }
+      items.push(item);
+    }
+
+    if (deleted) {
+      await dbm.saveCollection('characters', charData);
+    }
+
+    items.sort();
+
+    const pages = Math.max(1, Math.ceil(items.length / itemsPerPage));
+    if (page > pages) page = pages;
+    const pageItems = items.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+
+    const embed = new Discord.EmbedBuilder()
+      .setTitle(category)
+      .setColor(0x36393e);
+
+    if (pageItems.length === 0) {
+      embed.setDescription('No items in ' + category + '!');
+      return [embed, []];
+    }
+
+    const descriptionText = pageItems
+      .map((item) => {
+        const icon = shopData[item].infoOptions.Icon;
+        const quantity = charData[charID].inventory[item];
+        let alignSpaces = ' ';
+        if ((30 - item.length - ('' + quantity).length) > 0) {
+          alignSpaces = ' '.repeat(30 - item.length - ('' + quantity).length);
+        }
+        return `${icon} \`${item}${alignSpaces}${quantity}\``;
+      })
+      .join('\n');
+
+    embed.setDescription('**Items:** \n' + descriptionText);
+
+    if (pages > 1) {
+      embed.setFooter({ text: `Page ${page} of ${pages}` });
+    }
+
+    const rows = [];
+    if (pages > 1) {
+      const prevButton = new ButtonBuilder()
+        .setCustomId(idPrefix + (page - 1))
+        .setLabel('<')
+        .setStyle(ButtonStyle.Secondary);
+      if (page === 1) {
+        prevButton.setDisabled(true);
+      }
+      const nextButton = new ButtonBuilder()
+        .setCustomId(idPrefix + (page + 1))
+        .setLabel('>')
+        .setStyle(ButtonStyle.Secondary);
+      if (page === pages) {
+        nextButton.setDisabled(true);
+      }
+      rows.push(new ActionRowBuilder().addComponents(prevButton, nextButton));
+    }
+
+    return [embed, rows];
+  }
+
   //function to create an embed of player inventory
   static async createInventoryEmbed(charID, page = 1) {
     charID = await dataGetters.getCharFromNumericID(charID);
@@ -481,7 +581,12 @@ class shop {
         delete charData[charID].inventory[item];
         continue;
       }
-      const category = shopData[item].infoOptions.Category;
+      const categoryRaw = shopData[item].infoOptions.Category || '';
+      const categoryLower = categoryRaw.toLowerCase();
+      if (categoryLower === 'ships' || categoryLower === 'ship' || categoryLower === 'resources' || categoryLower === 'resource') {
+        continue;
+      }
+      const category = categoryRaw;
       if (!inventory[category]) {
         inventory[category] = [];
       }
