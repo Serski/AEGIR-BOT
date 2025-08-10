@@ -576,22 +576,14 @@ class shop {
     charID = await dataGetters.getCharFromNumericID(charID);
     page = Number(page);
     const itemsPerPage = 25;
-    // load data from characters.json and shop.json
-    const charData = await dbm.loadCollection('characters');
+    // load data from db
     const shopData = await dbm.loadCollection('shop');
+    const inventoryStacks = await dbm.getInventory(charID);
 
-    // create a 2d of items in the player's inventory sorted by category. Remove items with 0 quantity or that don't exist in the shop
-    let deleted = false;
-    let inventory = [];
-    for (const item in charData[charID].inventory) {
-      if (charData[charID].inventory[item] == 0) {
-        deleted = true;
-        delete charData[charID].inventory[item];
-        continue;
-      }
+    // create a 2d of items in the player's inventory sorted by category
+    let inventory = {};
+    for (const item in inventoryStacks) {
       if (!shopData[item]) {
-        deleted = true;
-        delete charData[charID].inventory[item];
         continue;
       }
       const categoryRaw = shopData[item].infoOptions.Category || '';
@@ -604,9 +596,6 @@ class shop {
         inventory[category] = [];
       }
       inventory[category].push(item);
-    }
-    if (deleted) {
-      await dbm.saveCollection('characters', charData);
     }
 
     const inventoryCategories = Object.keys(inventory);
@@ -654,7 +643,7 @@ class shop {
       descriptionText += inventory[category]
         .map((item) => {
           const icon = shopData[item].infoOptions.Icon;
-          const quantity = charData[charID].inventory[item];
+          const quantity = inventoryStacks[item];
 
           let alignSpaces = ' ';
           if ((30 - item.length - ("" + quantity).length) > 0){
