@@ -1739,12 +1739,31 @@ class char {
 
     if (charData && charData2) {
       if (charData.inventory[item] && charData.inventory[item] >= amount) {
+        const category = (shopData[item].infoOptions.Category || '').trim().toLowerCase();
+
         charData.inventory[item] -= amount;
-        if (charData2.inventory[item]) {
-          charData2.inventory[item] += amount;
-        } else {
-          charData2.inventory[item] = amount;
+        if (charData.inventory[item] <= 0) {
+          delete charData.inventory[item];
         }
+
+        if (category === 'ships' || category === 'ship') {
+          for (let i = 0; i < amount; i++) {
+            char.addShip(charData2, item);
+          }
+          if (charData2.inventory[item] && charData2.inventory[item] <= 0) {
+            delete charData2.inventory[item];
+          }
+        } else {
+          if (charData2.inventory[item]) {
+            charData2.inventory[item] += amount;
+          } else {
+            charData2.inventory[item] = amount;
+          }
+          if (charData2.inventory[item] <= 0) {
+            delete charData2.inventory[item];
+          }
+        }
+
         await dbm.saveFile(collectionName, playerGiving, charData);
         await dbm.saveFile(collectionName, player, charData2);
         return true;
