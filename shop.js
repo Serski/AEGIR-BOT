@@ -476,24 +476,44 @@ class shop {
     const items = [];
     const target = category.toLowerCase();
 
-    const sourceData = source === 'ships'
-      ? (charData[charID].ships || {})
-      : source === 'storage'
-        ? (charData[charID].storage || {})
-        : (charData[charID].inventory || {});
+    let sourceData;
+    let sourceIsLegacy = false;
+    if (source === 'ships') {
+      sourceData = charData[charID].ships || {};
+    } else if (source === 'storage') {
+      const stacks = (await dbm.getInventory(charID)) || {};
+      sourceData = {};
+      for (const item in stacks) {
+        const cat = (shopData[item]?.infoOptions.Category || '').toLowerCase();
+        if (cat === 'resources' || cat === 'resource') {
+          sourceData[item] = stacks[item];
+        }
+      }
+      if (Object.keys(sourceData).length === 0 && charData[charID].storage) {
+        sourceData = charData[charID].storage;
+        sourceIsLegacy = true;
+      }
+    } else {
+      sourceData = charData[charID].inventory || {};
+      sourceIsLegacy = true;
+    }
 
     for (const item in sourceData) {
-      if (source !== 'ships' && sourceData[item] == 0) {
+      if (source !== 'ships' && sourceIsLegacy && sourceData[item] == 0) {
         deleted = true;
         delete sourceData[item];
         continue;
       }
-      if (!shopData[item]) {
-        deleted = true;
-        delete sourceData[item];
+      if (source !== 'ships' && !shopData[item]) {
+        if (sourceIsLegacy) {
+          deleted = true;
+          delete sourceData[item];
+        }
         continue;
       }
-      const itemCat = (shopData[item].infoOptions.Category || '').toLowerCase();
+      const itemCat = (
+        shopData[item]?.infoOptions.Category || (source === 'ships' ? 'ships' : '')
+      ).toLowerCase();
       const matches = (cat) => {
         if (target === 'ships') return cat === 'ships' || cat === 'ship';
         if (target === 'resources') return cat === 'resources' || cat === 'resource';
@@ -505,7 +525,7 @@ class shop {
       items.push(item);
     }
 
-    if (deleted) {
+    if (deleted && (source === 'ships' || sourceIsLegacy)) {
       if (source === 'ships') {
         charData[charID].ships = sourceData;
       } else if (source === 'storage') {
@@ -578,7 +598,19 @@ class shop {
     const itemsPerPage = 25;
     // load data from db
     const shopData = await dbm.loadCollection('shop');
-    const inventoryStacks = await dbm.getInventory(charID);
+    const charData = await dbm.loadCollection('characters');
+
+    if (charID === 'ERROR' || !charData[charID]) {
+      const embed = new Discord.EmbedBuilder()
+        .setColor(0x36393e)
+        .setDescription('Character not found.');
+      return [embed, []];
+    }
+
+    let inventoryStacks = await dbm.getInventory(charID);
+    if (Object.keys(inventoryStacks).length === 0 && charData[charID].inventory) {
+      inventoryStacks = charData[charID].inventory;
+    }
 
     // create a 2d of items in the player's inventory sorted by category
     let inventory = {};
@@ -686,122 +718,7 @@ class shop {
   }
 
   static async storage(charID, page = 1) {
-    charID = await dataGetters.getCharFromNumericID(charID);
-    page = Number(page);
-    const itemsPerPage = 25;
-    // load data from characters.json and shop.json
-    const charData = await dbm.loadCollection('characters');
-    const shopData = await dbm.loadCollection('shop');
-
-    // create a 2d of items in the player's storage sorted by category. Remove items with 0 quantity or that don't exist in the shop
-    let deleted = false;
-    let storage = [];
-    for (const item in charData[charID].storage) {
-      if (charData[charID].storage[item] == 0) {
-        deleted = true;
-        delete charData[charID].storage[item];
-        continue;
-      }
-      if (!shopData[item]) {
-        deleted = true;
-        delete charData[charID].storage[item];
-        continue;
-      }
-      const category = shopData[item].infoOptions.Category;
-      if (!storage[category]) {
-        storage[category] = [];
-      }
-      storage[category].push(item);
-    }
-    if (deleted) {
-      await dbm.saveCollection('characters', charData);
-    }
-
-    const storageCategories = Object.keys(storage);
-    storageCategories.sort();
-
-    let startIndices = [];
-    startIndices[0] = 0;
-    let currIndice = 0;
-    let currPageLength = 0;
-    let i = 0;
-    for (const category of storageCategories) {
-      let length = storage[category].length;
-      currPageLength += length;
-      if (currPageLength > itemsPerPage) {
-        currPageLength = length;
-        currIndice++;
-        startIndices[currIndice] = i;
-      }
-      i++;
-    }
-
-    const pages = Math.ceil(startIndices.length);
-    const pageItems = storageCategories.slice(
-      startIndices[page - 1],
-      startIndices[page] ? startIndices[page] : undefined
-    );
-
-    const embed = new Discord.EmbedBuilder()
-      .setTitle('Storage')
-      .setColor(0x36393e);
-
-    if (pageItems.length === 0) {
-      embed.setDescription('No items in storage!');
-      return [embed, []];
-    }
-
-    //create description text from the 2d array
-    let descriptionText = '';
-    for (const category of pageItems) {
-      let endSpaces = "-";
-      if ((20 - category.length - 2)> 0) {
-        endSpaces = "-".repeat(20 - category.length - 2);
-      }
-      descriptionText += `**\`--${category}${endSpaces}\`**\n`;
-      descriptionText += storage[category]
-        .map((item) => {
-          const icon = shopData[item].infoOptions.Icon;
-          const quantity = charData[charID].storage[item];
-
-          let alignSpaces = ' ';
-          if ((30 - item.length - ("" + quantity).length) > 0){
-            alignSpaces = ' '.repeat(30 - item.length - ("" + quantity).length);
-          }
-
-          // Create the formatted line
-          return `${icon} \`${item}${alignSpaces}${quantity}\``;
-        })
-        .join('\n');
-      descriptionText += '\n';
-    }
-
-    embed.setDescription('**Items:** \n' + descriptionText);
-
-    if (pages > 1) {
-      embed.setFooter({ text: `Page ${page} of ${pages}` });
-    }
-
-    const rows = [];
-    if (pages > 1) {
-      const prevButton = new ButtonBuilder()
-        .setCustomId('panel_store_page' + (page - 1))
-        .setLabel('<')
-        .setStyle(ButtonStyle.Secondary);
-      if (page === 1) {
-        prevButton.setDisabled(true);
-      }
-      const nextButton = new ButtonBuilder()
-        .setCustomId('panel_store_page' + (page + 1))
-        .setLabel('>')
-        .setStyle(ButtonStyle.Secondary);
-      if (page === pages) {
-        nextButton.setDisabled(true);
-      }
-      rows.push(new ActionRowBuilder().addComponents(prevButton, nextButton));
-    }
-
-    return [embed, rows];
+    return this.createCategoryEmbed(charID, 'Resources', page, 'panel_store_page', 'storage');
   }
 
   // Function to print item list
