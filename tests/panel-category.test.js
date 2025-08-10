@@ -23,7 +23,12 @@ function discordStub() {
   };
 }
 
-test('resources and ships appear only in their submenus', async (t) => {
+function mockModule(modulePath, mock) {
+  const resolved = require.resolve(modulePath);
+  require.cache[resolved] = { id: resolved, filename: resolved, loaded: true, exports: mock };
+}
+
+test('resources and ships appear only in their submenus', async () => {
   const charData = {
     player1: {
       inventory: { Sword: 2 },
@@ -44,21 +49,15 @@ test('resources and ships appear only in their submenus', async (t) => {
   };
   const dataGettersStub = { getCharFromNumericID: async (id) => id };
 
-  const shopModule = await t.mock.import(shopPath, {
-    './database-manager': dbmStub,
-    './pg-client': { query: async () => ({ rows: [] }) },
-    './clientManager': {},
-    './dataGetters': dataGettersStub,
-    './logger': { debug() {}, info() {}, error() {} }
-  });
+  mockModule(path.join(root, 'database-manager.js'), dbmStub);
+  mockModule(path.join(root, 'pg-client.js'), { query: async () => ({ rows: [] }) });
+  mockModule(path.join(root, 'clientManager.js'), { getEmoji: () => ':coin:' });
+  mockModule(path.join(root, 'dataGetters.js'), dataGettersStub);
+  mockModule(path.join(root, 'logger.js'), { debug() {}, info() {}, error() {} });
+  mockModule('discord.js', discordStub());
 
-  const panelModule = await t.mock.import(panelPath, {
-    './shop': shopModule,
-    './database-manager': dbmStub,
-    './dataGetters': dataGettersStub,
-    './clientManager': { getEmoji: () => ':coin:' },
-    'discord.js': discordStub(),
-  });
+  const shopModule = require(shopPath);
+  const panelModule = require(panelPath);
 
   const [invEmbed] = await panelModule.inventoryEmbed('player1', 1);
   assert.ok(invEmbed.description.includes('Sword'));
@@ -75,3 +74,4 @@ test('resources and ships appear only in their submenus', async (t) => {
   assert.ok(!shipEmbed.description.includes('Iron'));
   assert.ok(!shipEmbed.description.includes('Sword'));
 });
+
