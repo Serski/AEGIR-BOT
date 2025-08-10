@@ -276,10 +276,6 @@ class shop {
     const categories = {};
 
     for (const [itemName, itemData] of Object.entries(shopData)) {
-      const price = itemData.shopOptions['Price (#)'];
-      if (price === '' || price === undefined || price === null) {
-        continue;
-      }
       const category = itemData.infoOptions.Category || 'Misc';
       if (!categories[category]) {
         categories[category] = [];
@@ -287,13 +283,23 @@ class shop {
       categories[category].push({
         emoji: itemData.infoOptions.Icon || '',
         name: itemData.infoOptions.Name || itemName,
-        price: price,
+        price: itemData.shopOptions['Price (#)'],
         description: itemData.infoOptions.Description || '',
       });
     }
 
     for (const category of Object.keys(categories).sort()) {
-      const items = categories[category];
+      const items = categories[category]
+        .filter(item => {
+          if (item.price === '' || item.price === undefined || item.price === null) {
+            return false;
+          }
+          item.price = Number(item.price);
+          return !Number.isNaN(item.price);
+        });
+      if (items.length === 0) {
+        continue;
+      }
       const headerEmoji = category === 'Ships' ? '🚀' : category === 'Resources' ? '📦' : '✨';
       const maxName = Math.max(...items.map(i => i.name.length));
       const maxPrice = Math.max(...items.map(i => i.price.toString().length));
