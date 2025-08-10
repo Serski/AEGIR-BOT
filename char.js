@@ -1738,33 +1738,57 @@ class char {
     }
 
     if (charData && charData2) {
-      // Ensure legacy inventories reflect the current normalized inventory
-      charData.inventory = await dbm.getInventory(playerGiving);
-      charData2.inventory = await dbm.getInventory(player);
+      const invStacks = await dbm.getInventory(playerGiving);
+      const def = await dbm.getItemDefinition(item);
+      const category = (shopData[item].infoOptions.Category || '').trim().toLowerCase();
 
-      if (charData.inventory[item] && charData.inventory[item] >= amount) {
-        const category = (shopData[item].infoOptions.Category || '').trim().toLowerCase();
-
-        // Update the normalized inventory tables
+      if (def && def.stackable === false) {
+        const invInstances = await dbm.getInventoryItems(playerGiving);
+        const owned = invInstances.filter((i) => i.itemId === item).slice(0, amount);
+        if (owned.length < amount) {
+          return "You don't have enough of that item!";
+        }
+        for (const inst of owned) {
+          await this.removeItem(playerGiving, item, { instanceId: inst.instanceId });
+          if (category === 'ships' || category === 'ship') {
+            if (charData.ships) {
+              const shipName = Object.keys(charData.ships).find((n) => n.startsWith(item));
+              if (shipName) delete charData.ships[shipName];
+            }
+            char.addShip(charData2, item);
+          } else {
+            await this.addItem(player, item, {
+              instanceId: inst.instanceId,
+              durability: inst.durability,
+              metadata: inst.metadata,
+            });
+          }
+        }
+      } else {
+        if (!invStacks[item] || invStacks[item] < amount) {
+          return "You don't have enough of that item!";
+        }
         await this.removeItem(playerGiving, item, { qty: amount });
         if (category === 'ships' || category === 'ship') {
           for (let i = 0; i < amount; i++) {
+            if (charData.ships) {
+              const shipName = Object.keys(charData.ships).find((n) => n.startsWith(item));
+              if (shipName) delete charData.ships[shipName];
+            }
             char.addShip(charData2, item);
           }
         } else {
           await this.addItem(player, item, { qty: amount });
         }
-
-        // Refresh legacy inventory fields after updates
-        charData.inventory = await dbm.getInventory(playerGiving);
-        charData2.inventory = await dbm.getInventory(player);
-
-        await dbm.saveFile(collectionName, playerGiving, charData);
-        await dbm.saveFile(collectionName, player, charData2);
-        return true;
-      } else {
-        return "You don't have enough of that item!";
       }
+
+      // Refresh legacy inventory fields after updates
+      charData.inventory = await dbm.getInventory(playerGiving);
+      charData2.inventory = await dbm.getInventory(player);
+
+      await dbm.saveFile(collectionName, playerGiving, charData);
+      await dbm.saveFile(collectionName, player, charData2);
+      return true;
     }
   }
 
