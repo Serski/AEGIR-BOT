@@ -339,11 +339,19 @@ class shop {
     //Put the array into an array of categories each containing all items in the category, alphabetically
     let itemCategories = {};
     for (let i = 0; i < itemArray.length; i++) {
-      let category = shopData[itemArray[i]].infoOptions.Category;
+      const itemName = itemArray[i];
+      const price = shopData[itemName].shopOptions['Price (#)'];
+
+      // Only include items that have a price value
+      if (price === '' || price === undefined || price === null) {
+        continue;
+      }
+
+      const category = shopData[itemName].infoOptions.Category;
       if (!itemCategories[category]) {
         itemCategories[category] = [];
       }
-      itemCategories[category].push(itemArray[i]);
+      itemCategories[category].push(itemName);
     }
 
     //Sort categories alphabetically
@@ -386,6 +394,11 @@ class shop {
     let descriptionText = '';
 
     for (const category of pageItems) {
+      // Skip categories without priced items
+      if (!itemCategories[category] || itemCategories[category].length === 0) {
+        continue;
+      }
+
       let endSpaces = "-";
       if ((20 - category.length - 2) > 0) {
         endSpaces = "-".repeat(20 - category.length - 2);
@@ -394,7 +407,7 @@ class shop {
       descriptionText += itemCategories[category]
         .map((item) => {
           const icon = shopData[item].infoOptions.Icon;
-  
+
           // Create the formatted line
           return `${icon} ${item}`;
         })
