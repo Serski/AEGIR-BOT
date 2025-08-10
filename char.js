@@ -1738,11 +1738,9 @@ class char {
     }
 
     if (charData && charData2) {
-      // Ensure legacy inventories reflect the current normalized inventory
-      charData.inventory = await dbm.getInventory(playerGiving);
-      charData2.inventory = await dbm.getInventory(player);
+      const invGiving = { ...(await dbm.getInventory(playerGiving)) };
 
-      if (charData.inventory[item] && charData.inventory[item] >= amount) {
+      if (invGiving[item] && invGiving[item] >= amount) {
         const category = (shopData[item].infoOptions.Category || '').trim().toLowerCase();
 
         // Update the normalized inventory tables
@@ -1756,7 +1754,9 @@ class char {
         }
 
         // Refresh legacy inventory fields after updates
-        charData.inventory = await dbm.getInventory(playerGiving);
+        invGiving[item] -= amount;
+        if (invGiving[item] <= 0) delete invGiving[item];
+        charData.inventory = invGiving;
         charData2.inventory = await dbm.getInventory(player);
 
         await dbm.saveFile(collectionName, playerGiving, charData);
