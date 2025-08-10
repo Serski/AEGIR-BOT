@@ -488,7 +488,7 @@ class shop {
         delete sourceData[item];
         continue;
       }
-      if (!shopData[item]) {
+      if (source !== 'ships' && !shopData[item]) {
         deleted = true;
         delete sourceData[item];
         continue;
@@ -578,7 +578,19 @@ class shop {
     const itemsPerPage = 25;
     // load data from db
     const shopData = await dbm.loadCollection('shop');
-    const inventoryStacks = await dbm.getInventory(charID);
+    const charData = await dbm.loadCollection('characters');
+
+    if (charID === 'ERROR' || !charData[charID]) {
+      const embed = new Discord.EmbedBuilder()
+        .setColor(0x36393e)
+        .setDescription('Character not found.');
+      return [embed, []];
+    }
+
+    let inventoryStacks = await dbm.getInventory(charID);
+    if (Object.keys(inventoryStacks).length === 0 && charData[charID].inventory) {
+      inventoryStacks = charData[charID].inventory;
+    }
 
     // create a 2d of items in the player's inventory sorted by category
     let inventory = {};
