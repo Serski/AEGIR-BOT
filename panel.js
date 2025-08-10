@@ -68,7 +68,7 @@ module.exports = {
         .setDescription('Character not found.');
       return [embed, []];
     }
-    let [embed, rows] = await shop.createCategoryEmbed(charID, 'Resources', page, 'panel_store_page');
+    let [embed, rows] = await shop.createCategoryEmbed(charID, 'Resources', page, 'panel_store_page', 'storage');
     rows.push(selectRow());
     return [embed, rows];
   },
@@ -82,7 +82,7 @@ module.exports = {
         .setDescription('Character not found.');
       return [embed, []];
     }
-    let [embed, rows] = await shop.createCategoryEmbed(charID, 'Ships', page, 'panel_ship_page');
+    let [embed, rows] = await shop.createCategoryEmbed(charID, 'Ships', page, 'panel_ship_page', 'ships');
     rows.push(selectRow());
     return [embed, rows];
   },
