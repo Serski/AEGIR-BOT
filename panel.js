@@ -60,29 +60,25 @@ module.exports = {
   },
 
   storageEmbed: async function (charID, page = 1) {
-    charID = await dataGetters.getCharFromNumericID(charID);
-    const charData = await dbm.loadCollection('characters');
-    if (charID === 'ERROR' || !charData[charID]) {
-      const embed = new EmbedBuilder()
-        .setColor(0x36393e)
-        .setDescription('Character not found.');
-      return [embed, []];
-    }
-    let [embed, rows] = await shop.createCategoryEmbed(charID, 'Resources', page, 'panel_store_page', 'storage');
+    let [embed, rows] = await shop.createCategoryEmbed(
+      charID,
+      'Resources',
+      page,
+      'panel_store_page',
+      'storage'
+    );
     rows.push(selectRow());
     return [embed, rows];
   },
 
   shipsEmbed: async function (charID, page = 1) {
-    charID = await dataGetters.getCharFromNumericID(charID);
-    const charData = await dbm.loadCollection('characters');
-    if (charID === 'ERROR' || !charData[charID]) {
-      const embed = new EmbedBuilder()
-        .setColor(0x36393e)
-        .setDescription('Character not found.');
-      return [embed, []];
-    }
-    let [embed, rows] = await shop.createCategoryEmbed(charID, 'Ships', page, 'panel_ship_page', 'ships');
+    let [embed, rows] = await shop.createCategoryEmbed(
+      charID,
+      'Ships',
+      page,
+      'panel_ship_page',
+      'ships'
+    );
     rows.push(selectRow());
     return [embed, rows];
   },
