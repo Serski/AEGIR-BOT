@@ -458,7 +458,24 @@ class shop {
     return [embed, rows];
   }
 
-  static async createCategoryEmbed(charID, category, page = 1, idPrefix = 'panel_cat_page') {
+  /**
+   * Create an embed listing the items for a given category from a character's
+   * data store.
+   *
+   * @param {string} charID - Character identifier.
+   * @param {string} category - Display category name (case-insensitive).
+   * @param {number} [page=1] - Page number of results to show.
+   * @param {string} [idPrefix='panel_cat_page'] - Custom ID prefix for page buttons.
+   * @param {('inventory'|'storage'|'ships')} [source='inventory'] - Where to pull
+   *   items from:
+   *   - `inventory`: `charData[charID].inventory` items and their quantities.
+   *   - `storage`: `charData[charID].storage` items and their quantities.
+   *   - `ships`: `charData[charID].ships` keys, each treated as a single ship
+   *     (quantity always 1).
+   *   Only items whose shop category matches `category` are included in the
+   *   returned list.
+   */
+  static async createCategoryEmbed(charID, category, page = 1, idPrefix = 'panel_cat_page', source = 'inventory') {
     charID = await dataGetters.getCharFromNumericID(charID);
     page = Number(page);
     const itemsPerPage = 25;
@@ -476,15 +493,21 @@ class shop {
     const items = [];
     const target = category.toLowerCase();
 
-    for (const item in charData[charID].inventory) {
-      if (charData[charID].inventory[item] == 0) {
+    const sourceData = source === 'ships'
+      ? (charData[charID].ships || {})
+      : source === 'storage'
+        ? (charData[charID].storage || {})
+        : (charData[charID].inventory || {});
+
+    for (const item in sourceData) {
+      if (source !== 'ships' && sourceData[item] == 0) {
         deleted = true;
-        delete charData[charID].inventory[item];
+        delete sourceData[item];
         continue;
       }
       if (!shopData[item]) {
         deleted = true;
-        delete charData[charID].inventory[item];
+        delete sourceData[item];
         continue;
       }
       const itemCat = (shopData[item].infoOptions.Category || '').toLowerCase();
@@ -500,6 +523,13 @@ class shop {
     }
 
     if (deleted) {
+      if (source === 'ships') {
+        charData[charID].ships = sourceData;
+      } else if (source === 'storage') {
+        charData[charID].storage = sourceData;
+      } else {
+        charData[charID].inventory = sourceData;
+      }
       await dbm.saveCollection('characters', charData);
     }
 
@@ -521,7 +551,7 @@ class shop {
     const descriptionText = pageItems
       .map((item) => {
         const icon = shopData[item].infoOptions.Icon;
-        const quantity = charData[charID].inventory[item];
+        const quantity = source === 'ships' ? 1 : sourceData[item];
         let alignSpaces = ' ';
         if ((30 - item.length - ('' + quantity).length) > 0) {
           alignSpaces = ' '.repeat(30 - item.length - ('' + quantity).length);
