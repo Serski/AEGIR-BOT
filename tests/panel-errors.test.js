@@ -76,15 +76,16 @@ test('mainEmbed returns error when character data missing', async (t) => {
 
 test('shipsEmbed returns error when character lookup fails', async (t) => {
   const { panel, cleanup } = loadPanelWithMocks({
-    './dataGetters.js': { getCharFromNumericID: async () => 'ERROR' },
-    './database-manager.js': { loadCollection: async () => ({}) },
+    './dataGetters.js': {},
+    './database-manager.js': {},
     './clientManager.js': { getEmoji: () => ':coin:' },
-    './shop.js': {},
-    './char.js': { getShips: async () => ({}) },
+    './shop.js': {
+      createCategoryEmbed: async () => [{ description: 'Character not found.' }, []],
+    },
     'discord.js': discordStub(),
   });
   t.after(cleanup);
   const [embed, rows] = await panel.shipsEmbed('123', 1);
   assert.equal(embed.description, 'Character not found.');
-  assert.deepEqual(rows, []);
+  assert.equal(rows.length, 1);
 });

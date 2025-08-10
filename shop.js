@@ -465,7 +465,7 @@ class shop {
     const charData = await dbm.loadCollection('characters');
     const shopData = await dbm.loadCollection('shop');
 
-    if (!charData[charID]) {
+    if (charID === 'ERROR' || !charData[charID]) {
       const embed = new Discord.EmbedBuilder()
         .setColor(0x36393e)
         .setDescription('Character not found.');
