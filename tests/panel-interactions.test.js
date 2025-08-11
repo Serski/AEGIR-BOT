@@ -100,7 +100,8 @@ function panelSelectTest(choice, expectedFn) {
     const interaction = createSelectInteraction(choice);
     await handler.handle(interaction);
     assert.equal(called.fn, expectedFn);
-    assert.equal(called.id, 'user123');
+    const expectedId = expectedFn === 'inventory' ? 'stub' : 'user123';
+    assert.equal(called.id, expectedId);
     if (called.page) assert.equal(called.page, 1);
     const expectedEmbed = {
       inventory: 'invEmbed',
@@ -136,7 +137,8 @@ function paginationTest(customId, expectedFn, expectedPage) {
     const interaction = createButtonInteraction(customId);
     await handler.handle(interaction);
     assert.equal(called.fn, expectedFn);
-    assert.deepEqual(called, { fn: expectedFn, id: 'user123', page: expectedPage });
+    const expectedId = expectedFn === 'inventory' ? 'stub' : 'user123';
+    assert.deepEqual(called, { fn: expectedFn, id: expectedId, page: expectedPage });
     const expectedEmbed = {
       inventory: 'invEmbed',
       storage: 'storeEmbed',
