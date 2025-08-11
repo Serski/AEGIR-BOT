@@ -29,7 +29,7 @@ function mockModule(modulePath, mock) {
 
 test('storage uses normalized inventory when legacy storage empty', async () => {
   const charData = {
-    player1: {
+    'Player#0001': {
       inventory: {},
       numericID: 'player1'
     }
@@ -37,10 +37,11 @@ test('storage uses normalized inventory when legacy storage empty', async () => 
   const shopData = {
     Wood: { infoOptions: { Category: 'Resources', Icon: ':wood:' } }
   };
+  let invId;
   const dbmStub = {
     loadCollection: async (col) => (col === 'characters' ? charData : shopData),
     saveCollection: async () => {},
-    getInventory: async () => ({ Wood: 10 })
+    getInventory: async (id) => { invId = id; return { Wood: 10 }; }
   };
   const dataGettersStub = { getCharFromNumericID: async (id) => id };
 
@@ -52,6 +53,7 @@ test('storage uses normalized inventory when legacy storage empty', async () => 
   mockModule('discord.js', discordStub());
 
   const shopModule = require(shopPath);
-  const [embed] = await shopModule.createCategoryEmbed('player1', 'Resources', 1, 'panel_store_page', 'storage');
+  const [embed] = await shopModule.createCategoryEmbed('Player#0001', 'Resources', 1, 'panel_store_page', 'storage');
   assert.ok(embed.description.includes('Wood'));
+  assert.equal(invId, 'Player#0001');
 });

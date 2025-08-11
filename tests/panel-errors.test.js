@@ -61,7 +61,7 @@ test('mainEmbed returns error when character lookup fails', async (t) => {
 
 test('mainEmbed returns error when character data missing', async (t) => {
   const { panel, cleanup } = loadPanelWithMocks({
-    './dataGetters.js': { getCharFromNumericID: async () => 'user1' },
+    './dataGetters.js': { getCharFromNumericID: async () => 'User#0001' },
     './database-manager.js': { loadCollection: async () => ({}) },
     './clientManager.js': { getEmoji: () => ':coin:' },
     './shop.js': {},
