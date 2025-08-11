@@ -4,16 +4,12 @@ const path = require('node:path');
 
 const rootDir = path.resolve(__dirname, '..');
 const marketplacePath = path.join(rootDir, 'marketplace.js');
-const dbmPath = path.join(rootDir, 'database-manager.js');
-const shopPath = path.join(rootDir, 'shop.js');
-const clientManagerPath = path.join(rootDir, 'clientManager.js');
-const loggerPath = path.join(rootDir, 'logger.js');
-const pgClientPath = path.join(rootDir, 'pg-client.js');
 const discordPath = require.resolve('discord.js');
 
 let pool;
 let charData;
 let shopData;
+let balances;
 const stubbed = new Set([discordPath]);
 
 function stubModule(file, exports) {
@@ -43,14 +39,17 @@ function stubModule(file, exports) {
   stubModule('shop.js', shopStub);
 
   charData = {
-    'Seller#1234': { inventory: { 'Iron Sword': 5 }, balance: 100 },
-    'Buyer#5678': { inventory: {}, balance: 200 }
+    'Seller#1234': { inventory: { 'Iron Sword': 5 } },
+    'Buyer#5678': { inventory: {} }
   };
+  balances = { 'Seller#1234': 100, 'Buyer#5678': 200 };
   const dbmStub = {
     loadFile: async (collection, doc) => charData[doc],
     loadCollection: async collection => collection === 'shop' ? shopData : charData,
     saveFile: async (collection, doc, data) => { charData[doc] = data; },
-    saveCollection: async (collection, data) => { if (collection === 'characters') charData = data; }
+    saveCollection: async (collection, data) => { if (collection === 'characters') charData = data; },
+    getBalance: async id => balances[id] ?? 0,
+    setBalance: async (id, amt) => { balances[id] = amt; }
   };
   stubModule('database-manager.js', dbmStub);
 
@@ -63,6 +62,11 @@ function stubModule(file, exports) {
 })();
 
 const marketplace = require(marketplacePath);
+for (const p of stubbed) {
+  if (p !== discordPath) delete require.cache[p];
+}
+stubbed.clear();
+stubbed.add(discordPath);
 
 after(() => {
   for (const p of stubbed) delete require.cache[p];
@@ -73,9 +77,10 @@ after(() => {
 test('posting and buying a sale updates inventories and balances', async () => {
   // reset data
   charData = {
-    'Seller#1234': { inventory: { 'Iron Sword': 5 }, balance: 100 },
-    'Buyer#5678': { inventory: {}, balance: 200 }
+    'Seller#1234': { inventory: { 'Iron Sword': 5 } },
+    'Buyer#5678': { inventory: {} }
   };
+  balances = { 'Seller#1234': 100, 'Buyer#5678': 200 };
   await pool.query('DELETE FROM marketplace');
 
   // post sale
@@ -89,8 +94,8 @@ test('posting and buying a sale updates inventories and balances', async () => {
   // buy sale
   const buyEmbed = await marketplace.buySale(saleID, 'Buyer#5678', 'buyerId');
   assert.equal(charData['Buyer#5678'].inventory['Iron Sword'], 2);
-  assert.equal(charData['Seller#1234'].balance, 150);
-  assert.equal(charData['Buyer#5678'].balance, 150);
+  assert.equal(balances['Seller#1234'], 150);
+  assert.equal(balances['Buyer#5678'], 150);
   const { rows: remaining } = await pool.query('SELECT * FROM marketplace');
   assert.equal(remaining.length, 0);
   assert.ok(buyEmbed.description.includes('bought'));
@@ -98,8 +103,9 @@ test('posting and buying a sale updates inventories and balances', async () => {
 
 test('postSale validates input', async () => {
   charData = {
-    'Seller#1234': { inventory: { 'Iron Sword': 5 }, balance: 100 }
+    'Seller#1234': { inventory: { 'Iron Sword': 5 } }
   };
+  balances = { 'Seller#1234': 100 };
   await pool.query('DELETE FROM marketplace');
 
   const badNumber = await marketplace.postSale(0, 'iron sword', 10, 'Seller#1234', 'sellerId');
@@ -114,9 +120,10 @@ test('postSale validates input', async () => {
 
 test('buySale validates characters and sale data', async () => {
   charData = {
-    'Seller#1234': { inventory: { 'Iron Sword': 5 }, balance: 100 },
-    'Buyer#5678': { inventory: {}, balance: 200 }
+    'Seller#1234': { inventory: { 'Iron Sword': 5 } },
+    'Buyer#5678': { inventory: {} }
   };
+  balances = { 'Seller#1234': 100, 'Buyer#5678': 200 };
   await pool.query('DELETE FROM marketplace');
 
   // insert sale with negative price
@@ -132,6 +139,7 @@ test('buySale validates characters and sale data', async () => {
   await pool.query('DELETE FROM marketplace');
   rows = await pool.query("INSERT INTO marketplace (item, category, price, number, seller, seller_id) VALUES ('Iron Sword','Weapons',10,1,'Seller#1234','sellerId') RETURNING id");
   delete charData['Buyer#5678'];
+  delete balances['Buyer#5678'];
   res = await marketplace.buySale(rows.rows[0].id, 'Buyer#5678', 'buyerId');
   assert.equal(res, 'Character not found!');
 });

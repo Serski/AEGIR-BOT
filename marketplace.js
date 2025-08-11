@@ -171,11 +171,13 @@ class marketplace {
       return embed;
     }
 
-    if (charData[userTag].balance < sale.price) {
+    const buyerBalance = await dbm.getBalance(userTag);
+    if (buyerBalance < sale.price) {
       return "You don't have enough money to buy that!";
     }
-    charData[userTag].balance -= sale.price;
-    charData[sale.seller].balance += sale.price;
+    const sellerBalance = await dbm.getBalance(sale.seller);
+    await dbm.setBalance(userTag, buyerBalance - sale.price);
+    await dbm.setBalance(sale.seller, sellerBalance + sale.price);
 
     if (!charData[userTag].inventory[itemName]) {
       charData[userTag].inventory[itemName] = 0;

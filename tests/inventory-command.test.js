@@ -10,7 +10,7 @@ function mockModule(modulePath, mock) {
   require.cache[resolved] = { id: resolved, filename: resolved, loaded: true, exports: mock };
 }
 
-test('/inventory command uses user tag identifier', async (t) => {
+test('/inventory command uses user id identifier', async (t) => {
   let calledId;
   mockModule(path.join(root, 'shop.js'), {
     createInventoryEmbed: async (id) => { calledId = id; return [{ description: 'ok' }, []]; }
@@ -27,7 +27,7 @@ test('/inventory command uses user tag identifier', async (t) => {
   };
 
   await command.execute(interaction);
-  assert.equal(calledId, 'TestUser#0001');
+  assert.equal(calledId, '123456789012345678');
   assert.ok(replied.embeds);
 
   t.after(() => {
