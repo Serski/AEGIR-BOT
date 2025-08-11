@@ -531,23 +531,7 @@ for (const item in sourceData) {
   if (!matches(itemCat)) continue;
   items.push(item);
 }
-
-
-      const itemCat = (
-        shopInfo?.infoOptions.Category || (source === 'ships' ? 'ships' : '')
-      ).toLowerCase();
-      const matches = (cat) => {
-        if (target === 'ships') return cat === 'ships' || cat === 'ship';
-        if (target === 'resources') return cat === 'resources' || cat === 'resource';
-        return cat === target;
-      };
-      if (!matches(itemCat)) {
-        continue;
-      }
-      items.push(item);
-    }
-
-    if (deleted && (source === 'ships' || sourceIsLegacy)) {
+if (deleted && (source === 'ships' || sourceIsLegacy)) {
       if (source === 'ships') {
         charData[charID].ships = sourceData;
       } else if (source === 'storage') {
