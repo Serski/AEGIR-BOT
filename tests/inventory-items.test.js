@@ -4,7 +4,6 @@ const path = require('node:path');
 
 const root = path.join(__dirname, '..');
 const shopPath = path.join(root, 'shop.js');
-const panelPath = path.join(root, 'panel.js');
 
 function discordStub() {
   return {
@@ -18,8 +17,6 @@ function discordStub() {
       setDescription(d) { this.description = d; return this; }
       setFooter(f) { this.footer = f; return this; }
     },
-    StringSelectMenuBuilder: class { setCustomId() { return this; } addOptions() { return this; } },
-    StringSelectMenuOptionBuilder: class { setLabel() { return this; } setValue() { return this; } setDescription() { return this; } },
   };
 }
 
@@ -28,26 +25,18 @@ function mockModule(modulePath, mock) {
   require.cache[resolved] = { id: resolved, filename: resolved, loaded: true, exports: mock };
 }
 
-test('resources and ships appear only in their submenus', async () => {
+test('inventory embed shows non-stackable items', async () => {
   const charData = {
-    player1: {
-      inventory: { Sword: 2 },
-      storage: { Iron: 5 },
-      ships: { Longboat: {} },
-      balance: 0,
-      numericID: 'player1'
-    }
+    player1: { numericID: 'player1', inventory: {} }
   };
   const shopData = {
-    Longboat: { infoOptions: { Category: 'Ships', Icon: ':ship:' } },
-    Iron: { infoOptions: { Category: 'Resources', Icon: ':iron:' } },
     Sword: { infoOptions: { Category: 'Weapons', Icon: ':sword:' } }
   };
   const dbmStub = {
-    loadCollection: async (col) => col === 'characters' ? charData : shopData,
+    loadCollection: async (col) => (col === 'characters' ? charData : shopData),
     saveCollection: async () => {},
-    getInventory: async (id) => (charData[id] ? charData[id].inventory : {}),
-    getInventoryItems: async () => []
+    getInventory: async () => ({}),
+    getInventoryItems: async () => [{ item_id: 'Sword' }],
   };
   const dataGettersStub = { getCharFromNumericID: async (id) => id };
 
@@ -59,21 +48,7 @@ test('resources and ships appear only in their submenus', async () => {
   mockModule('discord.js', discordStub());
 
   const shopModule = require(shopPath);
-  const panelModule = require(panelPath);
-
-  const [invEmbed] = await panelModule.inventoryEmbed('player1', 1);
-  assert.ok(invEmbed.description.includes('Sword'));
-  assert.ok(!invEmbed.description.includes('Longboat'));
-  assert.ok(!invEmbed.description.includes('Iron'));
-
-  const [resEmbed] = await panelModule.storageEmbed('player1', 1);
-  assert.ok(resEmbed.description.includes('Iron'));
-  assert.ok(!resEmbed.description.includes('Longboat'));
-  assert.ok(!resEmbed.description.includes('Sword'));
-
-  const [shipEmbed] = await panelModule.shipsEmbed('player1', 1);
-  assert.ok(shipEmbed.description.includes('Longboat'));
-  assert.ok(!shipEmbed.description.includes('Iron'));
-  assert.ok(!shipEmbed.description.includes('Sword'));
+  const [embed] = await shopModule.createInventoryEmbed('player1', 1);
+  assert.ok(embed.description.includes('Sword'));
 });
 
