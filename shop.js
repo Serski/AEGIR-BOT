@@ -516,21 +516,38 @@ class shop {
           sourceData[item] = stacks[item];
         }
       }
-      if (Object.keys(sourceData).length === 0 && charData[charID].storage) {
-        sourceData = charData[charID].storage;
-        sourceIsLegacy = true;
+
+      // If stacks empty, read legacy storage or legacy inventory
+      if (Object.keys(sourceData).length === 0) {
+        if (charData[charID].storage && Object.keys(charData[charID].storage).length) {
+          sourceData = charData[charID].storage;
+          sourceIsLegacy = true;
+        } else if (charData[charID].inventory) {
+          for (const [item, qty] of Object.entries(charData[charID].inventory)) {
+            const cat = (shopData[item]?.infoOptions.Category || '').toLowerCase();
+            if (cat === 'resources' || cat === 'resource') {
+              sourceData[item] = qty;
+            }
+          }
+          sourceIsLegacy = true;
+        }
       }
     } else {
       sourceData = charData[charID].inventory || {};
       sourceIsLegacy = true;
     }
 
-for (const item in sourceData) {
-  // prune zero-qty legacy entries
-  if (source !== 'ships' && sourceIsLegacy && sourceData[item] == 0) {
-    deleted = true;
-    delete sourceData[item];
-    continue;
+    if (source === 'storage' && sourceIsLegacy) {
+      charData[charID].storage = sourceData;
+      await dbm.saveCollection('characters', charData);
+    }
+
+    for (const item in sourceData) {
+      // prune zero-qty legacy entries
+      if (source !== 'ships' && sourceIsLegacy && sourceData[item] == 0) {
+        deleted = true;
+        delete sourceData[item];
+        continue;
   }
 
   // look up shop metadata (may be undefined for legacy/missing items)
