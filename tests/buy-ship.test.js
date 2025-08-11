@@ -41,7 +41,7 @@ test.skip('buying a ship stores it separately from inventory', async (t) => {
     }
   };
   const dbmShopStub = {
-    loadCollection: async (col) => col === 'shop' ? shopData : { 'player1': charData },
+    loadCollection: async (col) => col === 'shop' ? shopData : { 'Player#0001': charData },
     loadFile: async () => charData,
     saveFile: async (col, id, data) => { charData = data; }
   };
@@ -53,7 +53,7 @@ test.skip('buying a ship stores it separately from inventory', async (t) => {
     './char': { addShip: (data, name) => { if (!data.ships) data.ships = {}; data.ships[name] = {}; } }
   });
 
-  const reply = await shopModule.buyItem('Longboat', 'player1', 1, 'channel');
+  const reply = await shopModule.buyItem('Longboat', 'Player#0001', 1, 'channel');
   assert.equal(reply, 'Succesfully bought 1 Longboat');
   assert.equal(charData.balance, 90);
   assert.ok(charData.ships['Longboat']);
@@ -72,7 +72,7 @@ test.skip('buying ship items with varied category casing routes to ships list', 
         }
       };
       const dbmShopStub = {
-        loadCollection: async (col) => col === 'shop' ? shopData : { 'player1': charData },
+        loadCollection: async (col) => col === 'shop' ? shopData : { 'Player#0001': charData },
         loadFile: async () => charData,
         saveFile: async (col, id, data) => { charData = data; }
       };
@@ -84,7 +84,7 @@ test.skip('buying ship items with varied category casing routes to ships list', 
         './char': { addShip: (data, name) => { if (!data.ships) data.ships = {}; data.ships[name] = {}; } }
       });
 
-      const reply = await shopModule.buyItem('Longboat', 'player1', 1, 'channel');
+      const reply = await shopModule.buyItem('Longboat', 'Player#0001', 1, 'channel');
       assert.equal(reply, 'Succesfully bought 1 Longboat');
       assert.equal(charData.balance, 90);
       assert.ok(charData.ships['Longboat']);

@@ -30,7 +30,7 @@ function mockModule(modulePath, mock) {
 
 test('resources and ships appear only in their submenus', async () => {
   const charData = {
-    player1: {
+    'Player#0001': {
       inventory: { Sword: 2 },
       storage: { Iron: 5 },
       ships: { Longboat: {} },
@@ -43,10 +43,11 @@ test('resources and ships appear only in their submenus', async () => {
     Iron: { infoOptions: { Category: 'Resources', Icon: ':iron:' } },
     Sword: { infoOptions: { Category: 'Weapons', Icon: ':sword:' } }
   };
+  let invId;
   const dbmStub = {
     loadCollection: async (col) => col === 'characters' ? charData : shopData,
     saveCollection: async () => {},
-    getInventory: async (id) => (charData[id] ? charData[id].inventory : {}),
+    getInventory: async (id) => { invId = id; return charData[id] ? charData[id].inventory : {}; },
     getInventoryItems: async () => []
   };
   const dataGettersStub = { getCharFromNumericID: async (id) => id };
@@ -61,17 +62,18 @@ test('resources and ships appear only in their submenus', async () => {
   const shopModule = require(shopPath);
   const panelModule = require(panelPath);
 
-  const [invEmbed] = await panelModule.inventoryEmbed('player1', 1);
+  const [invEmbed] = await panelModule.inventoryEmbed('Player#0001', 1);
   assert.ok(invEmbed.description.includes('Sword'));
   assert.ok(!invEmbed.description.includes('Longboat'));
   assert.ok(!invEmbed.description.includes('Iron'));
+  assert.equal(invId, 'Player#0001');
 
-  const [resEmbed] = await panelModule.storageEmbed('player1', 1);
+  const [resEmbed] = await panelModule.storageEmbed('Player#0001', 1);
   assert.ok(resEmbed.description.includes('Iron'));
   assert.ok(!resEmbed.description.includes('Longboat'));
   assert.ok(!resEmbed.description.includes('Sword'));
 
-  const [shipEmbed] = await panelModule.shipsEmbed('player1', 1);
+  const [shipEmbed] = await panelModule.shipsEmbed('Player#0001', 1);
   assert.ok(shipEmbed.description.includes('Longboat'));
   assert.ok(!shipEmbed.description.includes('Iron'));
   assert.ok(!shipEmbed.description.includes('Sword'));

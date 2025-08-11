@@ -45,10 +45,10 @@ after(() => {
 });
 
 test('getCharFromNumericID retrieves matching character', async () => {
-  await dbm.saveFile('characters', 'user1', { numericID: 101 });
-  await dbm.saveFile('characters', 'user2', { numericID: 202 });
+  await dbm.saveFile('characters', 'UserOne#0001', { numericID: 101 });
+  await dbm.saveFile('characters', 'UserTwo#0002', { numericID: 202 });
 
-  assert.equal(await dataGetters.getCharFromNumericID(202), 'user2');
+  assert.equal(await dataGetters.getCharFromNumericID(202), 'UserTwo#0002');
   assert.equal(await dataGetters.getCharFromNumericID(999), 'ERROR');
 });
 

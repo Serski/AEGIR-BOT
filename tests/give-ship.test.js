@@ -36,6 +36,8 @@ const charPath = path.join(root, 'char.js');
 test('transferring a ship gives it to ships collection only', async () => {
   let giver = { inventory: { Longboat: 1 }, ships: {} };
   let receiver = { inventory: {}, ships: {} };
+  const giverTag = 'Giver#1111';
+  const receiverTag = 'Receiver#2222';
   const shopData = {
     Longboat: { infoOptions: { Category: 'Ships', 'Transferrable (Y/N)': 'Yes' } }
   };
@@ -43,19 +45,20 @@ test('transferring a ship gives it to ships collection only', async () => {
   const dbmStub = {
     loadCollection: async (col) => {
       if (col === 'shop') return shopData;
-      return { giver, receiver };
+      return { [giverTag]: giver, [receiverTag]: receiver };
     },
     saveFile: async (col, id, data) => {
-      if (id === 'giver') giver = data;
-      if (id === 'receiver') receiver = data;
+      if (id === giverTag) giver = data;
+      if (id === receiverTag) receiver = data;
     },
     getInventory: async (id) => {
-      if (id === 'giver') return giver.inventory;
-      if (id === 'receiver') return receiver.inventory;
+      if (id === giverTag) return giver.inventory;
+      if (id === receiverTag) return receiver.inventory;
       return {};
     },
     updateInventory: async (id, item, delta) => {
-      const target = id === 'giver' ? giver : receiver;
+      updates.push({ id, item, delta });
+      const target = id === giverTag ? giver : receiver;
       target.inventory[item] = (target.inventory[item] || 0) + delta;
       if (target.inventory[item] <= 0) delete target.inventory[item];
     },
@@ -64,6 +67,7 @@ test('transferring a ship gives it to ships collection only', async () => {
 
   const shopStub = { findItemName: async (name) => name };
 
+  const updates = [];
   const charModule = await mockImport(charPath, {
     './database-manager': dbmStub,
     './shop': shopStub,
@@ -79,15 +83,18 @@ test('transferring a ship gives it to ships collection only', async () => {
     data.ships[name] = {};
   };
   charModule.findPlayerData = async (id) => {
-    if (id === 'giver') return ['giver', giver];
-    if (id === 'receiver') return ['receiver', receiver];
+    if (id === giverTag) return [giverTag, giver];
+    if (id === receiverTag) return [receiverTag, receiver];
     return [false, false];
   };
 
-  const res = await charModule.giveItemToPlayer('giver', 'receiver', 'Longboat', 1);
+  const res = await charModule.giveItemToPlayer(giverTag, receiverTag, 'Longboat', 1);
   assert.equal(res, true);
   assert.equal(added, 1);
   assert.ok(receiver.ships['Longboat']);
   assert.strictEqual(receiver.inventory['Longboat'], undefined);
   assert.strictEqual(giver.inventory['Longboat'], undefined);
+  assert.deepEqual(updates, [
+    { id: giverTag, item: 'Longboat', delta: -1 }
+  ]);
 });

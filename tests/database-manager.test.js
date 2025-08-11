@@ -43,17 +43,17 @@ after(() => {
 });
 
 test('setBalance and getBalance update values', async () => {
-  assert.equal(await dbm.getBalance('user1'), 0);
-  await dbm.setBalance('user1', 100);
-  assert.equal(await dbm.getBalance('user1'), 100);
-  await dbm.setBalance('user1', 150);
-  assert.equal(await dbm.getBalance('user1'), 150);
+  assert.equal(await dbm.getBalance('User#0001'), 0);
+  await dbm.setBalance('User#0001', 100);
+  assert.equal(await dbm.getBalance('User#0001'), 100);
+  await dbm.setBalance('User#0001', 150);
+  assert.equal(await dbm.getBalance('User#0001'), 150);
 });
 
 test('updateInventory adds and removes items', async () => {
-  await dbm.updateInventory('user1', 'Iron Sword', 2);
-  await dbm.updateInventory('user1', 'Iron Sword', -1);
-  assert.deepEqual(await dbm.getInventory('user1'), { 'Iron Sword': 1 });
-  await dbm.updateInventory('user1', 'Iron Sword', -1);
-  assert.deepEqual(await dbm.getInventory('user1'), {});
+  await dbm.updateInventory('User#0001', 'Iron Sword', 2);
+  await dbm.updateInventory('User#0001', 'Iron Sword', -1);
+  assert.deepEqual(await dbm.getInventory('User#0001'), { 'Iron Sword': 1 });
+  await dbm.updateInventory('User#0001', 'Iron Sword', -1);
+  assert.deepEqual(await dbm.getInventory('User#0001'), {});
 });

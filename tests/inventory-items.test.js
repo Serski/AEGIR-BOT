@@ -27,16 +27,17 @@ function mockModule(modulePath, mock) {
 
 test('inventory embed shows non-stackable items', async () => {
   const charData = {
-    player1: { numericID: 'player1', inventory: {} }
+    'Player#0001': { numericID: 'player1', inventory: {} }
   };
   const shopData = {
     Sword: { infoOptions: { Category: 'Weapons', Icon: ':sword:' } }
   };
+  let invId, instId;
   const dbmStub = {
     loadCollection: async (col) => (col === 'characters' ? charData : shopData),
     saveCollection: async () => {},
-    getInventory: async () => ({}),
-    getInventoryItems: async () => [{ item_id: 'Sword' }],
+    getInventory: async (id) => { invId = id; return {}; },
+    getInventoryItems: async (id) => { instId = id; return [{ item_id: 'Sword' }]; },
   };
   const dataGettersStub = { getCharFromNumericID: async (id) => id };
 
@@ -48,7 +49,9 @@ test('inventory embed shows non-stackable items', async () => {
   mockModule('discord.js', discordStub());
 
   const shopModule = require(shopPath);
-  const [embed] = await shopModule.createInventoryEmbed('player1', 1);
+  const [embed] = await shopModule.createInventoryEmbed('Player#0001', 1);
   assert.ok(embed.description.includes('Sword'));
+  assert.equal(invId, 'Player#0001');
+  assert.equal(instId, 'Player#0001');
 });
 
