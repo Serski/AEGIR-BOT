@@ -223,7 +223,7 @@ const helpSwitch = async (interaction) => {
 
 const panelInvSwitch = async (interaction) => {
   const page = parseInt(interaction.customId.slice(15));
-  let [edittedEmbed, rows] = await panel.inventoryEmbed(interaction.user.id, page);
+  let [edittedEmbed, rows] = await panel.inventoryEmbed(interaction.user.tag, page);
   await interaction.update({ embeds: [edittedEmbed], components: rows });
 };
 
@@ -244,7 +244,7 @@ const panelSelect = async (interaction) => {
   let edittedEmbed;
   let rows;
   if (choice === 'inventory') {
-    [edittedEmbed, rows] = await panel.inventoryEmbed(interaction.user.id, 1);
+    [edittedEmbed, rows] = await panel.inventoryEmbed(interaction.user.tag, 1);
   } else if (choice === 'resources') {
     [edittedEmbed, rows] = await panel.storageEmbed(interaction.user.id, 1);
   } else if (choice === 'ships') {

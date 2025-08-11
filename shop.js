@@ -599,14 +599,13 @@ if (deleted && (source === 'ships' || sourceIsLegacy)) {
 
   //function to create an embed of player inventory
   static async createInventoryEmbed(charID, page = 1) {
-    charID = await dataGetters.getCharFromNumericID(charID);
     page = Number(page);
     const itemsPerPage = 25;
     // load data from db
     const shopData = await dbm.loadCollection('shop');
     const charData = await dbm.loadCollection('characters');
 
-    if (charID === 'ERROR' || !charData[charID]) {
+    if (!charData[charID]) {
       const embed = new Discord.EmbedBuilder()
         .setColor(0x36393e)
         .setDescription('Character not found.');
