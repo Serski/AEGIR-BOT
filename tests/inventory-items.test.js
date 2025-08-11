@@ -55,3 +55,32 @@ test('inventory embed shows non-stackable items', async () => {
   assert.equal(instId, 'Player#0001');
 });
 
+test('inventory embed includes legacy inline inventory', async () => {
+  const charData = {
+    'Player#0001': { numericID: 'player1', inventory: { Apple: 2 } }
+  };
+  const shopData = {
+    Apple: { infoOptions: { Category: 'Food', Icon: ':apple:' } }
+  };
+  const dbmStub = {
+    loadCollection: async (col) => (col === 'characters' ? charData : shopData),
+    saveCollection: async () => {},
+    getInventory: async () => ({}),
+    getInventoryItems: async () => [],
+  };
+  const dataGettersStub = { getCharFromNumericID: async (id) => id };
+
+  mockModule(path.join(root, 'database-manager.js'), dbmStub);
+  mockModule(path.join(root, 'pg-client.js'), { query: async () => ({ rows: [] }) });
+  mockModule(path.join(root, 'clientManager.js'), { getEmoji: () => ':coin:' });
+  mockModule(path.join(root, 'dataGetters.js'), dataGettersStub);
+  mockModule(path.join(root, 'logger.js'), { debug() {}, info() {}, error() {} });
+  mockModule('discord.js', discordStub());
+
+  delete require.cache[require.resolve(shopPath)];
+  const shopModule = require(shopPath);
+  const [embed] = await shopModule.createInventoryEmbed('Player#0001', 1);
+  assert.ok(embed.description.includes('Apple'));
+  assert.ok(embed.description.includes('2'));
+});
+
