@@ -498,21 +498,40 @@ class shop {
       sourceIsLegacy = true;
     }
 
-    for (const item in sourceData) {
-      if (source !== 'ships' && sourceIsLegacy && sourceData[item] == 0) {
-        deleted = true;
-        delete sourceData[item];
-        continue;
-      }
+for (const item in sourceData) {
+  // prune zero-qty legacy entries
+  if (source !== 'ships' && sourceIsLegacy && sourceData[item] == 0) {
+    deleted = true;
+    delete sourceData[item];
+    continue;
+  }
 
-      const shopInfo = shopData[item];
-      if (!shopInfo && source !== 'ships') {
-        if (sourceIsLegacy) {
-          deleted = true;
-          delete sourceData[item];
-        }
-        continue;
-      }
+  // look up shop metadata (may be undefined for legacy/missing items)
+  const shopInfo = shopData[item];
+
+  // if not a ship and the item isn't in the shop, drop it (only mutate legacy sources)
+  if (source !== 'ships' && !shopInfo) {
+    if (sourceIsLegacy) {
+      deleted = true;
+      delete sourceData[item];
+    }
+    continue;
+  }
+
+  const itemCat = (
+    shopInfo?.infoOptions.Category || (source === 'ships' ? 'ships' : '')
+  ).toLowerCase();
+
+  const matches = (cat) => {
+    if (target === 'ships') return cat === 'ships' || cat === 'ship';
+    if (target === 'resources') return cat === 'resources' || cat === 'resource';
+    return cat === target;
+  };
+
+  if (!matches(itemCat)) continue;
+  items.push(item);
+}
+
 
       const itemCat = (
         shopInfo?.infoOptions.Category || (source === 'ships' ? 'ships' : '')
