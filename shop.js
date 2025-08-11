@@ -678,9 +678,14 @@ static async createInventoryEmbed(charID, page = 1) {
     inventoryStacks[itemId]++;
   }
 
-  // fallback to legacy inline inventory on the character record
-  if (Object.keys(inventoryStacks).length === 0 && charData[charID].inventory) {
-    inventoryStacks = charData[charID].inventory;
+  // 🔧 NEW: always merge legacy inline inventory from the character record
+  if (charData[charID].inventory) {
+    for (const [item, qty] of Object.entries(charData[charID].inventory)) {
+      if (!inventoryStacks[item]) {
+        inventoryStacks[item] = 0;
+      }
+      inventoryStacks[item] += qty;
+    }
   }
 
   // remap raw inventory keys to canonical names
