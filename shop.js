@@ -677,20 +677,31 @@ static async createInventoryEmbed(charID, page = 1) {
     inventoryStacks = charData[charID].inventory;
   }
 
-  // build category -> items[] (exclude ships/resources; they have their own views)
-  let inventory = {};
-  for (const item in inventoryStacks) {
-    if (!shopData[item]) continue;
+  // remap raw inventory keys to canonical names
+  const remappedStacks = {};
+  for (const [rawKey, qty] of Object.entries(inventoryStacks)) {
+    let resolved = await shop.findItemName(rawKey);
+    if (resolved === 'ERROR') {
+      resolved = rawKey;
+    }
+    if (!remappedStacks[resolved]) remappedStacks[resolved] = 0;
+    remappedStacks[resolved] += qty;
+  }
+  const inventoryStacksFinal = remappedStacks;
 
-    const categoryRaw = shopData[item].infoOptions.Category || '';
-    const categoryLower = categoryRaw.toLowerCase();
+  // build category -> items[] (exclude ships; they have their own views)
+  let inventory = {};
+  for (const item in inventoryStacksFinal) {
+    const itemData = shopData[item];
+    let category = itemData ? (itemData.infoOptions.Category || '') : 'Misc';
+    if (!category) category = 'Misc';
+    const categoryLower = category.toLowerCase();
 
     // Skip only ships; include resources in inventory
     if (categoryLower === 'ships' || categoryLower === 'ship') {
       continue;
     }
 
-    const category = categoryRaw;
     if (!inventory[category]) inventory[category] = [];
     inventory[category].push(item);
   }
@@ -739,8 +750,8 @@ static async createInventoryEmbed(charID, page = 1) {
     descriptionText += `**\`--${category}${endSpaces}\`**\n`;
     descriptionText += inventory[category]
       .map((item) => {
-        const icon = shopData[item].infoOptions.Icon;
-        const quantity = inventoryStacks[item];
+        const icon = shopData[item]?.infoOptions.Icon || '';
+        const quantity = inventoryStacksFinal[item];
 
         let alignSpaces = ' ';
         if (30 - item.length - ('' + quantity).length > 0) {
