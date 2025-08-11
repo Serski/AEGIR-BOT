@@ -613,7 +613,15 @@ if (deleted && (source === 'ships' || sourceIsLegacy)) {
       return [embed, []];
     }
 
-    let inventoryStacks = await dbm.getInventory(charID);
+    let inventoryStacks = { ...(await dbm.getInventory(charID)) };
+    const inventoryItems = await dbm.getInventoryItems(charID);
+    for (const inst of inventoryItems) {
+      const itemId = inst.item_id || inst.item;
+      if (!inventoryStacks[itemId]) {
+        inventoryStacks[itemId] = 0;
+      }
+      inventoryStacks[itemId]++;
+    }
     if (Object.keys(inventoryStacks).length === 0 && charData[charID].inventory) {
       inventoryStacks = charData[charID].inventory;
     }
