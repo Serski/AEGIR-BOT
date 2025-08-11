@@ -100,7 +100,11 @@ function panelSelectTest(choice, expectedFn) {
     const interaction = createSelectInteraction(choice);
     await handler.handle(interaction);
     assert.equal(called.fn, expectedFn);
+ wlb4yk-codex/update-inventory-database-operations-identifier
     const expectedId = expectedFn === 'inventory' ? 'TestUser#0001' : '123456789012345678';
+
+    const expectedId = expectedFn === 'inventory' ? 'stub' : 'user123';
+ main
     assert.equal(called.id, expectedId);
     if (called.page) assert.equal(called.page, 1);
     const expectedEmbed = {
@@ -137,7 +141,11 @@ function paginationTest(customId, expectedFn, expectedPage) {
     const interaction = createButtonInteraction(customId);
     await handler.handle(interaction);
     assert.equal(called.fn, expectedFn);
+ wlb4yk-codex/update-inventory-database-operations-identifier
     const expectedId = expectedFn === 'inventory' ? 'TestUser#0001' : '123456789012345678';
+
+    const expectedId = expectedFn === 'inventory' ? 'stub' : 'user123';
+ main
     assert.deepEqual(called, { fn: expectedFn, id: expectedId, page: expectedPage });
     const expectedEmbed = {
       inventory: 'invEmbed',
