@@ -597,138 +597,148 @@ if (deleted && (source === 'ships' || sourceIsLegacy)) {
     return [embed, rows];
   }
 
-  //function to create an embed of player inventory
-  static async createInventoryEmbed(charID, page = 1) {
-    page = Number(page);
-    const itemsPerPage = 25;
-    // load data from db
-    const shopData = await dbm.loadCollection('shop');
-    const charData = await dbm.loadCollection('characters');
+// REPLACE your existing createInventoryEmbed with this:
+static async createInventoryEmbed(charID, page = 1) {
+  // 🔧 NEW: map Discord numeric ID -> internal character key (e.g., "serski")
+  charID = await dataGetters.getCharFromNumericID(charID);
 
-    if (!charData[charID]) {
-      const embed = new Discord.EmbedBuilder()
-        .setColor(0x36393e)
-        .setDescription('Character not found.');
-      return [embed, []];
-    }
+  page = Number(page);
+  const itemsPerPage = 25;
 
-    let inventoryStacks = { ...(await dbm.getInventory(charID)) };
-    const inventoryItems = await dbm.getInventoryItems(charID);
-    for (const inst of inventoryItems) {
-      const itemId = inst.item_id || inst.item;
-      if (!inventoryStacks[itemId]) {
-        inventoryStacks[itemId] = 0;
-      }
-      inventoryStacks[itemId]++;
-    }
-    if (Object.keys(inventoryStacks).length === 0 && charData[charID].inventory) {
-      inventoryStacks = charData[charID].inventory;
-    }
+  // load data from db
+  const shopData = await dbm.loadCollection('shop');
+  const charData = await dbm.loadCollection('characters');
 
-    // create a 2d of items in the player's inventory sorted by category
-    let inventory = {};
-    for (const item in inventoryStacks) {
-      if (!shopData[item]) {
-        continue;
-      }
-      const categoryRaw = shopData[item].infoOptions.Category || '';
-      const categoryLower = categoryRaw.toLowerCase();
-      if (categoryLower === 'ships' || categoryLower === 'ship' || categoryLower === 'resources' || categoryLower === 'resource') {
-        continue;
-      }
-      const category = categoryRaw;
-      if (!inventory[category]) {
-        inventory[category] = [];
-      }
-      inventory[category].push(item);
-    }
-
-    const inventoryCategories = Object.keys(inventory);
-    inventoryCategories.sort();
-
-    let startIndices = [];
-    startIndices[0] = 0;
-    let currIndice = 0;
-    let currPageLength = 0;
-    let i = 0;
-    for (const category of inventoryCategories) {
-      let length = inventory[category].length;
-      currPageLength += length;
-      if (currPageLength > itemsPerPage) {
-        currPageLength = length;
-        currIndice++;
-        startIndices[currIndice] = i;
-      }
-      i++;
-    }
-
-    const pages = Math.ceil(startIndices.length);
-    const pageItems = inventoryCategories.slice(
-      startIndices[page - 1],
-      startIndices[page] ? startIndices[page] : undefined
-    );
-
+  if (!charID || !charData[charID]) {
     const embed = new Discord.EmbedBuilder()
-      .setTitle('Inventory')
-      .setColor(0x36393e);
-
-    if (pageItems.length === 0) {
-      embed.setDescription('No items in inventory!');
-      return [embed, []];
-    }
-
-    //create description text from the 2d array
-    let descriptionText = '';
-    for (const category of pageItems) {
-      let endSpaces = "-";
-      if ((20 - category.length - 2)> 0) {
-        endSpaces = "-".repeat(20 - category.length - 2);
-      }
-      descriptionText += `**\`--${category}${endSpaces}\`**\n`;
-      descriptionText += inventory[category]
-        .map((item) => {
-          const icon = shopData[item].infoOptions.Icon;
-          const quantity = inventoryStacks[item];
-
-          let alignSpaces = ' ';
-          if ((30 - item.length - ("" + quantity).length) > 0){
-            alignSpaces = ' '.repeat(30 - item.length - ("" + quantity).length);
-          }
-
-          // Create the formatted line
-          return `${icon} \`${item}${alignSpaces}${quantity}\``;
-        })
-        .join('\n');
-      descriptionText += '\n';
-    }
-
-    embed.setDescription('**Items:** \n' + descriptionText);
-
-    if (pages > 1) {
-      embed.setFooter({ text: `Page ${page} of ${pages}` });
-    }
-
-    const rows = [];
-    if (pages > 1) {
-      const prevButton = new ButtonBuilder()
-        .setCustomId('panel_inv_page' + (page - 1))
-        .setLabel('<')
-        .setStyle(ButtonStyle.Secondary);
-      if (page === 1) {
-        prevButton.setDisabled(true);
-      }
-      const nextButton = new ButtonBuilder()
-        .setCustomId('panel_inv_page' + (page + 1))
-        .setLabel('>')
-        .setStyle(ButtonStyle.Secondary);
-      if (page === pages) {
-        nextButton.setDisabled(true);
-      }
-      rows.push(new ActionRowBuilder().addComponents(prevButton, nextButton));
-    }
-
-    return [embed, rows];
+      .setColor(0x36393e)
+      .setDescription('Character not found.');
+    return [embed, []];
   }
+
+  // merge stack-based inventory with instance-based inventory
+  let inventoryStacks = { ...(await dbm.getInventory(charID)) };
+  const inventoryItems = await dbm.getInventoryItems(charID);
+
+  for (const inst of inventoryItems) {
+    const itemId = inst.item_id || inst.item;
+    if (!inventoryStacks[itemId]) {
+      inventoryStacks[itemId] = 0;
+    }
+    inventoryStacks[itemId]++;
+  }
+
+  // fallback to legacy inline inventory on the character record
+  if (Object.keys(inventoryStacks).length === 0 && charData[charID].inventory) {
+    inventoryStacks = charData[charID].inventory;
+  }
+
+  // build category -> items[] (exclude ships/resources; they have their own views)
+  let inventory = {};
+  for (const item in inventoryStacks) {
+    if (!shopData[item]) continue;
+
+    const categoryRaw = shopData[item].infoOptions.Category || '';
+    const categoryLower = categoryRaw.toLowerCase();
+
+    if (
+      categoryLower === 'ships' ||
+      categoryLower === 'ship' ||
+      categoryLower === 'resources' ||
+      categoryLower === 'resource'
+    ) {
+      continue;
+    }
+
+    const category = categoryRaw;
+    if (!inventory[category]) inventory[category] = [];
+    inventory[category].push(item);
+  }
+
+  const inventoryCategories = Object.keys(inventory).sort();
+
+  // paginate by category count (not item count)
+  let startIndices = [];
+  startIndices[0] = 0;
+  let currIndice = 0;
+  let currPageLength = 0;
+  let i = 0;
+  for (const category of inventoryCategories) {
+    let length = inventory[category].length;
+    currPageLength += length;
+    if (currPageLength > itemsPerPage) {
+      currPageLength = length;
+      currIndice++;
+      startIndices[currIndice] = i;
+    }
+    i++;
+  }
+
+  const pages = Math.max(1, Math.ceil(startIndices.length));
+  const pageItems = inventoryCategories.slice(
+    startIndices[page - 1],
+    startIndices[page] ? startIndices[page] : undefined
+  );
+
+  const embed = new Discord.EmbedBuilder()
+    .setTitle('Inventory')
+    .setColor(0x36393e);
+
+  if (pageItems.length === 0) {
+    embed.setDescription('No items in inventory!');
+    return [embed, []];
+  }
+
+  // render lines
+  let descriptionText = '';
+  for (const category of pageItems) {
+    let endSpaces = '-';
+    if (20 - category.length - 2 > 0) {
+      endSpaces = '-'.repeat(20 - category.length - 2);
+    }
+    descriptionText += `**\`--${category}${endSpaces}\`**\n`;
+    descriptionText += inventory[category]
+      .map((item) => {
+        const icon = shopData[item].infoOptions.Icon;
+        const quantity = inventoryStacks[item];
+
+        let alignSpaces = ' ';
+        if (30 - item.length - ('' + quantity).length > 0) {
+          alignSpaces = ' '.repeat(30 - item.length - ('' + quantity).length);
+        }
+
+        return `${icon} \`${item}${alignSpaces}${quantity}\``;
+      })
+      .join('\n');
+    descriptionText += '\n';
+  }
+
+  embed.setDescription('**Items:** \n' + descriptionText);
+
+  if (pages > 1) {
+    embed.setFooter({ text: `Page ${page} of ${pages}` });
+  }
+
+  const rows = [];
+  if (pages > 1) {
+    const prevButton = new Discord.ButtonBuilder()
+      .setCustomId('panel_inv_page' + (page - 1))
+      .setLabel('<')
+      .setStyle(Discord.ButtonStyle.Secondary);
+    if (page === 1) prevButton.setDisabled(true);
+
+    const nextButton = new Discord.ButtonBuilder()
+      .setCustomId('panel_inv_page' + (page + 1))
+      .setLabel('>')
+      .setStyle(Discord.ButtonStyle.Secondary);
+    if (page === pages) nextButton.setDisabled(true);
+
+    rows.push(new Discord.ActionRowBuilder().addComponents(prevButton, nextButton));
+  }
+
+  return [embed, rows];
+}
+
 
   static async storage(charID, page = 1) {
     return this.createCategoryEmbed(charID, 'Resources', page, 'panel_store_page', 'storage');
