@@ -479,7 +479,34 @@ class shop {
     let sourceData;
     let sourceIsLegacy = false;
     if (source === 'ships') {
+      // start with new-format ships
       sourceData = charData[charID].ships || {};
+
+      // pull ship items from both DB stacks and legacy inline inventory
+      const stacks = (await dbm.getInventory(charID)) || {};
+      const inst = await dbm.getInventoryItems(charID);
+      for (const it of inst) {
+        const itemId = it.item_id || it.item;
+        stacks[itemId] = (stacks[itemId] || 0) + 1;
+      }
+
+      const legacyInv = charData[charID].inventory || {};
+      let migrated = false;
+
+      // fold in anything whose category is "Ships"/"Ship"
+      for (const [item, qty] of Object.entries({ ...legacyInv, ...stacks })) {
+        const cat = (shopData[item]?.infoOptions?.Category || '').toLowerCase();
+        if (cat === 'ships' || cat === 'ship') {
+          sourceData[item] = (sourceData[item] || 0) + Number(qty || 0);
+          migrated = true;
+        }
+      }
+
+      // persist migration so next time we read from ships only
+      if (migrated) {
+        charData[charID].ships = sourceData;
+        await dbm.saveCollection('characters', charData);
+      }
     } else if (source === 'storage') {
       const stacks = (await dbm.getInventory(charID)) || {};
       sourceData = {};
@@ -641,12 +668,8 @@ static async createInventoryEmbed(charID, page = 1) {
     const categoryRaw = shopData[item].infoOptions.Category || '';
     const categoryLower = categoryRaw.toLowerCase();
 
-    if (
-      categoryLower === 'ships' ||
-      categoryLower === 'ship' ||
-      categoryLower === 'resources' ||
-      categoryLower === 'resource'
-    ) {
+    // Skip only ships; include resources in inventory
+    if (categoryLower === 'ships' || categoryLower === 'ship') {
       continue;
     }
 
