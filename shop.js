@@ -542,39 +542,45 @@ class shop {
       await dbm.saveCollection('characters', charData);
     }
 
-    for (const item in sourceData) {
+    for (const [rawItem, qty] of Object.entries(sourceData)) {
       // prune zero-qty legacy entries
-      if (source !== 'ships' && sourceIsLegacy && sourceData[item] == 0) {
+      if (source !== 'ships' && sourceIsLegacy && qty == 0) {
         deleted = true;
-        delete sourceData[item];
+        delete sourceData[rawItem];
         continue;
-  }
+      }
 
-  // look up shop metadata (may be undefined for legacy/missing items)
-  const shopInfo = shopData[item];
+      // resolve canonical item name if possible
+      let resolvedItem = await shop.findItemName(rawItem);
+      if (resolvedItem !== 'ERROR') {
+        if (resolvedItem !== rawItem) {
+          sourceData[resolvedItem] = (sourceData[resolvedItem] || 0) + qty;
+          if (sourceIsLegacy) {
+            deleted = true;
+            delete sourceData[rawItem];
+          }
+        }
+      } else {
+        resolvedItem = rawItem;
+      }
 
-  // if not a ship and the item isn't in the shop, drop it (only mutate legacy sources)
-  if (source !== 'ships' && !shopInfo) {
-    if (sourceIsLegacy) {
-      deleted = true;
-      delete sourceData[item];
+      // look up shop metadata (may be undefined for legacy/missing items)
+      const shopInfo = shopData[resolvedItem];
+
+      // determine category, defaulting to misc for non-ship items
+      const itemCat = (
+        shopInfo?.infoOptions.Category || (source === 'ships' ? 'ships' : 'misc')
+      ).toLowerCase();
+
+      const matches = (cat) => {
+        if (target === 'ships') return cat === 'ships' || cat === 'ship';
+        if (target === 'resources') return cat === 'resources' || cat === 'resource';
+        return cat === target;
+      };
+
+      if (!matches(itemCat)) continue;
+      items.push(resolvedItem);
     }
-    continue;
-  }
-
-  const itemCat = (
-    shopInfo?.infoOptions.Category || (source === 'ships' ? 'ships' : '')
-  ).toLowerCase();
-
-  const matches = (cat) => {
-    if (target === 'ships') return cat === 'ships' || cat === 'ship';
-    if (target === 'resources') return cat === 'resources' || cat === 'resource';
-    return cat === target;
-  };
-
-  if (!matches(itemCat)) continue;
-  items.push(item);
-}
 if (deleted && (source === 'ships' || sourceIsLegacy)) {
       if (source === 'ships') {
         charData[charID].ships = sourceData;
@@ -603,7 +609,7 @@ if (deleted && (source === 'ships' || sourceIsLegacy)) {
 
     const descriptionText = pageItems
       .map((item) => {
-        const icon = shopData[item].infoOptions.Icon;
+        const icon = shopData[item]?.infoOptions?.Icon || '';
         const quantity = source === 'ships' ? 1 : sourceData[item];
         let alignSpaces = ' ';
         if ((30 - item.length - ('' + quantity).length) > 0) {
