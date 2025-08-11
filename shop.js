@@ -1604,7 +1604,9 @@ static async createInventoryEmbed(charID, page = 1) {
     let user = await clientManager.getUser(charData.numericID);
 
     let returnString;
-    if (charData.balance < (price * numToBuy)) {
+    const totalCost = price * numToBuy;
+    const currentBalance = await dbm.getBalance(charID);
+    if (currentBalance < totalCost) {
       returnString = "You do not have enough gold!";
       await dbm.saveFile(charCollection, charID, charData);
       return returnString;
@@ -1630,7 +1632,7 @@ static async createInventoryEmbed(charID, page = 1) {
         return "You do not have the required role to buy this item! You must have one of the following role(s): " + itemData.shopOptions["Need Role"];
       }
     }
-    charData.balance -= (price * numToBuy);
+    await dbm.setBalance(charID, currentBalance - totalCost);
 
     const category = (itemData.infoOptions.Category || '').trim().toLowerCase();
     if (category === 'ships' || category === 'ship') {

@@ -11,6 +11,7 @@ async function mockImport(modulePath, mocks) {
   for (const [key, value] of Object.entries(mocks)) {
     try {
       const abs = require.resolve(key, { paths: [path.dirname(resolvedPath)] });
+      resolvedMocks[key] = value;
       resolvedMocks[abs] = value;
       delete require.cache[abs];
     } catch {}
@@ -33,7 +34,8 @@ const root = path.join(__dirname, '..');
 const shopPath = path.join(root, 'shop.js');
 
 test.skip('buying a ship stores it separately from inventory', async (t) => {
-  let charData = { numericID: 'usernum', balance: 100, inventory: {}, ships: {} };
+  let balance = 100;
+  let charData = { numericID: 'usernum', inventory: {}, ships: {} };
   const shopData = {
     'Longboat': {
       infoOptions: { Category: 'Ships', Icon: ':ship:' },
@@ -43,7 +45,9 @@ test.skip('buying a ship stores it separately from inventory', async (t) => {
   const dbmShopStub = {
     loadCollection: async (col) => col === 'shop' ? shopData : { 'Player#0001': charData },
     loadFile: async () => charData,
-    saveFile: async (col, id, data) => { charData = data; }
+    saveFile: async (col, id, data) => { charData = data; },
+    getBalance: async () => balance,
+    setBalance: async (id, amt) => { balance = amt; }
   };
   const shopModule = await mockImport(shopPath, {
     './database-manager': dbmShopStub,
@@ -55,7 +59,7 @@ test.skip('buying a ship stores it separately from inventory', async (t) => {
 
   const reply = await shopModule.buyItem('Longboat', 'Player#0001', 1, 'channel');
   assert.equal(reply, 'Succesfully bought 1 Longboat');
-  assert.equal(charData.balance, 90);
+  assert.equal(balance, 90);
   assert.ok(charData.ships['Longboat']);
   assert.strictEqual(charData.inventory['Longboat'], undefined);
 
@@ -64,7 +68,8 @@ test.skip('buying a ship stores it separately from inventory', async (t) => {
 test.skip('buying ship items with varied category casing routes to ships list', async (t) => {
   for (const category of ['Ship', 'ships']) {
     await t.test(category, async () => {
-      let charData = { numericID: 'usernum', balance: 100, inventory: {}, ships: {} };
+      let balance = 100;
+      let charData = { numericID: 'usernum', inventory: {}, ships: {} };
       const shopData = {
         'Longboat': {
           infoOptions: { Category: category, Icon: ':ship:' },
@@ -74,7 +79,9 @@ test.skip('buying ship items with varied category casing routes to ships list', 
       const dbmShopStub = {
         loadCollection: async (col) => col === 'shop' ? shopData : { 'Player#0001': charData },
         loadFile: async () => charData,
-        saveFile: async (col, id, data) => { charData = data; }
+        saveFile: async (col, id, data) => { charData = data; },
+        getBalance: async () => balance,
+        setBalance: async (id, amt) => { balance = amt; }
       };
       const shopModule = await mockImport(shopPath, {
         './database-manager': dbmShopStub,
@@ -86,7 +93,7 @@ test.skip('buying ship items with varied category casing routes to ships list', 
 
       const reply = await shopModule.buyItem('Longboat', 'Player#0001', 1, 'channel');
       assert.equal(reply, 'Succesfully bought 1 Longboat');
-      assert.equal(charData.balance, 90);
+      assert.equal(balance, 90);
       assert.ok(charData.ships['Longboat']);
       assert.strictEqual(charData.inventory['Longboat'], undefined);
     });
