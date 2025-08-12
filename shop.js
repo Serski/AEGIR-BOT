@@ -1649,8 +1649,8 @@ static async createInventoryEmbed(charID, page = 1) {
         }
       } else {
         const invRes = await t.query(
-          `INSERT INTO inventories (character_id) VALUES ($1)
-           ON CONFLICT (character_id) DO UPDATE SET character_id = EXCLUDED.character_id
+          `INSERT INTO inventories (owner_id) VALUES ($1)
+           ON CONFLICT (owner_id) DO UPDATE SET owner_id = EXCLUDED.owner_id
            RETURNING id`,
           [charID]
         );
