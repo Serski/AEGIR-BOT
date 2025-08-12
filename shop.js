@@ -1596,25 +1596,21 @@ static async createInventoryEmbed(charID, page = 1) {
     if (price === "ERROR" || price === "No Price Item!" || price === undefined || price === null || price === NaN || !(price > 0) || price == "") {
       return "Not a valid item to purchase!";
     }
-    
+
     let channels = itemData.shopOptions.Channels;
     if (channels.includes("#") && !channels.includes(channelId)) {
       return "This item is not available in this channel!";
     }
 
-    let charCollection = 'characters';
-    let charData = await dbm.loadFile(charCollection, charID);
+    let charData = await dbm.loadFile('characters', charID);
 
     //Get user object from clientmanager
     let user = await clientManager.getUser(charData.numericID);
 
-    let returnString;
     const totalCost = price * numToBuy;
     const currentBalance = await dbm.getBalance(charID);
     if (currentBalance < totalCost) {
-      returnString = "You do not have enough gold!";
-      await dbm.saveFile(charCollection, charID, charData);
-      return returnString;
+      return "You do not have enough gold!";
     } else if (itemData.shopOptions["Need Role"]) {
       //Need Role is a string that may include several roles. Roles are enclosed in <@& and >, and there may be multiple roles. They may not be comma separated but commas and spaces may exist (though not always! Sometimes it will just be six roles one after another). Make sure at least one role is valid
       let roles = itemData.shopOptions["Need Role"].split("<@&");
@@ -1637,23 +1633,39 @@ static async createInventoryEmbed(charID, page = 1) {
         return "You do not have the required role to buy this item! You must have one of the following role(s): " + itemData.shopOptions["Need Role"];
       }
     }
-    await dbm.setBalance(charID, currentBalance - totalCost);
 
     const category = (itemData.infoOptions.Category || '').trim().toLowerCase();
-    if (category === 'ships' || category === 'ship') {
-      const char = require('./char');
-      for (let i = 0; i < numToBuy; i++) {
-        char.addShip(charData, itemName);
-      }
-    } else {
-      charData.inventory = charData.inventory || {};
-      if (!charData.inventory[itemName]) {
-        charData.inventory[itemName] = 0;
-      }
-      charData.inventory[itemName] += numToBuy;
-    }
+    await db.tx(async t => {
+      await t.query(
+        `INSERT INTO balances (id, amount) VALUES ($1, $2)
+         ON CONFLICT (id) DO UPDATE SET amount = EXCLUDED.amount`,
+        [charID, currentBalance - totalCost]
+      );
 
-    returnString = "Succesfully bought " + numToBuy + " " + itemName;
+      if (category === 'ships' || category === 'ship') {
+        const char = require('./char');
+        for (let i = 0; i < numToBuy; i++) {
+          char.addShip(charData, itemName);
+        }
+      } else {
+        const invRes = await t.query(
+          `INSERT INTO inventories (character_id) VALUES ($1)
+           ON CONFLICT (character_id) DO UPDATE SET character_id = EXCLUDED.character_id
+           RETURNING id`,
+          [charID]
+        );
+        const inventoryId = invRes.rows[0].id;
+        await t.query(
+          `INSERT INTO inventory_items (inventory_id, item_id, quantity)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (inventory_id, item_id)
+           DO UPDATE SET quantity = inventory_items.quantity + EXCLUDED.quantity`,
+          [inventoryId, itemName, numToBuy]
+        );
+      }
+    });
+
+    let returnString = "Succesfully bought " + numToBuy + " " + itemName;
 
     let roles = itemData.shopOptions["Give Role"].split("<@&");
     roles = roles.map(role => role.replace(">", ""));
@@ -1668,7 +1680,9 @@ static async createInventoryEmbed(charID, page = 1) {
       returnString += "\nAdded the following role(s): " + itemData.shopOptions["Give Role"];
     }
 
-    await dbm.saveFile(charCollection, charID, charData);
+    if (category === 'ships' || category === 'ship') {
+      await dbm.saveFile('characters', charID, charData);
+    }
     return returnString;
   }
 
