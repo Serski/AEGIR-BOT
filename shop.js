@@ -5,7 +5,7 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('
 const clientManager = require('./clientManager');
 const dataGetters = require('./dataGetters');
 const logger = require('./logger');
-const { randomUUID } = require('crypto');
+const { grantItemToPlayer } = require('./inventory-grants');
 
 class shop {
   //Declare constants for class 
@@ -1485,13 +1485,13 @@ static async createInventoryEmbed(charID, page = 1) {
           char.addShip(charData, itemName);
         }
       } else {
-        for (let i = 0; i < numToBuy; i++) {
-          await t.query(
-            `INSERT INTO inventory_items (instance_id, owner_id, item_id, durability, metadata)
-             VALUES ($1, $2, $3, $4, $5)`,
-            [randomUUID(), charID, itemName, null, '{}']
-          );
-        }
+        const grantClient = {
+          query: (text, params) =>
+            /SELECT\s+id\s+FROM\s+items/i.test(text)
+              ? db.query(text, params)
+              : t.query(text, params),
+        };
+        await grantItemToPlayer(grantClient, charID, itemName, numToBuy);
       }
     });
 
