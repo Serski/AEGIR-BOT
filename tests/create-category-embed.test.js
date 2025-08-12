@@ -27,10 +27,10 @@ function mockModule(modulePath, mock) {
   require.cache[resolved] = { id: resolved, filename: resolved, loaded: true, exports: mock };
 }
 
-test('createCategoryEmbed remaps legacy item names via findItemName', async () => {
+test('createCategoryEmbed shows items for category', async () => {
   delete require.cache[require.resolve(shopPath)];
 
-  const charData = { 'Player#0001': { inventory: { wood: 2 }, numericID: 'player1' } };
+  const charData = { 'Player#0001': { numericID: 'player1' } };
   const shopData = { Wood: { infoOptions: { Category: 'Resources', Icon: ':wood:' } } };
   const dbmStub = {
     loadCollection: async (col) => (col === 'characters' ? charData : shopData),
@@ -39,7 +39,7 @@ test('createCategoryEmbed remaps legacy item names via findItemName', async () =
   const dataGettersStub = { getCharFromNumericID: async (id) => id };
 
   mockModule(path.join(root, 'database-manager.js'), dbmStub);
-  mockModule(path.join(root, 'pg-client.js'), { query: async () => ({ rows: [{ id: 'Wood' }] }) });
+  mockModule(path.join(root, 'pg-client.js'), { query: async () => ({ rows: [{ character_id:'Player#0001', item_id:'Wood', quantity:2, name:'Wood', category:'Resources' }] }) });
   mockModule(path.join(root, 'clientManager.js'), { getEmoji: () => ':coin:' });
   mockModule(path.join(root, 'dataGetters.js'), dataGettersStub);
   mockModule(path.join(root, 'logger.js'), { debug() {}, info() {}, error() {} });
@@ -48,14 +48,13 @@ test('createCategoryEmbed remaps legacy item names via findItemName', async () =
   const shopModule = require(shopPath);
   const [embed] = await shopModule.createCategoryEmbed('Player#0001', 'Resources', 1);
   assert.ok(embed.description.includes('Wood'));
-  assert.ok(!('wood' in charData['Player#0001'].inventory));
 });
 
-test('createCategoryEmbed categorizes unknown items as misc', async () => {
+test('createCategoryEmbed handles misc category', async () => {
   delete require.cache[require.resolve(shopPath)];
 
-  const charData = { 'Player#0001': { inventory: { Mystery: 1 }, numericID: 'player1' } };
-  const shopData = {};
+  const charData = { 'Player#0001': { numericID: 'player1' } };
+  const shopData = { Mystery: { infoOptions: { Category: 'Misc', Icon: ':?' } } };
   const dbmStub = {
     loadCollection: async (col) => (col === 'characters' ? charData : shopData),
     saveCollection: async () => {},
@@ -63,7 +62,7 @@ test('createCategoryEmbed categorizes unknown items as misc', async () => {
   const dataGettersStub = { getCharFromNumericID: async (id) => id };
 
   mockModule(path.join(root, 'database-manager.js'), dbmStub);
-  mockModule(path.join(root, 'pg-client.js'), { query: async () => ({ rows: [] }) });
+  mockModule(path.join(root, 'pg-client.js'), { query: async () => ({ rows: [{ character_id:'Player#0001', item_id:'Mystery', quantity:1, name:'Mystery', category:'Misc' }] }) });
   mockModule(path.join(root, 'clientManager.js'), { getEmoji: () => ':coin:' });
   mockModule(path.join(root, 'dataGetters.js'), dataGettersStub);
   mockModule(path.join(root, 'logger.js'), { debug() {}, info() {}, error() {} });

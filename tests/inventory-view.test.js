@@ -39,21 +39,18 @@ async function setupTest(itemName, category) {
   const pool = new pgMem.Pool();
 
   await pool.query('CREATE TABLE balances (id TEXT PRIMARY KEY, amount INTEGER DEFAULT 0)');
-  await pool.query('CREATE TABLE inventories (id SERIAL PRIMARY KEY, owner_id TEXT UNIQUE)');
   await pool.query('CREATE TABLE items (id TEXT PRIMARY KEY, category TEXT, data JSONB)');
-  await pool.query('CREATE TABLE inventory_items (inventory_id INTEGER, item_id TEXT, quantity INTEGER, PRIMARY KEY (inventory_id, item_id))');
+  await pool.query('CREATE TABLE inventory_items (instance_id TEXT PRIMARY KEY, owner_id TEXT, item_id TEXT, durability INTEGER, metadata JSONB)');
   await pool.query('CREATE TABLE shop (id TEXT PRIMARY KEY)');
   await pool.query(`CREATE VIEW v_inventory AS
-    SELECT inv.owner_id AS owner_id,
+    SELECT ii.owner_id AS character_id,
            ii.item_id,
-           ii.quantity AS qty,
-           NULL::TEXT AS instance_id,
-           NULL::INTEGER AS durability,
-           NULL::JSONB AS metadata,
+           COUNT(*) AS quantity,
+           ii.item_id AS name,
            it.category
       FROM inventory_items ii
-      JOIN inventories inv ON ii.inventory_id = inv.id
-      JOIN items it ON ii.item_id = it.id`);
+      JOIN items it ON ii.item_id = it.id
+     GROUP BY ii.owner_id, ii.item_id, it.category`);
 
   await pool.query('INSERT INTO items (id, category, data) VALUES ($1, $2, $3)', [itemName, category, {}]);
   await pool.query('INSERT INTO shop (id) VALUES ($1)', [itemName]);
@@ -108,10 +105,10 @@ test('buying a resources item appears in v_inventory and resource filter', async
   const reply = await shopModule.buyItem('Wood', 'Player#0001', 1, 'channel');
   assert.equal(reply, 'Succesfully bought 1 Wood');
 
-  const { rows: allRows } = await pool.query('SELECT item_id, qty, category FROM v_inventory WHERE owner_id=$1', ['Player#0001']);
-  assert.deepEqual(allRows, [{ item_id: 'Wood', qty: 1, category: 'Resources' }]);
+  const { rows: allRows } = await pool.query('SELECT item_id, quantity, category FROM v_inventory WHERE character_id=$1', ['Player#0001']);
+  assert.deepEqual(allRows, [{ item_id: 'Wood', quantity: 1, category: 'Resources' }]);
 
-  const { rows: resourceRows } = await pool.query("SELECT item_id FROM v_inventory WHERE owner_id=$1 AND category='Resources'", ['Player#0001']);
+  const { rows: resourceRows } = await pool.query("SELECT item_id FROM v_inventory WHERE character_id=$1 AND category='Resources'", ['Player#0001']);
   assert.equal(resourceRows.length, 1);
   assert.equal(resourceRows[0].item_id, 'Wood');
 });
@@ -121,10 +118,10 @@ test('misc item excluded from Resources filter', async () => {
 
   await shopModule.buyItem('Rope', 'Player#0001', 1, 'channel');
 
-  const { rows: allRows } = await pool.query('SELECT item_id FROM v_inventory WHERE owner_id=$1', ['Player#0001']);
+  const { rows: allRows } = await pool.query('SELECT item_id FROM v_inventory WHERE character_id=$1', ['Player#0001']);
   assert.equal(allRows.length, 1);
   assert.equal(allRows[0].item_id, 'Rope');
 
-  const { rows: resRows } = await pool.query("SELECT item_id FROM v_inventory WHERE owner_id=$1 AND category='Resources'", ['Player#0001']);
+  const { rows: resRows } = await pool.query("SELECT item_id FROM v_inventory WHERE character_id=$1 AND category='Resources'", ['Player#0001']);
   assert.equal(resRows.length, 0);
 });

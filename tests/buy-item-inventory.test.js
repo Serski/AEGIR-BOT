@@ -57,9 +57,6 @@ test('buyItem stores stacks in inventory_items via transaction', async () => {
       const t = {
         query: async (text, params) => {
           executed.push(text);
-          if (/INSERT INTO inventories/i.test(text)) {
-            return { rows: [{ id: 1 }] };
-          }
           return { rows: [] };
         }
       };
@@ -77,7 +74,7 @@ test('buyItem stores stacks in inventory_items via transaction', async () => {
 
   const reply = await shopModule.buyItem('Apple', 'Player#0001', 2, 'channel');
   assert.equal(reply, 'Succesfully bought 2 Apple');
-  assert.ok(executed.some(q => /INSERT INTO inventories/i.test(q)));
+  assert.ok(!executed.some(q => /INSERT INTO inventories/i.test(q)));
   assert.ok(executed.some(q => /INSERT INTO inventory_items/i.test(q)));
   assert.ok(!saveCalled);
   assert.strictEqual(charData.inventory, undefined);

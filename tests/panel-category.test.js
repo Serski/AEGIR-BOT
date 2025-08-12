@@ -31,9 +31,6 @@ function mockModule(modulePath, mock) {
 test('resources and ships appear only in their submenus', async () => {
   const charData = {
     'Player#0001': {
-      inventory: { Sword: 2 },
-      storage: { Iron: 5 },
-      ships: { Longboat: {} },
       balance: 0,
       numericID: 'player1'
     }
@@ -46,27 +43,26 @@ test('resources and ships appear only in their submenus', async () => {
   const dbmStub = {
     loadCollection: async (col) => (col === 'characters' ? charData : shopData),
     saveCollection: async () => {},
-    getInventory: async (id) => (charData[id] ? charData[id].inventory : {}),
-    getInventoryItems: async () => [],
   };
   const dataGettersStub = { getCharFromNumericID: async (id) => id };
 
   mockModule(path.join(root, 'database-manager.js'), dbmStub);
   mockModule(path.join(root, 'pg-client.js'), {
-    query: async (text, params) => {
-      if (text.startsWith('SELECT id FROM shop')) {
-        return { rows: [{ id: params[0] }] };
+    query: async (text, params = []) => {
+      if (text.includes("category = 'Resources'")) {
+        return { rows: [{ character_id:'Player#0001', item_id:'Iron', quantity:5, name:'Iron', category:'Resources' }] };
       }
-      if (text.includes("IN ('resources','resource')")) {
-        return { rows: [{ item_id: 'Iron', qty: 5, category: 'Resources', icon: ':iron:' }] };
+      if (params[1] === 'Ships') {
+        return { rows: [{ character_id:'Player#0001', item_id:'Longboat', quantity:1, name:'Longboat', category:'Ships' }] };
       }
-      return {
-        rows: [
-          { item_id: 'Sword', qty: 2, category: 'Weapons', icon: ':sword:' },
-          { item_id: 'Iron', qty: 5, category: 'Resources', icon: ':iron:' },
-          { item_id: 'Longboat', qty: 1, category: 'Ships', icon: ':ship:' },
-        ],
-      };
+      if (text.includes('FROM v_inventory')) {
+        return { rows: [
+          { character_id:'Player#0001', item_id:'Sword', quantity:2, name:'Sword', category:'Weapons' },
+          { character_id:'Player#0001', item_id:'Iron', quantity:5, name:'Iron', category:'Resources' },
+          { character_id:'Player#0001', item_id:'Longboat', quantity:1, name:'Longboat', category:'Ships' },
+        ] };
+      }
+      return { rows: [{ id: 'dummy' }] };
     },
   });
   mockModule(path.join(root, 'clientManager.js'), { getEmoji: () => ':coin:' });

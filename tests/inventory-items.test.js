@@ -27,22 +27,19 @@ function mockModule(modulePath, mock) {
 
 test('inventory embed shows non-stackable items', async () => {
   const charData = {
-    'Player#0001': { numericID: 'player1', inventory: {} }
+    'Player#0001': { numericID: 'player1' }
   };
   const shopData = {
     Sword: { infoOptions: { Category: 'Weapons', Icon: ':sword:' } }
   };
-  let invId, instId;
   const dbmStub = {
     loadCollection: async (col) => (col === 'characters' ? charData : shopData),
     saveCollection: async () => {},
-    getInventory: async (id) => { invId = id; return {}; },
-    getInventoryItems: async (id) => { instId = id; return [{ item_id: 'Sword' }]; },
   };
   const dataGettersStub = { getCharFromNumericID: async (id) => id };
 
   mockModule(path.join(root, 'database-manager.js'), dbmStub);
-  mockModule(path.join(root, 'pg-client.js'), { query: async () => ({ rows: [] }) });
+  mockModule(path.join(root, 'pg-client.js'), { query: async () => ({ rows: [{ character_id:'Player#0001', item_id:'Sword', quantity:1, name:'Sword', category:'Weapons' }] }) });
   mockModule(path.join(root, 'clientManager.js'), { getEmoji: () => ':coin:' });
   mockModule(path.join(root, 'dataGetters.js'), dataGettersStub);
   mockModule(path.join(root, 'logger.js'), { debug() {}, info() {}, error() {} });
@@ -51,13 +48,11 @@ test('inventory embed shows non-stackable items', async () => {
   const shopModule = require(shopPath);
   const [embed] = await shopModule.createInventoryEmbed('Player#0001', 1);
   assert.ok(embed.description.includes('Sword'));
-  assert.equal(invId, 'Player#0001');
-  assert.equal(instId, 'Player#0001');
 });
 
 test('inventory embed includes legacy inline inventory', async () => {
   const charData = {
-    'Player#0001': { numericID: 'player1', inventory: { Apple: 2 } }
+    'Player#0001': { numericID: 'player1' }
   };
   const shopData = {
     Apple: { infoOptions: { Category: 'Food', Icon: ':apple:' } }
@@ -65,13 +60,11 @@ test('inventory embed includes legacy inline inventory', async () => {
   const dbmStub = {
     loadCollection: async (col) => (col === 'characters' ? charData : shopData),
     saveCollection: async () => {},
-    getInventory: async () => ({}),
-    getInventoryItems: async () => [],
   };
   const dataGettersStub = { getCharFromNumericID: async (id) => id };
 
   mockModule(path.join(root, 'database-manager.js'), dbmStub);
-  mockModule(path.join(root, 'pg-client.js'), { query: async () => ({ rows: [] }) });
+  mockModule(path.join(root, 'pg-client.js'), { query: async () => ({ rows: [{ character_id:'Player#0001', item_id:'Apple', quantity:2, name:'Apple', category:'Food' }] }) });
   mockModule(path.join(root, 'clientManager.js'), { getEmoji: () => ':coin:' });
   mockModule(path.join(root, 'dataGetters.js'), dataGettersStub);
   mockModule(path.join(root, 'logger.js'), { debug() {}, info() {}, error() {} });
