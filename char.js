@@ -4,7 +4,7 @@ const clientManager = require('./clientManager');
 const logger = require('./logger');
 const axios = require('axios');
 const db = require('./pg-client');
-const { randomUUID } = require('crypto');
+const { grantItemToPlayer, resolveItemId } = require('./inventory-grants');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, createWebhook } = require('discord.js');
 // No configuration fields are required from config.js in this module.
 
@@ -1491,74 +1491,58 @@ class char {
   }
 
   static async addItemToPlayer(player, item, amount) {
-    const shopData = await dbm.loadCollection('shop');
-    item = await shop.findItemName(item, shopData);
     [player] = await this.findPlayerData(player);
 
     if (!player) {
       throw new Error('Error: Player not found');
     }
-    if (item === 'ERROR') {
-      throw new Error('Not a valid item');
-    }
 
     if (amount > 0) {
-      for (let i = 0; i < amount; i++) {
-        await db.query(
-          `INSERT INTO inventory_items (instance_id, owner_id, item_id, durability, metadata)
-           VALUES ($1, $2, $3, $4, $5)`,
-          [randomUUID(), player, item, null, '{}']
-        );
-      }
+      const canonical = await grantItemToPlayer(db, player, item, amount);
+      return canonical;
     } else if (amount < 0) {
+      const canonical = await resolveItemId(db, item);
       const toRemove = -amount;
       const { rows } = await db.query(
         'SELECT instance_id FROM inventory_items WHERE owner_id=$1 AND item_id=$2 LIMIT $3',
-        [player, item, toRemove]
+        [player, canonical, toRemove]
       );
       for (const row of rows) {
         await db.query('DELETE FROM inventory_items WHERE instance_id=$1', [row.instance_id]);
       }
+      return canonical;
     }
 
-    return item;
+    return await resolveItemId(db, item);
   }
 
   static async addItemToRole(role, item, amount) {
-    let collectionName = 'characters';
-    let charData = await dbm.loadCollection(collectionName);
-  
-    let members = await role.guild.members.fetch();
-    members = members.filter(member => member.roles.cache.has(role.id));
-  
-    let errorMembers = [];
-  
-    for (let [id, member] of members) {
-  
-      // Check if the member has a character
-      let charID = member.user.username;
-      if (!charData[charID]) {
-        errorMembers.push(charID);
+    const members = await role.guild.members.fetch();
+    const filtered = members.filter(member => member.roles.cache.has(role.id));
+
+    const canonical = amount < 0 ? await resolveItemId(db, item) : null;
+    const errorMembers = [];
+    for (const [, member] of filtered) {
+      const [player] = await this.findPlayerData(member.user.username);
+      if (!player) {
+        errorMembers.push(member.user.username);
         continue;
       }
-  
-      // Add the item to the member's inventory
-      if (!charData[charID].inventory) {
-        charData[charID].inventory = {};
-      }
-  
+
       if (amount > 0) {
-        charData[charID].inventory[item] = (charData[charID].inventory[item] || 0) + amount;
+        await grantItemToPlayer(db, player, item, amount);
       } else if (amount < 0) {
-        charData[charID].inventory[item] = Math.max((charData[charID].inventory[item] || 0) + amount, 0);
-        if (charData[charID].inventory[item] === 0) {
-          delete charData[charID].inventory[item]; // Optional: Remove if amount is 0
+        const toRemove = -amount;
+        const { rows } = await db.query(
+          'SELECT instance_id FROM inventory_items WHERE owner_id=$1 AND item_id=$2 LIMIT $3',
+          [player, canonical, toRemove]
+        );
+        for (const row of rows) {
+          await db.query('DELETE FROM inventory_items WHERE instance_id=$1', [row.instance_id]);
         }
       }
     }
-  
-    await dbm.saveCollection(collectionName, charData);
-  
+
     return errorMembers;
   }
 
