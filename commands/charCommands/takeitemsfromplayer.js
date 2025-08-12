@@ -15,14 +15,11 @@ module.exports = {
         const player = interaction.options.getUser('player').toString();
         const item = interaction.options.getString('item');
         const amount = interaction.options.getInteger('amount');
-        const response = await char.addItemToPlayer(player, item, -amount);
-
-        if (response == true) {
-            return interaction.reply(`Took ${amount} ${item} from ${player}`);
-        } else if (response == false || !response) {
-            return interaction.reply('Something went wrong');
-        } else {
-            return interaction.reply(response);
+        try {
+            const canonical = await char.addItemToPlayer(player, item, -amount);
+            return interaction.reply(`Took ${amount} ${canonical} from ${player}`);
+        } catch (err) {
+            return interaction.reply(err.message || 'Something went wrong');
         }
     },
 };

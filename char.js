@@ -3,6 +3,8 @@ const shop = require('./shop');
 const clientManager = require('./clientManager');
 const logger = require('./logger');
 const axios = require('axios');
+const db = require('./pg-client');
+const { randomUUID } = require('crypto');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, createWebhook } = require('discord.js');
 // No configuration fields are required from config.js in this module.
 
@@ -1489,42 +1491,37 @@ class char {
   }
 
   static async addItemToPlayer(player, item, amount) {
-    let collectionName = 'characters';
-    let shopData = await dbm.loadCollection('shop');
+    const shopData = await dbm.loadCollection('shop');
     item = await shop.findItemName(item, shopData);
-    let charData;
-    [player, charData] = await this.findPlayerData(player);
+    [player] = await this.findPlayerData(player);
+
     if (!player) {
-      return "Error: Player not found";
+      throw new Error('Error: Player not found');
     }
-    if (item === "ERROR") {
-      return "Not a valid item";
+    if (item === 'ERROR') {
+      throw new Error('Not a valid item');
     }
-    if (charData) {
-      charData.inventory = charData.inventory || {};
-      //If amount is positive, add items to player or set to amount if they have none of the item already. If amount is negative, remove items from player or set to 0 if they have none of the item already, or less than the amount.
-      if (amount > 0) {
-        if (charData.inventory[item]) {
-          charData.inventory[item] += amount;
-        } else {
-          charData.inventory[item] = amount;
-        }
-      } else if (amount < 0) {
-        if (charData.inventory[item]) {
-          if (charData.inventory[item] + amount > 0) {
-            charData.inventory[item] += amount;
-          } else {
-            charData.inventory[item] = 0;
-          }
-        } else {
-          charData.inventory[item] = 0;
-        }
+
+    if (amount > 0) {
+      for (let i = 0; i < amount; i++) {
+        await db.query(
+          `INSERT INTO inventory_items (instance_id, owner_id, item_id, durability, metadata)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [randomUUID(), player, item, null, '{}']
+        );
       }
-      await dbm.saveFile(collectionName, player, charData);
-      return true;
-    } else {
-      return false;
+    } else if (amount < 0) {
+      const toRemove = -amount;
+      const { rows } = await db.query(
+        'SELECT instance_id FROM inventory_items WHERE owner_id=$1 AND item_id=$2 LIMIT $3',
+        [player, item, toRemove]
+      );
+      for (const row of rows) {
+        await db.query('DELETE FROM inventory_items WHERE instance_id=$1', [row.instance_id]);
+      }
     }
+
+    return item;
   }
 
   static async addItemToRole(role, item, amount) {
