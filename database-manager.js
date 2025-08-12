@@ -91,7 +91,7 @@ async function init() {
 
   logger.info('[database-manager] initialization complete.');
 }
-init().catch(err => logger.error(err));
+init().catch(err => (logger.error ? logger.error(err) : console.error(err)));
 
 async function saveFile(collection, doc, data) {
   const table = assertTable(collection);
