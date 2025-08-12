@@ -4,6 +4,7 @@ const marketplace = require('./marketplace');
 const admin = require('./admin');
 const panel = require('./panel');
 const logger = require('./logger');
+const dbm = require('./database-manager');
 
 const sanitizeCategory = (category) => {
   const sanitized = (category || '').trim().toLowerCase();
@@ -18,6 +19,7 @@ const addItem = async (interaction) => {
   const itemDescription = interaction.fields.getTextInputValue('itemdescription');
   const itemCategory = sanitizeCategory(interaction.fields.getTextInputValue('itemcategory'));
   const warshipStats = interaction.fields.getTextInputValue('warshipstats');
+  const itemId = itemName.trim().toLowerCase().replace(/\s+/g, '_');
 
   const priceInt = itemPrice ? parseInt(itemPrice) : undefined;
   if (itemPrice && isNaN(priceInt)) {
@@ -41,6 +43,9 @@ const addItem = async (interaction) => {
       if (stats[1] !== undefined && !isNaN(stats[1])) itemData.Defence = stats[1];
       if (stats[2] !== undefined && !isNaN(stats[2])) itemData.Speed = stats[2];
       if (stats[3] !== undefined && !isNaN(stats[3])) itemData.HP = stats[3];
+    }
+    if (!(await dbm.getItemDefinition(itemId))) {
+      await dbm.saveItemDefinition(itemId, { name: itemName, category: itemCategory });
     }
     await shop.addItem(itemName, itemData);
     await interaction.reply({content: `Item '${itemName}' has been added to the item list. Use /shoplayout or ping Alex to add to shop.`, ephemeral: true});
