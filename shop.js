@@ -5,6 +5,7 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('
 const clientManager = require('./clientManager');
 const dataGetters = require('./dataGetters');
 const logger = require('./logger');
+const { randomUUID } = require('crypto');
 
 class shop {
   //Declare constants for class 
@@ -458,275 +459,129 @@ class shop {
     return [embed, rows];
   }
 
-  static async createCategoryEmbed(charID, category, page = 1, idPrefix = 'panel_cat_page', source = 'inventory') {
-    charID = await dataGetters.getCharFromNumericID(charID);
-    page = Number(page);
-    const itemsPerPage = 25;
-    const charData = await dbm.loadCollection('characters');
-    const shopData = await dbm.loadCollection('shop');
+    static async createCategoryEmbed(charID, category, page = 1, idPrefix = 'panel_cat_page') {
+      charID = await dataGetters.getCharFromNumericID(charID);
+      page = Number(page);
+      const itemsPerPage = 25;
+      const charData = await dbm.loadCollection('characters');
+      const shopData = await dbm.loadCollection('shop');
 
-    if (charID === 'ERROR' || !charData[charID]) {
+      if (charID === 'ERROR' || !charData[charID]) {
+        const embed = new Discord.EmbedBuilder()
+          .setColor(0x36393e)
+          .setDescription('Character not found.');
+        return [embed, []];
+      }
+
+      const { rows } = await db.query(
+        `SELECT character_id, item_id, quantity, name, category
+           FROM v_inventory
+          WHERE character_id = $1 AND category = $2
+          ORDER BY name`,
+        [charID, category]
+      );
+
+      const items = rows.map(r => ({
+        item: r.name,
+        qty: Number(r.quantity),
+        icon: shopData[r.item_id]?.infoOptions?.Icon || ''
+      }));
+
+      const pages = Math.max(1, Math.ceil(items.length / itemsPerPage));
+      if (page > pages) page = pages;
+      const pageItems = items.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+
       const embed = new Discord.EmbedBuilder()
-        .setColor(0x36393e)
-        .setDescription('Character not found.');
-      return [embed, []];
-    }
+        .setTitle(category)
+        .setColor(0x36393e);
 
-    let deleted = false;
-    const items = [];
-    const target = category.toLowerCase();
-
-    let sourceData;
-    let sourceIsLegacy = false;
-    if (source === 'ships') {
-      // start with new-format ships
-      sourceData = charData[charID].ships || {};
-
-      // pull ship items from both DB stacks and legacy inline inventory
-      const stacks = (await dbm.getInventory(charID)) || {};
-      const inst = await dbm.getInventoryItems(charID);
-      for (const it of inst) {
-        const itemId = it.item_id || it.item;
-        stacks[itemId] = (stacks[itemId] || 0) + 1;
+      if (pageItems.length === 0) {
+        embed.setDescription('No items in ' + category + '!');
+        return [embed, []];
       }
 
-      const legacyInv = charData[charID].inventory || {};
-      let migrated = false;
-
-      // fold in anything whose category is "Ships"/"Ship"
-      for (const [item, qty] of Object.entries({ ...legacyInv, ...stacks })) {
-        const cat = (shopData[item]?.infoOptions?.Category || '').toLowerCase();
-        if (cat === 'ships' || cat === 'ship') {
-          sourceData[item] = (sourceData[item] || 0) + Number(qty || 0);
-          migrated = true;
-        }
-      }
-
-      // persist migration so next time we read from ships only
-      if (migrated) {
-        charData[charID].ships = sourceData;
-        await dbm.saveCollection('characters', charData);
-      }
-    } else if (source === 'storage') {
-      const stacks = (await dbm.getInventory(charID)) || {};
-      sourceData = {};
-      for (const item in stacks) {
-        const cat = (shopData[item]?.infoOptions.Category || '').toLowerCase();
-        if (cat === 'resources' || cat === 'resource') {
-          sourceData[item] = stacks[item];
-        }
-      }
-
-      // If stacks empty, read legacy storage or legacy inventory
-      if (Object.keys(sourceData).length === 0) {
-        if (charData[charID].storage && Object.keys(charData[charID].storage).length) {
-          sourceData = charData[charID].storage;
-          sourceIsLegacy = true;
-        } else if (charData[charID].inventory) {
-          for (const [item, qty] of Object.entries(charData[charID].inventory)) {
-            const cat = (shopData[item]?.infoOptions.Category || '').toLowerCase();
-            if (cat === 'resources' || cat === 'resource') {
-              sourceData[item] = qty;
-            }
+      const descriptionText = pageItems
+        .map(({ item, qty, icon }) => {
+          let alignSpaces = ' ';
+          if (30 - item.length - ('' + qty).length > 0) {
+            alignSpaces = ' '.repeat(30 - item.length - ('' + qty).length);
           }
-          sourceIsLegacy = true;
-        }
-      }
-    } else {
-      sourceData = charData[charID].inventory || {};
-      sourceIsLegacy = true;
-    }
+          return `${icon} \`${item}${alignSpaces}${qty}\``;
+        })
+        .join('\n');
 
-    if (source === 'storage' && sourceIsLegacy) {
-      charData[charID].storage = sourceData;
-      await dbm.saveCollection('characters', charData);
-    }
+      embed.setDescription('**Items:** \n' + descriptionText);
+      if (pages > 1) embed.setFooter({ text: `Page ${page} of ${pages}` });
 
-    for (const [rawItem, qty] of Object.entries(sourceData)) {
-      // prune zero-qty legacy entries
-      if (source !== 'ships' && sourceIsLegacy && qty == 0) {
-        deleted = true;
-        delete sourceData[rawItem];
-        continue;
-      }
+      const rowsArr = [];
+      if (pages > 1) {
+        const prevButton = new ButtonBuilder()
+          .setCustomId(idPrefix + (page - 1))
+          .setLabel('<')
+          .setStyle(ButtonStyle.Secondary);
+        if (page === 1) prevButton.setDisabled(true);
 
-      // resolve canonical item name if possible
-      let resolvedItem = await shop.findItemName(rawItem);
-      if (resolvedItem !== 'ERROR') {
-        if (resolvedItem !== rawItem) {
-          sourceData[resolvedItem] = (sourceData[resolvedItem] || 0) + qty;
-          if (sourceIsLegacy) {
-            deleted = true;
-            delete sourceData[rawItem];
-          }
-        }
-      } else {
-        resolvedItem = rawItem;
+        const nextButton = new ButtonBuilder()
+          .setCustomId(idPrefix + (page + 1))
+          .setLabel('>')
+          .setStyle(ButtonStyle.Secondary);
+        if (page === pages) nextButton.setDisabled(true);
+
+        rowsArr.push(new ActionRowBuilder().addComponents(prevButton, nextButton));
       }
 
-      // look up shop metadata (may be undefined for legacy/missing items)
-      const shopInfo = shopData[resolvedItem];
-
-      // determine category, defaulting to misc for non-ship items
-      const itemCat = (
-        shopInfo?.infoOptions.Category || (source === 'ships' ? 'ships' : 'misc')
-      ).toLowerCase();
-
-      const matches = (cat) => {
-        if (target === 'ships') return cat === 'ships' || cat === 'ship';
-        if (target === 'resources') return cat === 'resources' || cat === 'resource';
-        return cat === target;
-      };
-
-      if (!matches(itemCat)) continue;
-      items.push(resolvedItem);
+      return [embed, rowsArr];
     }
-if (deleted && (source === 'ships' || sourceIsLegacy)) {
-      if (source === 'ships') {
-        charData[charID].ships = sourceData;
-      } else if (source === 'storage') {
-        charData[charID].storage = sourceData;
-      } else {
-        charData[charID].inventory = sourceData;
-      }
-      await dbm.saveCollection('characters', charData);
-    }
-
-    items.sort();
-
-    const pages = Math.max(1, Math.ceil(items.length / itemsPerPage));
-    if (page > pages) page = pages;
-    const pageItems = items.slice((page - 1) * itemsPerPage, page * itemsPerPage);
-
-    const embed = new Discord.EmbedBuilder()
-      .setTitle(category)
-      .setColor(0x36393e);
-
-    if (pageItems.length === 0) {
-      embed.setDescription('No items in ' + category + '!');
-      return [embed, []];
-    }
-
-    const descriptionText = pageItems
-      .map((item) => {
-        const icon = shopData[item]?.infoOptions?.Icon || '';
-        const quantity = source === 'ships' ? 1 : sourceData[item];
-        let alignSpaces = ' ';
-        if ((30 - item.length - ('' + quantity).length) > 0) {
-          alignSpaces = ' '.repeat(30 - item.length - ('' + quantity).length);
-        }
-        return `${icon} \`${item}${alignSpaces}${quantity}\``;
-      })
-      .join('\n');
-
-    embed.setDescription('**Items:** \n' + descriptionText);
-
-    if (pages > 1) {
-      embed.setFooter({ text: `Page ${page} of ${pages}` });
-    }
-
-    const rows = [];
-    if (pages > 1) {
-      const prevButton = new ButtonBuilder()
-        .setCustomId(idPrefix + (page - 1))
-        .setLabel('<')
-        .setStyle(ButtonStyle.Secondary);
-      if (page === 1) {
-        prevButton.setDisabled(true);
-      }
-      const nextButton = new ButtonBuilder()
-        .setCustomId(idPrefix + (page + 1))
-        .setLabel('>')
-        .setStyle(ButtonStyle.Secondary);
-      if (page === pages) {
-        nextButton.setDisabled(true);
-      }
-      rows.push(new ActionRowBuilder().addComponents(prevButton, nextButton));
-    }
-
-    return [embed, rows];
-  }
 
 // REPLACE your existing createInventoryEmbed with this:
 static async createInventoryEmbed(charID, page = 1) {
-  // 🔧 NEW: map Discord numeric ID -> internal character key (e.g., "serski")
   charID = await dataGetters.getCharFromNumericID(charID);
-
   page = Number(page);
   const itemsPerPage = 25;
 
-  // load data from db
   const shopData = await dbm.loadCollection('shop');
   const charData = await dbm.loadCollection('characters');
 
-  if (!charID || !charData[charID]) {
+  if (charID === 'ERROR' || !charData[charID]) {
     const embed = new Discord.EmbedBuilder()
       .setColor(0x36393e)
       .setDescription('Character not found.');
     return [embed, []];
   }
 
-  // merge stack-based inventory with instance-based inventory
-  let inventoryStacks = { ...(await dbm.getInventory(charID)) };
-  const inventoryItems = await dbm.getInventoryItems(charID);
+  const { rows } = await db.query(
+    `SELECT character_id, item_id, quantity, name, category
+       FROM v_inventory
+      WHERE character_id = $1
+      ORDER BY category, name`,
+    [charID]
+  );
 
-  for (const inst of inventoryItems) {
-    const itemId = inst.item_id || inst.item;
-    if (!inventoryStacks[itemId]) {
-      inventoryStacks[itemId] = 0;
-    }
-    inventoryStacks[itemId]++;
-  }
-
-  // 🔧 NEW: always merge legacy inline inventory from the character record
-  if (charData[charID].inventory) {
-    for (const [item, qty] of Object.entries(charData[charID].inventory)) {
-      if (!inventoryStacks[item]) {
-        inventoryStacks[item] = 0;
-      }
-      inventoryStacks[item] += qty;
-    }
-  }
-
-  // remap raw inventory keys to canonical names
-  const remappedStacks = {};
-  for (const [rawKey, qty] of Object.entries(inventoryStacks)) {
-    let resolved = await shop.findItemName(rawKey);
-    if (resolved === 'ERROR') {
-      resolved = rawKey;
-    }
-    if (!remappedStacks[resolved]) remappedStacks[resolved] = 0;
-    remappedStacks[resolved] += qty;
-  }
-  const inventoryStacksFinal = remappedStacks;
-
-  // build category -> items[] (exclude ships; they have their own views)
-  let inventory = {};
-  for (const item in inventoryStacksFinal) {
-    const itemData = shopData[item];
-    let category = itemData ? (itemData.infoOptions.Category || '') : 'Misc';
-    if (!category) category = 'Misc';
-    const categoryLower = category.toLowerCase();
-
-    // Skip only ships; include resources in inventory
-    if (categoryLower === 'ships' || categoryLower === 'ship') {
-      continue;
-    }
-
+  const inventory = {};
+  for (const row of rows) {
+    const catLower = (row.category || '').toLowerCase();
+    if (catLower === 'ships' || catLower === 'ship' || catLower === 'resources' || catLower === 'resource') continue;
+    const category = row.category || 'Misc';
     if (!inventory[category]) inventory[category] = [];
-    inventory[category].push(item);
+    const icon = shopData[row.item_id]?.infoOptions?.Icon || '';
+    inventory[category].push({ item: row.name, qty: Number(row.quantity), icon });
   }
 
-  const inventoryCategories = Object.keys(inventory).sort();
+  const categories = Object.keys(inventory).sort();
+  if (categories.length === 0) {
+    const embed = new Discord.EmbedBuilder()
+      .setTitle('Inventory')
+      .setColor(0x36393e)
+      .setDescription('No items in inventory!');
+    return [embed, []];
+  }
 
-  // paginate by category count (not item count)
-  let startIndices = [];
-  startIndices[0] = 0;
+  let startIndices = [0];
   let currIndice = 0;
   let currPageLength = 0;
   let i = 0;
-  for (const category of inventoryCategories) {
-    let length = inventory[category].length;
+  for (const category of categories) {
+    const length = inventory[category].length;
     currPageLength += length;
     if (currPageLength > itemsPerPage) {
       currPageLength = length;
@@ -737,68 +592,50 @@ static async createInventoryEmbed(charID, page = 1) {
   }
 
   const pages = Math.max(1, Math.ceil(startIndices.length));
-  const pageItems = inventoryCategories.slice(
+  if (page > pages) page = pages;
+  const pageItems = categories.slice(
     startIndices[page - 1],
-    startIndices[page] ? startIndices[page] : undefined
+    startIndices[page] !== undefined ? startIndices[page] : undefined
   );
 
-  const embed = new Discord.EmbedBuilder()
-    .setTitle('Inventory')
-    .setColor(0x36393e);
+  const embed = new Discord.EmbedBuilder().setTitle('Inventory').setColor(0x36393e);
 
-  if (pageItems.length === 0) {
-    embed.setDescription('No items in inventory!');
-    return [embed, []];
-  }
-
-  // render lines
   let descriptionText = '';
   for (const category of pageItems) {
-    let endSpaces = '-';
-    if (20 - category.length - 2 > 0) {
-      endSpaces = '-'.repeat(20 - category.length - 2);
-    }
-    descriptionText += `**\`--${category}${endSpaces}\`**\n`;
+    descriptionText += `**${category}**\n`;
     descriptionText += inventory[category]
-      .map((item) => {
-        const icon = shopData[item]?.infoOptions.Icon || '';
-        const quantity = inventoryStacksFinal[item];
-
+      .map(({ item, qty, icon }) => {
         let alignSpaces = ' ';
-        if (30 - item.length - ('' + quantity).length > 0) {
-          alignSpaces = ' '.repeat(30 - item.length - ('' + quantity).length);
+        if (30 - item.length - ('' + qty).length > 0) {
+          alignSpaces = ' '.repeat(30 - item.length - ('' + qty).length);
         }
-
-        return `${icon} \`${item}${alignSpaces}${quantity}\``;
+        return `${icon} \`${item}${alignSpaces}${qty}\``;
       })
       .join('\n');
     descriptionText += '\n';
   }
+  embed.setDescription(descriptionText);
 
-  embed.setDescription('**Items:** \n' + descriptionText);
+  if (pages > 1) embed.setFooter({ text: `Page ${page} of ${pages}` });
 
-  if (pages > 1) {
-    embed.setFooter({ text: `Page ${page} of ${pages}` });
-  }
-
-  const rows = [];
+  const row = [];
   if (pages > 1) {
     const prevButton = new Discord.ButtonBuilder()
-      .setCustomId('panel_inv_page' + (page - 1))
+      .setCustomId('inventory_prev' + (page - 1))
       .setLabel('<')
       .setStyle(Discord.ButtonStyle.Secondary);
     if (page === 1) prevButton.setDisabled(true);
 
     const nextButton = new Discord.ButtonBuilder()
-      .setCustomId('panel_inv_page' + (page + 1))
+      .setCustomId('inventory_prev' + (page + 1))
       .setLabel('>')
       .setStyle(Discord.ButtonStyle.Secondary);
     if (page === pages) nextButton.setDisabled(true);
 
-    rows.push(new Discord.ActionRowBuilder().addComponents(prevButton, nextButton));
+    row.push(new Discord.ActionRowBuilder().addComponents(prevButton, nextButton));
   }
 
-  return [embed, rows];
+  return [embed, row];
 }
 
 
@@ -1648,20 +1485,13 @@ static async createInventoryEmbed(charID, page = 1) {
           char.addShip(charData, itemName);
         }
       } else {
-        const invRes = await t.query(
-          `INSERT INTO inventories (owner_id) VALUES ($1)
-           ON CONFLICT (owner_id) DO UPDATE SET owner_id = EXCLUDED.owner_id
-           RETURNING id`,
-          [charID]
-        );
-        const inventoryId = invRes.rows[0].id;
-        await t.query(
-          `INSERT INTO inventory_items (inventory_id, item_id, quantity)
-           VALUES ($1, $2, $3)
-           ON CONFLICT (inventory_id, item_id)
-           DO UPDATE SET quantity = inventory_items.quantity + EXCLUDED.quantity`,
-          [inventoryId, itemName, numToBuy]
-        );
+        for (let i = 0; i < numToBuy; i++) {
+          await t.query(
+            `INSERT INTO inventory_items (instance_id, owner_id, item_id, durability, metadata)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [randomUUID(), charID, itemName, null, '{}']
+          );
+        }
       }
     });
 

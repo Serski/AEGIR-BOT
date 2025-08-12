@@ -30,30 +30,26 @@ function mockModule(modulePath, mock) {
 test('storage uses normalized inventory when legacy storage empty', async () => {
   const charData = {
     'Player#0001': {
-      inventory: {},
       numericID: 'player1'
     }
   };
   const shopData = {
     Wood: { infoOptions: { Category: 'Resources', Icon: ':wood:' } }
   };
-  let invId;
   const dbmStub = {
     loadCollection: async (col) => (col === 'characters' ? charData : shopData),
     saveCollection: async () => {},
-    getInventory: async (id) => { invId = id; return { Wood: 10 }; }
   };
   const dataGettersStub = { getCharFromNumericID: async (id) => id };
 
   mockModule(path.join(root, 'database-manager.js'), dbmStub);
-  mockModule(path.join(root, 'pg-client.js'), { query: async () => ({ rows: [] }) });
+  mockModule(path.join(root, 'pg-client.js'), { query: async () => ({ rows: [{ character_id:'Player#0001', item_id:'Wood', quantity:10, name:'Wood', category:'Resources' }] }) });
   mockModule(path.join(root, 'clientManager.js'), { getEmoji: () => ':coin:' });
   mockModule(path.join(root, 'dataGetters.js'), dataGettersStub);
   mockModule(path.join(root, 'logger.js'), { debug() {}, info() {}, error() {} });
   mockModule('discord.js', discordStub());
 
   const shopModule = require(shopPath);
-  const [embed] = await shopModule.createCategoryEmbed('Player#0001', 'Resources', 1, 'panel_store_page', 'storage');
+  const [embed] = await shopModule.createCategoryEmbed('Player#0001', 'Resources', 1, 'panel_store_page');
   assert.ok(embed.description.includes('Wood'));
-  assert.equal(invId, 'Player#0001');
 });
