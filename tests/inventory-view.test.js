@@ -39,12 +39,12 @@ async function setupTest(itemName, category) {
   const pool = new pgMem.Pool();
 
   await pool.query('CREATE TABLE balances (id TEXT PRIMARY KEY, amount INTEGER DEFAULT 0)');
-  await pool.query('CREATE TABLE inventories (id SERIAL PRIMARY KEY, character_id TEXT UNIQUE)');
+  await pool.query('CREATE TABLE inventories (id SERIAL PRIMARY KEY, owner_id TEXT UNIQUE)');
   await pool.query('CREATE TABLE items (id TEXT PRIMARY KEY, category TEXT, data JSONB)');
   await pool.query('CREATE TABLE inventory_items (inventory_id INTEGER, item_id TEXT, quantity INTEGER, PRIMARY KEY (inventory_id, item_id))');
   await pool.query('CREATE TABLE shop (id TEXT PRIMARY KEY)');
   await pool.query(`CREATE VIEW v_inventory AS
-    SELECT inv.character_id AS owner_id,
+    SELECT inv.owner_id AS owner_id,
            ii.item_id,
            ii.quantity AS qty,
            NULL::TEXT AS instance_id,

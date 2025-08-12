@@ -16,7 +16,10 @@ let pool;
   pool = new pgMem.Pool();
   // pre-create tables used in tests
   pool.query('CREATE TABLE balances (id TEXT PRIMARY KEY, amount INTEGER DEFAULT 0)');
-  pool.query('CREATE TABLE inventories (id TEXT, item TEXT, qty INTEGER, PRIMARY KEY (id, item))');
+  pool.query('CREATE TABLE inventories (id SERIAL PRIMARY KEY, owner_id TEXT UNIQUE)');
+  pool.query(
+    'CREATE TABLE inventory_items (inventory_id INTEGER, item_id TEXT, quantity INTEGER, PRIMARY KEY (inventory_id, item_id))'
+  );
 
   require.cache[pgClientPath] = {
     id: pgClientPath,

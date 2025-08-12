@@ -4,7 +4,19 @@ const fs = require('fs');
 const path = require('path');
 const { randomUUID } = require('crypto');
 
-const tables = ['characters', 'keys', 'shop', 'recipes', 'shoplayout', 'items', 'balances', 'inventories', 'inventory_items', 'cooldowns'];
+const tables = [
+  'characters',
+  'keys',
+  'shop',
+  'recipes',
+  'shoplayout',
+  'items',
+  'balances',
+  'inventories',
+  'inventory_items',
+  'item_instances',
+  'cooldowns',
+];
 
 function assertTable(name) {
   if (!tables.includes(name)) throw new Error(`Unknown table ${name}`);
@@ -38,17 +50,25 @@ async function init() {
   );
 
   // normalized tables for balances, inventories, inventory items and cooldowns
-  await db.query('CREATE TABLE IF NOT EXISTS balances (id TEXT PRIMARY KEY, amount INTEGER DEFAULT 0)');
+  await db.query(
+    'CREATE TABLE IF NOT EXISTS balances (id TEXT PRIMARY KEY, amount INTEGER DEFAULT 0)'
+  );
   await db.query(
     `CREATE TABLE IF NOT EXISTS inventories (
-       id   TEXT,
-       item TEXT,
-       qty  INTEGER,
-       PRIMARY KEY (id, item)
+       id SERIAL PRIMARY KEY,
+       owner_id TEXT UNIQUE
      )`
   );
   await db.query(
     `CREATE TABLE IF NOT EXISTS inventory_items (
+       inventory_id INTEGER,
+       item_id      TEXT,
+       quantity     INTEGER,
+       PRIMARY KEY (inventory_id, item_id)
+     )`
+  );
+  await db.query(
+    `CREATE TABLE IF NOT EXISTS item_instances (
        instance_id TEXT PRIMARY KEY,
        owner_id    TEXT,
        item_id     TEXT,
@@ -183,19 +203,54 @@ async function getAllBalances() {
 }
 
 // --- inventory helpers ---
-async function getInventory(id) {
-  const res = await db.query('SELECT item, qty FROM inventories WHERE id=$1', [id]);
-  return res.rows.reduce((acc, row) => ((acc[row.item] = Number(row.qty)), acc), {});
+async function createInventory(ownerId) {
+  const res = await db.query(
+    `INSERT INTO inventories (owner_id) VALUES ($1)
+     ON CONFLICT (owner_id) DO UPDATE SET owner_id = EXCLUDED.owner_id
+     RETURNING id`,
+    [ownerId]
+  );
+  return res.rows[0].id;
 }
 
-async function updateInventory(id, item, delta) {
-  await db.query(
-    `INSERT INTO inventories (id, item, qty) VALUES ($1, $2, $3)
-     ON CONFLICT (id, item) DO UPDATE SET qty = inventories.qty + EXCLUDED.qty`,
-    [id, item, delta]
+async function getInventory(ownerId) {
+  const invRes = await db.query('SELECT id FROM inventories WHERE owner_id=$1', [ownerId]);
+  if (!invRes.rows[0]) return {};
+  const invId = invRes.rows[0].id;
+  const res = await db.query(
+    'SELECT item_id, quantity FROM inventory_items WHERE inventory_id=$1',
+    [invId]
   );
-  await db.query('DELETE FROM inventories WHERE id=$1 AND item=$2 AND qty <= 0', [id, item]);
+  return res.rows.reduce((acc, row) => ((acc[row.item_id] = Number(row.quantity)), acc), {});
 }
+
+async function getInventoryItem(ownerId, itemId) {
+  const invRes = await db.query('SELECT id FROM inventories WHERE owner_id=$1', [ownerId]);
+  if (!invRes.rows[0]) return 0;
+  const res = await db.query(
+    'SELECT quantity FROM inventory_items WHERE inventory_id=$1 AND item_id=$2',
+    [invRes.rows[0].id, itemId]
+  );
+  return res.rows[0] ? Number(res.rows[0].quantity) : 0;
+}
+
+async function upsertInventoryItem(ownerId, itemId, delta) {
+  const invId = await createInventory(ownerId);
+  await db.query(
+    `INSERT INTO inventory_items (inventory_id, item_id, quantity)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (inventory_id, item_id)
+     DO UPDATE SET quantity = inventory_items.quantity + EXCLUDED.quantity`,
+    [invId, itemId, delta]
+  );
+  await db.query(
+    'DELETE FROM inventory_items WHERE inventory_id=$1 AND item_id=$2 AND quantity <= 0',
+    [invId, itemId]
+  );
+}
+
+// legacy alias
+const updateInventory = upsertInventoryItem;
 
 // --- item definition helpers ---
 async function getItemDefinition(id) {
@@ -211,10 +266,14 @@ async function saveItemDefinition(id, data) {
   );
 }
 
-// --- inventory item instance helpers ---
-async function addInventoryItem(ownerId, itemId, { instanceId = randomUUID(), durability = null, metadata = {} } = {}) {
+// --- individual item instance helpers ---
+async function addInventoryItem(
+  ownerId,
+  itemId,
+  { instanceId = randomUUID(), durability = null, metadata = {} } = {}
+) {
   await db.query(
-    `INSERT INTO inventory_items (instance_id, owner_id, item_id, durability, metadata)
+    `INSERT INTO item_instances (instance_id, owner_id, item_id, durability, metadata)
      VALUES ($1,$2,$3,$4,$5)`,
     [instanceId, ownerId, itemId, durability, metadata]
   );
@@ -222,12 +281,12 @@ async function addInventoryItem(ownerId, itemId, { instanceId = randomUUID(), du
 }
 
 async function getInventoryItems(ownerId) {
-  const res = await db.query('SELECT * FROM inventory_items WHERE owner_id=$1', [ownerId]);
+  const res = await db.query('SELECT * FROM item_instances WHERE owner_id=$1', [ownerId]);
   return res.rows;
 }
 
 async function removeInventoryItem(instanceId) {
-  await db.query('DELETE FROM inventory_items WHERE instance_id=$1', [instanceId]);
+  await db.query('DELETE FROM item_instances WHERE instance_id=$1', [instanceId]);
 }
 
 // --- cooldown helpers ---
@@ -261,7 +320,10 @@ module.exports = {
   getBalance,
   setBalance,
   getAllBalances,
+  createInventory,
   getInventory,
+  getInventoryItem,
+  upsertInventoryItem,
   updateInventory,
   getItemDefinition,
   saveItemDefinition,
