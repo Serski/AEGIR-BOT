@@ -51,6 +51,7 @@ test('mainEmbed returns error when character lookup fails', async (t) => {
     './clientManager.js': { getEmoji: () => ':coin:' },
     './shop.js': {},
     './char.js': {},
+    './pg-client.js': { query: async () => ({ rows: [] }) },
     'discord.js': discordStub(),
   });
   t.after(cleanup);
@@ -66,6 +67,7 @@ test('mainEmbed returns error when character data missing', async (t) => {
     './clientManager.js': { getEmoji: () => ':coin:' },
     './shop.js': {},
     './char.js': {},
+    './pg-client.js': { query: async () => ({ rows: [] }) },
     'discord.js': discordStub(),
   });
   t.after(cleanup);
@@ -82,6 +84,7 @@ test('shipsEmbed returns error when character lookup fails', async (t) => {
     './shop.js': {
       createCategoryEmbed: async () => [{ description: 'Character not found.' }, []],
     },
+    './pg-client.js': { query: async () => ({ rows: [] }) },
     'discord.js': discordStub(),
   });
   t.after(cleanup);

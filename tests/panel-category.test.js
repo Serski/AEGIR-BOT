@@ -43,17 +43,32 @@ test('resources and ships appear only in their submenus', async () => {
     Iron: { infoOptions: { Category: 'Resources', Icon: ':iron:' } },
     Sword: { infoOptions: { Category: 'Weapons', Icon: ':sword:' } }
   };
-  let invId;
   const dbmStub = {
-    loadCollection: async (col) => col === 'characters' ? charData : shopData,
+    loadCollection: async (col) => (col === 'characters' ? charData : shopData),
     saveCollection: async () => {},
-    getInventory: async (id) => { invId = id; return charData[id] ? charData[id].inventory : {}; },
-    getInventoryItems: async () => []
+    getInventory: async (id) => (charData[id] ? charData[id].inventory : {}),
+    getInventoryItems: async () => [],
   };
   const dataGettersStub = { getCharFromNumericID: async (id) => id };
 
   mockModule(path.join(root, 'database-manager.js'), dbmStub);
-  mockModule(path.join(root, 'pg-client.js'), { query: async () => ({ rows: [] }) });
+  mockModule(path.join(root, 'pg-client.js'), {
+    query: async (text, params) => {
+      if (text.startsWith('SELECT id FROM shop')) {
+        return { rows: [{ id: params[0] }] };
+      }
+      if (text.includes("IN ('resources','resource')")) {
+        return { rows: [{ item_id: 'Iron', qty: 5, category: 'Resources', icon: ':iron:' }] };
+      }
+      return {
+        rows: [
+          { item_id: 'Sword', qty: 2, category: 'Weapons', icon: ':sword:' },
+          { item_id: 'Iron', qty: 5, category: 'Resources', icon: ':iron:' },
+          { item_id: 'Longboat', qty: 1, category: 'Ships', icon: ':ship:' },
+        ],
+      };
+    },
+  });
   mockModule(path.join(root, 'clientManager.js'), { getEmoji: () => ':coin:' });
   mockModule(path.join(root, 'dataGetters.js'), dataGettersStub);
   mockModule(path.join(root, 'logger.js'), { debug() {}, info() {}, error() {} });
@@ -66,7 +81,6 @@ test('resources and ships appear only in their submenus', async () => {
   assert.ok(invEmbed.description.includes('Sword'));
   assert.ok(!invEmbed.description.includes('Longboat'));
   assert.ok(!invEmbed.description.includes('Iron'));
-  assert.equal(invId, 'Player#0001');
 
   const [resEmbed] = await panelModule.storageEmbed('Player#0001', 1);
   assert.ok(resEmbed.description.includes('Iron'));

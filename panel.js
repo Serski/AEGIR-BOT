@@ -10,6 +10,7 @@ const shop = require('./shop');
 const dbm = require('./database-manager');
 const dataGetters = require('./dataGetters');
 const clientManager = require('./clientManager');
+const db = require('./pg-client');
 
 function selectRow() {
   return new ActionRowBuilder().addComponents(
@@ -54,21 +55,190 @@ module.exports = {
   },
 
   inventoryEmbed: async function (charID, page = 1) {
-    let [embed, rows] = await shop.createInventoryEmbed(charID, page);
-    rows.push(selectRow());
-    return [embed, rows];
+    charID = await dataGetters.getCharFromNumericID(charID);
+    page = Number(page);
+    const itemsPerPage = 25;
+    const charData = await dbm.loadCollection('characters');
+    if (charID === 'ERROR' || !charData[charID]) {
+      const embed = new EmbedBuilder()
+        .setColor(0x36393e)
+        .setDescription('Character not found.');
+      return [embed, []];
+    }
+
+    const { rows } = await db.query(
+      `SELECT v.item_id, SUM(v.qty) AS qty,
+              COALESCE(v.category, 'Misc') AS category,
+              COALESCE(i.data->'infoOptions'->>'Icon', '') AS icon
+         FROM v_inventory v
+         LEFT JOIN items i ON v.item_id = i.id
+        WHERE v.owner_id = $1
+        GROUP BY v.item_id, v.category, icon
+        ORDER BY LOWER(v.category), v.item_id`,
+      [charID]
+    );
+
+    const inventory = {};
+    for (const row of rows) {
+      const catLower = (row.category || '').toLowerCase();
+      if (catLower === 'ships' || catLower === 'ship' || catLower === 'resources' || catLower === 'resource') {
+        continue;
+      }
+      const category = row.category || 'Misc';
+      if (!inventory[category]) inventory[category] = [];
+      inventory[category].push({ item: row.item_id, qty: Number(row.qty), icon: row.icon || '' });
+    }
+
+    const categories = Object.keys(inventory).sort();
+    if (categories.length === 0) {
+      const embed = new EmbedBuilder()
+        .setTitle('Inventory')
+        .setColor(0x36393e)
+        .setDescription('No items in inventory!');
+      return [embed, [selectRow()]];
+    }
+
+    let startIndices = [0];
+    let currIndice = 0;
+    let currPageLength = 0;
+    let i = 0;
+    for (const category of categories) {
+      const length = inventory[category].length;
+      currPageLength += length;
+      if (currPageLength > itemsPerPage) {
+        currPageLength = length;
+        currIndice++;
+        startIndices[currIndice] = i;
+      }
+      i++;
+    }
+
+    const pages = Math.max(1, Math.ceil(startIndices.length));
+    if (page > pages) page = pages;
+    const pageItems = categories.slice(
+      startIndices[page - 1],
+      startIndices[page] !== undefined ? startIndices[page] : undefined
+    );
+
+    const embed = new EmbedBuilder().setTitle('Inventory').setColor(0x36393e);
+
+    let descriptionText = '';
+    for (const category of pageItems) {
+      let endSpaces = '-';
+      if (20 - category.length - 2 > 0) {
+        endSpaces = '-'.repeat(20 - category.length - 2);
+      }
+      descriptionText += `**\`--${category}${endSpaces}\`**\n`;
+      descriptionText += inventory[category]
+        .map(({ item, qty, icon }) => {
+          let alignSpaces = ' ';
+          if (30 - item.length - ('' + qty).length > 0) {
+            alignSpaces = ' '.repeat(30 - item.length - ('' + qty).length);
+          }
+          return `${icon} \`${item}${alignSpaces}${qty}\``;
+        })
+        .join('\n');
+      descriptionText += '\n';
+    }
+
+    embed.setDescription('**Items:** \n' + descriptionText);
+    if (pages > 1) {
+      embed.setFooter({ text: `Page ${page} of ${pages}` });
+    }
+
+    const rowsArr = [];
+    if (pages > 1) {
+      const prevButton = new ButtonBuilder()
+        .setCustomId('panel_inv_page' + (page - 1))
+        .setLabel('<')
+        .setStyle(ButtonStyle.Secondary);
+      if (page === 1) prevButton.setDisabled(true);
+
+      const nextButton = new ButtonBuilder()
+        .setCustomId('panel_inv_page' + (page + 1))
+        .setLabel('>')
+        .setStyle(ButtonStyle.Secondary);
+      if (page === pages) nextButton.setDisabled(true);
+
+      rowsArr.push(new ActionRowBuilder().addComponents(prevButton, nextButton));
+    }
+
+    rowsArr.push(selectRow());
+    return [embed, rowsArr];
   },
 
   storageEmbed: async function (charID, page = 1) {
-    let [embed, rows] = await shop.createCategoryEmbed(
-      charID,
-      'Resources',
-      page,
-      'panel_store_page',
-      'storage'
+    charID = await dataGetters.getCharFromNumericID(charID);
+    page = Number(page);
+    const itemsPerPage = 25;
+    const charData = await dbm.loadCollection('characters');
+    if (charID === 'ERROR' || !charData[charID]) {
+      const embed = new EmbedBuilder()
+        .setColor(0x36393e)
+        .setDescription('Character not found.');
+      return [embed, []];
+    }
+
+    const { rows } = await db.query(
+      `SELECT v.item_id, SUM(v.qty) AS qty,
+              COALESCE(i.data->'infoOptions'->>'Icon', '') AS icon
+         FROM v_inventory v
+         LEFT JOIN items i ON v.item_id = i.id
+        WHERE v.owner_id = $1 AND LOWER(v.category) IN ('resources','resource')
+        GROUP BY v.item_id, icon
+        ORDER BY v.item_id`,
+      [charID]
     );
-    rows.push(selectRow());
-    return [embed, rows];
+
+    const items = rows
+      .map((r) => ({ item: r.item_id, qty: Number(r.qty), icon: r.icon || '' }))
+      .sort((a, b) => a.item.localeCompare(b.item));
+
+    const pages = Math.max(1, Math.ceil(items.length / itemsPerPage));
+    if (page > pages) page = pages;
+    const pageItems = items.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+
+    const embed = new EmbedBuilder().setTitle('Resources').setColor(0x36393e);
+
+    if (pageItems.length === 0) {
+      embed.setDescription('No items in Resources!');
+      return [embed, [selectRow()]];
+    }
+
+    const descriptionText = pageItems
+      .map(({ item, qty, icon }) => {
+        let alignSpaces = ' ';
+        if (30 - item.length - ('' + qty).length > 0) {
+          alignSpaces = ' '.repeat(30 - item.length - ('' + qty).length);
+        }
+        return `${icon} \`${item}${alignSpaces}${qty}\``;
+      })
+      .join('\n');
+
+    embed.setDescription('**Items:** \n' + descriptionText);
+    if (pages > 1) {
+      embed.setFooter({ text: `Page ${page} of ${pages}` });
+    }
+
+    const rowsArr = [];
+    if (pages > 1) {
+      const prevButton = new ButtonBuilder()
+        .setCustomId('panel_store_page' + (page - 1))
+        .setLabel('<')
+        .setStyle(ButtonStyle.Secondary);
+      if (page === 1) prevButton.setDisabled(true);
+
+      const nextButton = new ButtonBuilder()
+        .setCustomId('panel_store_page' + (page + 1))
+        .setLabel('>')
+        .setStyle(ButtonStyle.Secondary);
+      if (page === pages) nextButton.setDisabled(true);
+
+      rowsArr.push(new ActionRowBuilder().addComponents(prevButton, nextButton));
+    }
+
+    rowsArr.push(selectRow());
+    return [embed, rowsArr];
   },
 
   shipsEmbed: async function (charID, page = 1) {
