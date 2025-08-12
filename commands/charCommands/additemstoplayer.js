@@ -2,6 +2,8 @@
 
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const char = require('../../char'); // Importing the database manager
+const db = require('../../pg-client');
+const { grantItemToPlayer } = require('../../inventory-grants');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -16,7 +18,11 @@ module.exports = {
         const item = interaction.options.getString('item');
         const amount = interaction.options.getInteger('amount');
         try {
-            const canonical = await char.addItemToPlayer(player, item, amount);
+            const [charId] = await char.findPlayerData(player);
+            if (!charId) {
+                throw new Error('Error: Player not found');
+            }
+            const canonical = await grantItemToPlayer(db, charId, item, amount);
             return interaction.reply(`Gave ${amount} ${canonical} to ${player}`);
         } catch (err) {
             return interaction.reply(err.message || 'Something went wrong');
