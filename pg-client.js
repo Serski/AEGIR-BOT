@@ -17,6 +17,22 @@ logger.info(`[pg-client] pool created (max=${pool.options.max || 10})`);
 
 module.exports = {
   query: (text, params) => pool.query(text, params),
+  tx: async (cb) => {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await cb({
+        query: (text, params) => client.query(text, params),
+      });
+      await client.query('COMMIT');
+      return result;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  },
   pool,
 };
 
