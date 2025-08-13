@@ -17,10 +17,16 @@ function stubModule(file, exports) {
 (function setup() {
   const { newDb } = require('pg-mem');
   const mem = newDb();
+  const { randomUUID } = require('crypto');
+  mem.public.registerFunction({
+    name: 'gen_random_uuid',
+    returns: 'text',
+    implementation: () => randomUUID(),
+  });
   const pgMem = mem.adapters.createPg();
   pool = new pgMem.Pool();
   pool.query(
-    "CREATE TABLE marketplace (id SERIAL PRIMARY KEY, name TEXT, item_code TEXT, price INTEGER, seller TEXT, quantity INTEGER)"
+    "CREATE TABLE marketplace (id TEXT PRIMARY KEY, name TEXT, item_code TEXT, price INTEGER, seller TEXT, quantity INTEGER)"
   );
   pool.query("CREATE VIEW marketplace_v AS SELECT name, item_code, price, 'Weapons'::text AS category FROM marketplace");
   pool.query("CREATE TABLE inventory_items (instance_id TEXT PRIMARY KEY, owner_id TEXT, item_id TEXT, durability INTEGER, metadata JSONB)");
@@ -51,7 +57,11 @@ after(() => {
 
 test('postSale and listSales', async () => {
   let res = await marketplace.postSale({ userId: 'user1', rawItem: 'sword', price: 10, quantity: 2 });
-  assert.deepEqual(res, { ok: true, itemCode: 'sword', price: 10, quantity: 2 });
+  assert.equal(res.ok, true);
+  assert.equal(res.itemCode, 'sword');
+  assert.equal(res.price, 10);
+  assert.equal(res.quantity, 2);
+  assert.equal(typeof res.saleId, 'string');
 
   res = await marketplace.postSale({ userId: 'user1', rawItem: 'sword', price: 10, quantity: 5 });
   assert.deepEqual(res, { ok: false, reason: 'not_enough', owned: 3, needed: 5 });

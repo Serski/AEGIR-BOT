@@ -25,6 +25,11 @@ function assertTable(name) {
 
 async function init() {
   logger.info('[database-manager] initializing tables...');
+  try {
+    await db.query('CREATE EXTENSION IF NOT EXISTS pgcrypto');
+  } catch (err) {
+    logger.warn ? logger.warn('[database-manager] failed to enable pgcrypto', err) : console.warn(err);
+  }
 
   // tables storing JSON blobs
   const jsonTables = ['characters', 'keys', 'shop', 'recipes', 'shoplayout', 'items'];
@@ -39,13 +44,12 @@ async function init() {
 
   await db.query(
     `CREATE TABLE IF NOT EXISTS marketplace (
-       id       SERIAL PRIMARY KEY,
-       item     TEXT,
-       category TEXT,
-       price    INTEGER,
-       number   INTEGER,
-       seller   TEXT,
-       seller_id TEXT
+       id        TEXT PRIMARY KEY,
+       name      TEXT,
+       item_code TEXT,
+       price     INTEGER,
+       seller    TEXT,
+       quantity  INTEGER
      )`
   );
 

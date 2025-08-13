@@ -44,6 +44,6 @@ module.exports = {
             return;
         }
 
-        await interaction.reply(`Listed ${qty} × ${res.itemCode} for ${price} each on the marketplace.`);
+        await interaction.reply(`Listed ${qty} × ${res.itemCode} for ${price} each on the marketplace. Sale ID: ${res.saleId}`);
     }
 };

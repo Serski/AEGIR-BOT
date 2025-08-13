@@ -60,7 +60,9 @@ async function postSale({ userId, rawItem, price = 0, quantity = 1 }) {
     const name = meta?.name || itemCode;
 
     const insertRes = await client.query(
-      'INSERT INTO marketplace (name, item_code, price, seller, quantity) VALUES ($1,$2,$3,$4,$5) RETURNING id',
+      `INSERT INTO marketplace (id, name, item_code, price, seller, quantity)
+       VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5)
+       RETURNING id`,
       [name, itemCode, price, userId, quantity]
     );
     const saleId = insertRes.rows[0]?.id;
@@ -73,7 +75,7 @@ async function postSale({ userId, rawItem, price = 0, quantity = 1 }) {
       quantity,
       saleId,
     });
-    return { ok: true, itemCode, price, quantity };
+    return { ok: true, saleId, itemCode, price, quantity };
   } catch (err) {
     try { await client.query('ROLLBACK'); } catch {}
     throw err;
