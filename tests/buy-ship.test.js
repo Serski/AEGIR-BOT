@@ -33,36 +33,59 @@ async function mockImport(modulePath, mocks) {
 const root = path.join(__dirname, '..');
 const shopPath = path.join(root, 'shop.js');
 
-test.skip('buying a ship stores it separately from inventory', async (t) => {
+test.skip('buying a ship stores it separately from inventory', async () => {
   let balance = 100;
   let charData = { numericID: 'usernum', inventory: {}, ships: {} };
-  const shopData = {
-    'Longboat': {
-      infoOptions: { Category: 'Ships', Icon: ':ship:' },
-      shopOptions: { 'Price (#)': 10, Channels: '', 'Need Role': '', 'Give Role': '' }
-    }
+
+  const row = {
+    id: 'Longboat',
+    item: 'longboat',
+    price: 10,
+    data: { item_id: 'longboat', name: 'Longboat', price: 10, category: 'Ships' }
   };
-  const dbmShopStub = {
-    loadCollection: async (col) => col === 'shop' ? shopData : { 'Player#0001': charData },
+
+  const dbStub = {
+    query: async (text, params) => {
+      if (/FROM shop/i.test(text)) {
+        return { rows: [row] };
+      }
+      if (/resolve_item_id/i.test(text)) {
+        return { rows: [{ canon_id: row.data.item_id }] };
+      }
+      if (/FROM items/i.test(text)) {
+        return { rows: [{ category: 'Ships' }] };
+      }
+      return { rows: [] };
+    },
+    tx: async cb => cb({
+      query: async (text, params) => {
+        if (/INSERT INTO balances/i.test(text)) {
+          balance = params[1];
+        }
+        return { rows: [] };
+      }
+    })
+  };
+
+  const dbmStub = {
     loadFile: async () => charData,
     saveFile: async (col, id, data) => { charData = data; },
-    getBalance: async () => balance,
-    setBalance: async (id, amt) => { balance = amt; }
+    getBalance: async () => balance
   };
+
   const shopModule = await mockImport(shopPath, {
-    './database-manager': dbmShopStub,
-    './pg-client': { query: async () => ({ rows: [{ id: 'Longboat' }] }) },
+    './database-manager': dbmStub,
+    './pg-client': dbStub,
     './clientManager': { getUser: async () => ({ roles: { cache: { some: () => false }, add: () => {} } }) },
     './logger': { debug() {}, info() {}, error() {} },
     './char': { addShip: (data, name) => { if (!data.ships) data.ships = {}; data.ships[name] = {}; } }
   });
 
   const reply = await shopModule.buyItem('Longboat', 'Player#0001', 1, 'channel');
-  assert.equal(reply, 'Succesfully bought 1 Longboat');
+  assert.equal(reply, 'Succesfully bought 1 longboat');
   assert.equal(balance, 90);
-  assert.ok(charData.ships['Longboat']);
-  assert.strictEqual(charData.inventory['Longboat'], undefined);
-
+  assert.ok(charData.ships['longboat']);
+  assert.strictEqual(charData.inventory['longboat'], undefined);
 });
 
 test.skip('buying ship items with varied category casing routes to ships list', async (t) => {
@@ -70,32 +93,45 @@ test.skip('buying ship items with varied category casing routes to ships list', 
     await t.test(category, async () => {
       let balance = 100;
       let charData = { numericID: 'usernum', inventory: {}, ships: {} };
-      const shopData = {
-        'Longboat': {
-          infoOptions: { Category: category, Icon: ':ship:' },
-          shopOptions: { 'Price (#)': 10, Channels: '', 'Need Role': '', 'Give Role': '' }
-        }
+      const row = {
+        id: 'Longboat',
+        item: 'longboat',
+        price: 10,
+        data: { item_id: 'longboat', name: 'Longboat', price: 10, category }
       };
-      const dbmShopStub = {
-        loadCollection: async (col) => col === 'shop' ? shopData : { 'Player#0001': charData },
+      const dbStub = {
+        query: async (text, params) => {
+          if (/FROM shop/i.test(text)) return { rows: [row] };
+          if (/resolve_item_id/i.test(text)) return { rows: [{ canon_id: row.data.item_id }] };
+          if (/FROM items/i.test(text)) return { rows: [{ category }] };
+          return { rows: [] };
+        },
+        tx: async cb => cb({
+          query: async (text, params) => {
+            if (/INSERT INTO balances/i.test(text)) balance = params[1];
+            return { rows: [] };
+          }
+        })
+      };
+      const dbmStub = {
         loadFile: async () => charData,
         saveFile: async (col, id, data) => { charData = data; },
-        getBalance: async () => balance,
-        setBalance: async (id, amt) => { balance = amt; }
+        getBalance: async () => balance
       };
       const shopModule = await mockImport(shopPath, {
-        './database-manager': dbmShopStub,
-        './pg-client': { query: async () => ({ rows: [{ id: 'Longboat' }] }) },
+        './database-manager': dbmStub,
+        './pg-client': dbStub,
         './clientManager': { getUser: async () => ({ roles: { cache: { some: () => false }, add: () => {} } }) },
         './logger': { debug() {}, info() {}, error() {} },
         './char': { addShip: (data, name) => { if (!data.ships) data.ships = {}; data.ships[name] = {}; } }
       });
 
       const reply = await shopModule.buyItem('Longboat', 'Player#0001', 1, 'channel');
-      assert.equal(reply, 'Succesfully bought 1 Longboat');
+      assert.equal(reply, 'Succesfully bought 1 longboat');
       assert.equal(balance, 90);
-      assert.ok(charData.ships['Longboat']);
-      assert.strictEqual(charData.inventory['Longboat'], undefined);
+      assert.ok(charData.ships['longboat']);
+      assert.strictEqual(charData.inventory['longboat'], undefined);
     });
   }
 });
+
