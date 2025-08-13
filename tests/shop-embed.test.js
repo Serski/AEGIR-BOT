@@ -25,26 +25,14 @@ const root = path.join(__dirname, '..');
 const shopPath = path.join(root, 'shop.js');
 
 test('createShopEmbed shows only items with numeric prices', async () => {
-  const shopData = {
-    'Longboat': {
-      infoOptions: { Category: 'Ships', Icon: ':ship:', Name: 'Longboat', Description: 'A boat' },
-      shopOptions: { 'Price (#)': 100 }
-    },
-    'Broken Ship': {
-      infoOptions: { Category: 'Ships', Icon: ':ship:', Name: 'Broken Ship' },
-      shopOptions: { 'Price (#)': 'abc' }
-    },
-    'Wood': {
-      infoOptions: { Category: 'Resources', Icon: ':wood:', Name: 'Wood', Description: 'Some wood' },
-      shopOptions: { 'Price (#)': 5 }
-    },
-    'Stone': {
-      infoOptions: { Category: 'Materials', Icon: ':rock:', Name: 'Stone' },
-      shopOptions: { 'Price (#)': '' }
-    }
-  };
+  const rows = [
+    { id: 'Longboat', name: 'Longboat', price: 100, data: { category: 'Ships', icon: ':ship:', description: 'A boat' } },
+    { id: 'Broken Ship', name: 'Broken Ship', price: 'abc', data: { category: 'Ships', icon: ':ship:' } },
+    { id: 'Wood', name: 'Wood', price: 5, data: { category: 'Resources', icon: ':wood:', description: 'Some wood' } },
+    { id: 'Stone', name: 'Stone', price: null, data: { category: 'Materials', icon: ':rock:' } }
+  ];
 
-  const dbmStub = { loadCollection: async () => shopData };
+  const dbStub = { query: async () => ({ rows }) };
 
   const discordStub = {
     EmbedBuilder: class {
@@ -53,19 +41,12 @@ test('createShopEmbed shows only items with numeric prices', async () => {
       setColor() { return this; }
       addFields(field) { this.fields.push(field); return this; }
     },
-    ActionRowBuilder: class { addComponents() { return this; } },
-    ButtonBuilder: class {
-      setCustomId() { return this; }
-      setLabel() { return this; }
-      setStyle() { return this; }
-    },
-    ButtonStyle: { Primary: 1 }
   };
 
   const shopModule = await mockImport(shopPath, {
-    './database-manager': dbmStub,
+    './pg-client': dbStub,
     'discord.js': discordStub,
-    './pg-client': {},
+    './database-manager': {},
     './clientManager': {},
     './dataGetters': {},
     './logger': { debug() {}, info() {}, error() {} }
