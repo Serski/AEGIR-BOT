@@ -12,8 +12,11 @@ function mockModule(modulePath, mock) {
 
 test('/inventory command uses user id identifier', async (t) => {
   let calledId;
-  mockModule(path.join(root, 'shop.js'), {
-    createInventoryEmbed: async (id) => { calledId = id; return [{ description: 'ok' }, []]; }
+  mockModule(path.join(root, 'db', 'inventory.js'), {
+    getInventoryView: async (id) => {
+      calledId = id;
+      return [{ name: 'Test', quantity: 1, category: 'Misc' }];
+    },
   });
   mockModule('discord.js', {
     SlashCommandBuilder: class { setName() { return this; } setDescription() { return this; } }
@@ -28,10 +31,11 @@ test('/inventory command uses user id identifier', async (t) => {
 
   await command.execute(interaction);
   assert.equal(calledId, '123456789012345678');
-  assert.ok(replied.embeds);
+  assert.equal(replied.content, '• Test — x1 [Misc]');
+  assert.equal(replied.ephemeral, true);
 
   t.after(() => {
-    delete require.cache[require.resolve(path.join(root, 'shop.js'))];
+    delete require.cache[require.resolve(path.join(root, 'db', 'inventory.js'))];
     delete require.cache[require.resolve('discord.js')];
     delete require.cache[commandPath];
   });

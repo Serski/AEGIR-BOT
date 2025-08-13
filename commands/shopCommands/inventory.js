@@ -1,13 +1,17 @@
 const { SlashCommandBuilder } = require('discord.js');
-const shop = require('../../shop'); // Importing the database manager
+const { getInventoryView } = require('../../db/inventory');
 
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('inventory')
 		.setDescription('Show your inventory'),
 	async execute(interaction) {
-        const userID = interaction.user.id; // this is the actual Discord Snowflake ID
-                const [replyEmbed, rows] = await shop.createInventoryEmbed(userID, 1);
-                await interaction.reply({ embeds: [replyEmbed], components: rows });
+        const rows = await getInventoryView(interaction.user.id);
+        if (rows.length === 0) {
+                await interaction.reply({ content: 'No items in inventory!', ephemeral: true });
+                return;
+        }
+        const lines = rows.map(row => `• ${row.name} — x${row.quantity} [${row.category}]`);
+        await interaction.reply({ content: lines.join('\n'), ephemeral: true });
         },
 };
