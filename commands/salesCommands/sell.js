@@ -7,8 +7,8 @@ module.exports = {
         .setName('sell')
         .setDescription('Sell an item')
         .addStringOption((option) =>
-            option.setName('itemname')
-                .setDescription('The item name')
+            option.setName('itemcode')
+                .setDescription('The item code')
                 .setRequired(true)
         )
         .addIntegerOption((option) =>
@@ -22,10 +22,10 @@ module.exports = {
                 .setRequired(true)
         ),
     async execute(interaction) {
-        const itemName = interaction.options.getString('itemname');
+        const itemCode = interaction.options.getString('itemcode');
         const quantity = interaction.options.getInteger('quantity');
         const price = interaction.options.getInteger('price');
-            let reply = await marketplace.postSale(quantity, itemName, price, interaction.user.tag, interaction.user.id)
+            let reply = await marketplace.postSale(quantity, itemCode, price, interaction.user.tag, interaction.user.id)
             if (typeof (reply) == 'string') {
                 await interaction.reply(reply);
             } else {
