@@ -1,6 +1,5 @@
 const dbm = require('./database-manager'); // Importing the database manager
 const db = require('./pg-client');
-const { pool } = require('./pg-client');
 const Discord = require('discord.js');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const clientManager = require('./clientManager');
@@ -9,16 +8,10 @@ const logger = require('./logger');
 const { grantItemToPlayer } = require('./inventory-grants');
 
 async function fetchShopItems() {
-  const { rows } = await pool.query(`
-    SELECT
-      id,
-      name,
-      item    AS item_id,
-      price
-    FROM shop
-    ORDER BY name
-  `);
-  return rows; // [{id, name, item_id, price}, ...]
+  const { rows } = await db.query(
+    'SELECT id, name, item_code, price, category FROM shop_v ORDER BY name'
+  );
+  return rows; // [{id, name, item_code, price, category}, ...]
 }
 
 class shop {
@@ -42,8 +35,11 @@ class shop {
   // Function to find an item by name in the shop
   //THIS IS INEFFICIENT BECAUSE IT MEANS CALLING IT MEANS TWO CALLS TO THE DATABASE- FIX LATER
   static async findItemName(itemName) {
-    const res = await db.query('SELECT id FROM shop WHERE LOWER(id)=LOWER($1)', [itemName]);
-    return res.rows[0] ? res.rows[0].id : "ERROR";
+    const res = await db.query(
+      'SELECT name FROM shop_v WHERE LOWER(name)=LOWER($1) OR LOWER(item_code)=LOWER($1) ORDER BY name',
+      [itemName]
+    );
+    return res.rows[0] ? res.rows[0].name : "ERROR";
   }
 
   static async convertToShopMap(rawShopLayoutData) {
@@ -290,14 +286,21 @@ class shop {
 
     const items = await fetchShopItems();
 
-    for (const it of items) {
-      embed.addFields({
-        name: it.name,
-        value: `Price: ${it.price}  •  ID: \`${it.item_id}\``,
-      });
+    const categories = {};
+    for (const row of items) {
+      const price = Number(row.price);
+      if (!price || Number.isNaN(price)) continue;
+      const category = row.category ?? 'Other';
+      if (!categories[category]) categories[category] = [];
+      categories[category].push({ name: row.name, price, item_code: row.item_code });
     }
 
-    return embed;
+    for (const [category, list] of Object.entries(categories)) {
+      const value = list.map(it => `${it.name}`).join('\n');
+      embed.addFields({ name: category, value });
+    }
+
+    return [embed];
   }
 
   static async renameCategory(oldCategory, newCategory) {
@@ -318,18 +321,19 @@ class shop {
     page = Number(page);
     const itemsPerPage = 25;
 
-    const { rows } = await db.query('SELECT id, name, item_id, price, data FROM shop');
+    const { rows } = await db.query(
+      'SELECT id, name, item_code, price, category FROM shop_v ORDER BY name'
+    );
 
     let itemCategories = {};
     for (const row of rows) {
-      const data = row.data || {};
-      const priceVal = row.price ?? data.price ?? data.shopOptions?.['Price (#)'];
+      const priceVal = row.price;
       if (priceVal === '' || priceVal === undefined || priceVal === null) continue;
       if (Number.isNaN(Number(priceVal))) continue;
-      const category = data.category ?? data.infoOptions?.Category ?? 'Misc';
+      const category = row.category ?? 'Other';
       if (!itemCategories[category]) itemCategories[category] = [];
-      const itemName = row.name ?? data.name ?? data.infoOptions?.Name ?? row.id;
-      const icon = data.icon ?? data.infoOptions?.Icon ?? '';
+      const itemName = row.name;
+      const icon = '';
       itemCategories[category].push({ name: itemName, icon });
     }
 
@@ -644,62 +648,59 @@ static async createInventoryEmbed(charID, page = 1) {
     await dbm.saveFile('keys', 'incomeList', incomes);
   }
 
-  static async getItemPrice(itemName) {
-    const res = await db.query('SELECT price, data FROM shop WHERE LOWER(id)=LOWER($1)', [itemName]);
-    if (!res.rows[0]) {
-      return "ERROR";
+    static async getItemPrice(itemName) {
+      const res = await db.query(
+        'SELECT id, name, item_code, price, category FROM shop_v WHERE LOWER(name)=LOWER($1) OR LOWER(item_code)=LOWER($1) ORDER BY name',
+        [itemName]
+      );
+      if (!res.rows[0]) {
+        return "ERROR";
+      }
+      const row = res.rows[0];
+      const priceVal = row.price;
+      return priceVal === '' || priceVal === undefined || priceVal === null
+        ? "No Price Item!"
+        : priceVal;
     }
-    const row = res.rows[0];
-    const priceVal = row.price ?? row.data?.price ?? row.data?.shopOptions?.['Price (#)'];
-    return priceVal === '' || priceVal === undefined || priceVal === null
-      ? "No Price Item!"
-      : priceVal;
-  }
 
-  static async getItemCategory(itemName) {
-    const res = await db.query('SELECT data FROM shop WHERE LOWER(id)=LOWER($1)', [itemName]);
-    if (!res.rows[0]) {
-      return "ERROR";
+    static async getItemCategory(itemName) {
+      const res = await db.query(
+        'SELECT id, name, item_code, price, category FROM shop_v WHERE LOWER(name)=LOWER($1) OR LOWER(item_code)=LOWER($1) ORDER BY name',
+        [itemName]
+      );
+      if (!res.rows[0]) {
+        return "ERROR";
+      }
+      return res.rows[0].category ?? 'Other';
     }
-    const d = res.rows[0].data || {};
-    return d.category ?? d.infoOptions?.Category ?? null;
-  }
 
-  static async getItemIcon(itemName) {
-    const res = await db.query('SELECT data FROM shop WHERE LOWER(id)=LOWER($1)', [itemName]);
-    if (!res.rows[0]) {
-      return "ERROR";
+    static async getItemIcon(itemName) {
+      const res = await db.query(
+        'SELECT id, name, item_code, price, category FROM shop_v WHERE LOWER(name)=LOWER($1) OR LOWER(item_code)=LOWER($1) ORDER BY name',
+        [itemName]
+      );
+      if (!res.rows[0]) {
+        return "ERROR";
+      }
+      return '';
     }
-    const d = res.rows[0].data || {};
-    return d.icon ?? d.infoOptions?.Icon ?? "ERROR";
-  }
 
-  static async getItemMetadata(itemId, shopData) {
-    if (shopData && shopData[itemId]) {
-      const item = shopData[itemId];
-      const data = item.data || {};
+    static async getItemMetadata(itemId) {
+      const res = await db.query(
+        'SELECT id, name, item_code, price, category FROM shop_v WHERE LOWER(name)=LOWER($1) OR LOWER(item_code)=LOWER($1) ORDER BY name',
+        [itemId]
+      );
+      if (!res.rows[0]) return null;
+      const row = res.rows[0];
       return {
-        name: item.name ?? data.name ?? item.infoOptions?.Name ?? itemId,
-        icon: data.icon ?? item.infoOptions?.Icon ?? '',
-        category: data.category ?? item.infoOptions?.Category ?? '',
-        transferrable: data.transferrable ?? item.infoOptions?.['Transferrable (Y/N)'] ?? '',
-        usage: data.usage ?? item.usageOptions ?? {},
-        data,
+        name: row.name,
+        icon: '',
+        category: row.category ?? 'Other',
+        transferrable: '',
+        usage: {},
+        data: {},
       };
     }
-    const res = await db.query('SELECT id, name, data FROM shop WHERE LOWER(id)=LOWER($1)', [itemId]);
-    if (!res.rows[0]) return null;
-    const row = res.rows[0];
-    const data = row.data || {};
-    return {
-      name: row.name ?? data.name ?? data.infoOptions?.Name ?? row.id,
-      icon: data.icon ?? data.infoOptions?.Icon ?? '',
-      category: data.category ?? data.infoOptions?.Category ?? '',
-      transferrable: data.transferrable ?? data.infoOptions?.['Transferrable (Y/N)'] ?? '',
-      usage: data.usage ?? data.usageOptions ?? {},
-      data,
-    };
-  }
 
   static async inspect(itemName) {
     let shopData = await dbm.loadCollection('shop');
@@ -715,9 +716,12 @@ static async createInventoryEmbed(charID, page = 1) {
     let data = shopData;
     let itemData = data[itemName];
 
-    const { rows: priceRows } = await db.query('SELECT price, data FROM shop WHERE LOWER(id)=LOWER($1)', [itemName]);
+    const { rows: priceRows } = await db.query(
+      'SELECT id, name, item_code, price, category FROM shop_v WHERE LOWER(name)=LOWER($1) OR LOWER(item_code)=LOWER($1) ORDER BY name',
+      [itemName]
+    );
     const priceRow = priceRows[0] || {};
-    const priceVal = priceRow.price ?? priceRow.data?.price ?? priceRow.data?.shopOptions?.['Price (#)'];
+    const priceVal = priceRow.price;
 
     const inspectEmbed = new Discord.EmbedBuilder()
       .setTitle('**__Item:__ ' +  itemData.infoOptions.Icon + " " + itemName + "**")
@@ -1416,58 +1420,29 @@ static async createInventoryEmbed(charID, page = 1) {
   } 
 
   static async buyItem(shopKey, charID, numToBuy, channelId) {
-    const { rows } = await db.query(
-      'SELECT item_id, price, data FROM shop WHERE id = $1',
-      [shopKey]
-    );
-    if (!rows[0]) {
-      return "Item not found!";
-    }
-    const row = rows[0];
-    const priceVal = row.price ?? row.data?.price ?? row.data?.shopOptions?.['Price (#)'];
-    const price = Number(priceVal);
-    if (!price || !(price > 0)) {
-      return "Not a valid item to purchase!";
-    }
-
-    const data = row.data || {};
-    const channels = data.channels || '';
-    if (channels.includes("#") && !channels.includes(channelId)) {
-      return "This item is not available in this channel!";
-    }
-
-    const charData = await dbm.loadFile('characters', charID);
-    const user = await clientManager.getUser(charData.numericID);
-
-    const totalCost = price * numToBuy;
-    const currentBalance = await dbm.getBalance(charID);
-    const needRole = data.need_role || '';
-    if (currentBalance < totalCost) {
-      return "You do not have enough gold!";
-    } else if (needRole) {
-      let roles = needRole.split("<@&");
-      roles = roles.map(role => role.replace(">", ""));
-      roles = roles.map(role => role.replace(",", ""));
-      roles = roles.map(role => role.replace(/\s+/g, ""));
-      roles = roles.filter(role => role.length > 0);
-
-      let hasRole = false;
-      for (let i = 0; i < roles.length; i++) {
-        if (user.roles.cache.some(role => role.id === roles[i])) {
-          hasRole = true;
-          break;
-        }
+      const { rows } = await db.query(
+        'SELECT id, name, item_code, price, category FROM shop_v WHERE LOWER(name)=LOWER($1) OR LOWER(item_code)=LOWER($1) ORDER BY name',
+        [shopKey]
+      );
+      if (!rows[0]) {
+        return "Item not found!";
       }
-      if (!hasRole) {
-        return "You do not have the required role to buy this item! You must have one of the following role(s): " + needRole;
+      const row = rows[0];
+      const price = Number(row.price);
+      if (!price || !(price > 0)) {
+        return "Not a valid item to purchase!";
       }
-    }
 
-    const rawItem = row.item_id ?? row.data?.item_id ?? row.data?.item ?? row.data?.name;
-    const { rows: canonRows } = await db.query('SELECT resolve_item_id($1) AS canon_id', [rawItem]);
-    const canonId = canonRows[0] ? canonRows[0].canon_id : rawItem;
-    const { rows: catRows } = await db.query('SELECT category FROM items WHERE id=$1', [canonId]);
-    const category = (catRows[0]?.category || '').trim().toLowerCase();
+      const charData = await dbm.loadFile('characters', charID);
+      const totalCost = price * numToBuy;
+      const currentBalance = await dbm.getBalance(charID);
+      if (currentBalance < totalCost) {
+        return "You do not have enough gold!";
+      }
+
+      const itemCode = row.item_code;
+      const itemName = row.name;
+      const category = (row.category || 'Other').trim().toLowerCase();
 
     await db.tx(async t => {
       await t.query(
@@ -1476,38 +1451,21 @@ static async createInventoryEmbed(charID, page = 1) {
         [charID, currentBalance - totalCost]
       );
 
-      if (category === 'ships' || category === 'ship') {
-        const char = require('./char');
-        for (let i = 0; i < numToBuy; i++) {
-          char.addShip(charData, canonId);
+        if (category === 'ships' || category === 'ship') {
+          const char = require('./char');
+          for (let i = 0; i < numToBuy; i++) {
+            char.addShip(charData, itemCode);
+          }
+        } else {
+          await grantItemToPlayer(t, charID, itemCode, numToBuy);
         }
-      } else {
-        await grantItemToPlayer(t, charID, canonId, numToBuy);
+      });
+      let returnString = "Succesfully bought " + numToBuy + " " + itemName;
+      if (category === 'ships' || category === 'ship') {
+        await dbm.saveFile('characters', charID, charData);
       }
-    });
-
-    let returnString = "Succesfully bought " + numToBuy + " " + canonId;
-
-    let roles = (data.give_role || '').split("<@&");
-    roles = roles.map(role => role.replace(">", ""));
-    roles = roles.map(role => role.replace(",", ""));
-    roles = roles.map(role => role.replace(/\s+/g, ""));
-    roles = roles.filter(role => role.length > 0);
-    for (let i = 0; i < roles.length; i++) {
-      if (!user.roles.cache.some(role => role.id === roles[i])) {
-        user.roles.add(roles[i]);
-      }
+      return returnString;
     }
-
-    if (data.give_role && data.give_role !== '') {
-      returnString += "\nAdded the following role(s): " + data.give_role;
-    }
-
-    if (category === 'ships' || category === 'ship') {
-      await dbm.saveFile('characters', charID, charData);
-    }
-    return returnString;
-  }
 
   static async shopLayout(categoryToEdit, layoutString) {
     let shopData = await dbm.loadCollection("shop");

@@ -49,6 +49,9 @@ const { newDb, DataType } = require('pg-mem');
   await pool.query('CREATE TABLE items (id TEXT PRIMARY KEY, category TEXT, data JSONB)');
   await pool.query('CREATE TABLE inventory_items (instance_id TEXT PRIMARY KEY, owner_id TEXT, item_id TEXT, durability INTEGER, metadata JSONB)');
   await pool.query('CREATE TABLE shop (id TEXT PRIMARY KEY, name TEXT, item_id TEXT, price INTEGER, data JSONB)');
+  await pool.query(`CREATE VIEW shop_v AS
+    SELECT s.id, s.name, s.item_id AS item_code, s.price, i.category
+      FROM shop s LEFT JOIN items i ON s.item_id = i.id`);
   await pool.query(`CREATE VIEW v_inventory AS
     SELECT ii.owner_id AS character_id,
            ii.item_id,

@@ -26,60 +26,10 @@ const shopPath = path.join(root, 'shop.js');
 
 test('createShopEmbed shows only items with numeric prices', async () => {
   const rows = [
-    {
-      id: 'longboat',
-      item_id: 'longboat',
-      name: 'Longboat',
-      price: 100,
-      data: {
-        item_id: 'longboat',
-        name: 'Longboat',
-        price: 100,
-        category: 'Ships',
-        icon: ':ship:',
-        description: 'A boat'
-      }
-    },
-    {
-      id: 'broken_ship',
-      item_id: 'broken_ship',
-      name: 'Broken Ship',
-      price: 'abc',
-      data: {
-        item_id: 'broken_ship',
-        name: 'Broken Ship',
-        price: 'abc',
-        category: 'Ships',
-        icon: ':ship:'
-      }
-    },
-    {
-      id: 'wood',
-      item_id: 'wood',
-      name: 'Wood',
-      price: 5,
-      data: {
-        item_id: 'wood',
-        name: 'Wood',
-        price: 5,
-        category: 'Resources',
-        icon: ':wood:',
-        description: 'Some wood'
-      }
-    },
-    {
-      id: 'stone',
-      item_id: 'stone',
-      name: 'Stone',
-      price: null,
-      data: {
-        item_id: 'stone',
-        name: 'Stone',
-        price: null,
-        category: 'Materials',
-        icon: ':rock:'
-      }
-    }
+    { id: 1, name: 'Longboat', item_code: 'longboat', price: 100, category: 'Ships' },
+    { id: 2, name: 'Broken Ship', item_code: 'broken_ship', price: 'abc', category: 'Ships' },
+    { id: 3, name: 'Wood', item_code: 'wood', price: 5, category: 'Resources' },
+    { id: 4, name: 'Stone', item_code: 'stone', price: null, category: 'Materials' }
   ];
 
   const dbStub = { query: async () => ({ rows }) };
