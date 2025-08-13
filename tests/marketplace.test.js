@@ -21,18 +21,16 @@ function stubModule(file, exports) {
   pool = new pgMem.Pool();
   pool.query("CREATE TABLE marketplace (name TEXT, item_code TEXT, price INTEGER, seller TEXT, quantity INTEGER)");
   pool.query("CREATE VIEW marketplace_v AS SELECT name, item_code, price, 'Weapons'::text AS category FROM marketplace");
+  pool.query("CREATE TABLE inventory_items (instance_id TEXT PRIMARY KEY, owner_id TEXT, item_id TEXT, durability INTEGER, metadata JSONB)");
+  for (let i = 1; i <= 5; i++) {
+    pool.query(
+      "INSERT INTO inventory_items (instance_id, owner_id, item_id, durability, metadata) VALUES ($1,$2,$3,NULL,'{}'::jsonb)",
+      [`id${i}`, 'user1', 'sword']
+    );
+  }
   stubModule('pg-client.js', { pool, query: (text, params) => pool.query(text, params) });
 
-  const inventory = {
-    counts: { user1: { sword: 5 } },
-    async getCount(userId, itemCode) { return this.counts[userId]?.[itemCode] ?? 0; },
-    async take(userId, itemCode, qty) {
-      const have = await this.getCount(userId, itemCode);
-      if (have < qty) return 0;
-      this.counts[userId][itemCode] -= qty;
-      return qty;
-    },
-  };
+  const inventory = { async give() {} };
   stubModule('db/inventory.js', inventory);
 
   const items = {
@@ -56,10 +54,24 @@ test('postSale and listSales', async () => {
   res = await marketplace.postSale({ userId: 'user1', rawItem: 'sword', price: 10, quantity: 5 });
   assert.deepEqual(res, { ok: false, reason: 'not_enough', owned: 3, needed: 5 });
 
-  const inventory = require(path.join(rootDir, 'db/inventory.js'));
-  inventory.take = async (userId, itemCode, qty) => qty - 1;
+  const realConnect = pool.connect.bind(pool);
+  pool.connect = async () => {
+    const client = await realConnect();
+    const realQuery = client.query.bind(client);
+    let first = true;
+    client.query = async (text, params) => {
+      if (first && typeof text === 'string' && text.startsWith('DELETE FROM inventory_items')) {
+        first = false;
+        const res = await realQuery(text, params);
+        return { ...res, rowCount: res.rowCount - 1 };
+      }
+      return realQuery(text, params);
+    };
+    return client;
+  };
   res = await marketplace.postSale({ userId: 'user1', rawItem: 'sword', price: 10, quantity: 3 });
   assert.deepEqual(res, { ok: false, reason: 'concurrent_change' });
+  pool.connect = realConnect;
 
   const sales = await marketplace.listSales();
   assert.deepEqual(sales, [

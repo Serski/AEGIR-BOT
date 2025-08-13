@@ -9,27 +9,53 @@ const { listSales } = require('./db/marketplace');
 // cancelled.
 async function postSale({ userId, rawItem, price = 0, quantity = 1 }) {
   const itemCode = await items.resolveItemCode(rawItem);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
 
-  const owned = await inventory.getCount(userId, itemCode);
-  if (owned < quantity) {
-    return { ok: false, reason: 'not_enough', owned, needed: quantity };
+    // lock and count the items we intend to sell
+    const { rows } = await client.query(
+      `SELECT instance_id
+         FROM inventory_items
+        WHERE owner_id = $1 AND item_id = $2
+        LIMIT $3
+        FOR UPDATE`,
+      [userId, itemCode, quantity]
+    );
+
+    if (rows.length < quantity) {
+      await client.query('ROLLBACK');
+      return { ok: false, reason: 'not_enough', owned: rows.length, needed: quantity };
+    }
+
+    const ids = rows.map(r => r.instance_id);
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+    const delRes = await client.query(
+      `DELETE FROM inventory_items WHERE instance_id IN (${placeholders})`,
+      ids
+    );
+
+    if (delRes.rowCount !== quantity) {
+      await client.query('ROLLBACK');
+      return { ok: false, reason: 'concurrent_change' };
+    }
+
+    const meta = await items.getItemMetaByCode(itemCode);
+    const name = meta?.name || itemCode;
+
+    await client.query(
+      'INSERT INTO marketplace (name, item_code, price, seller, quantity) VALUES ($1,$2,$3,$4,$5)',
+      [name, itemCode, price, userId, quantity]
+    );
+
+    await client.query('COMMIT');
+    return { ok: true, itemCode, price, quantity };
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch {}
+    throw err;
+  } finally {
+    client.release();
   }
-
-  // remove the items from the seller
-  const removed = await inventory.take(userId, itemCode, quantity);
-  if (removed !== quantity) {
-    return { ok: false, reason: 'concurrent_change' };
-  }
-
-  const meta = await items.getItemMetaByCode(itemCode);
-  const name = meta?.name || itemCode;
-
-  await pool.query(
-    'INSERT INTO marketplace (name, item_code, price, seller, quantity) VALUES ($1,$2,$3,$4,$5)',
-    [name, itemCode, price, userId, quantity]
-  );
-
-  return { ok: true, itemCode, price, quantity };
 }
 
 // ---------------------------------------------------------------------------
