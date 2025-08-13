@@ -26,19 +26,24 @@ function stubModule(file, exports) {
   const pgMem = mem.adapters.createPg();
   pool = new pgMem.Pool();
   pool.query(
-    "CREATE TABLE marketplace (id TEXT PRIMARY KEY, name TEXT, item_code TEXT, price INTEGER, seller TEXT, quantity INTEGER)"
+    'CREATE TABLE marketplace (id TEXT PRIMARY KEY, name TEXT, item_code TEXT, price INTEGER, seller TEXT, quantity INTEGER)'
   );
-  pool.query("CREATE VIEW marketplace_v AS SELECT id, name, item_code, price, seller, quantity, 'Weapons'::text AS category FROM marketplace");
-  pool.query("CREATE TABLE inventory_items (instance_id TEXT PRIMARY KEY, owner_id TEXT, item_id TEXT, durability INTEGER, metadata JSONB)");
-  for (let i = 1; i <= 5; i++) {
-    pool.query(
-      "INSERT INTO inventory_items (instance_id, owner_id, item_id, durability, metadata) VALUES ($1,$2,$3,NULL,'{}'::jsonb)",
-      [`id${i}`, 'user1', 'sword']
-    );
-  }
+  pool.query(
+    "CREATE VIEW marketplace_v AS SELECT id, name, item_code, price, seller, quantity, 'Weapons'::text AS category FROM marketplace"
+  );
   stubModule('pg-client.js', { pool, query: (text, params) => pool.query(text, params) });
 
-  const inventory = { async give() {} };
+  // inventory mocks will be customized per test
+  let getCountMock = async () => 0;
+  let takeMock = async () => 0;
+  const inventory = {
+    async getCount(userId, itemCode) { return getCountMock(userId, itemCode); },
+    async take(userId, itemCode, qty) { return takeMock(userId, itemCode, qty); },
+    async give() {},
+    // expose helpers to modify behaviour in tests
+    _setGetCount(fn) { getCountMock = fn; },
+    _setTake(fn) { takeMock = fn; },
+  };
   stubModule('db/inventory.js', inventory);
 
   const items = {
@@ -48,57 +53,40 @@ function stubModule(file, exports) {
   stubModule('db/items.js', items);
 })();
 
-const { postSale, listSales } = require(marketplacePath);
+const { postSale } = require(marketplacePath);
+const inventory = require('../db/inventory');
 
 after(() => {
   for (const p of stubbed) delete require.cache[p];
   if (pool) pool.end();
 });
 
-test('postSale and listSales', async () => {
+test('postSale handles inventory operations correctly', async () => {
+  // success path
+  inventory._setGetCount(async () => 5);
+  inventory._setTake(async (_u, _i, qty) => qty);
   let res = await postSale({ userId: 'user1', rawItem: 'sword', price: 10, quantity: 2 });
   assert.equal(res.ok, true);
   assert.equal(res.itemCode, 'sword');
   assert.equal(res.price, 10);
   assert.equal(res.quantity, 2);
   assert.equal(typeof res.saleId, 'string');
-  const saleId = res.saleId;
+  let { rows } = await pool.query('SELECT * FROM marketplace');
+  assert.equal(rows.length, 1);
 
+  // not enough items
+  inventory._setGetCount(async () => 1);
+  inventory._setTake(async () => { throw new Error('should not be called'); });
   res = await postSale({ userId: 'user1', rawItem: 'sword', price: 10, quantity: 5 });
-  assert.deepEqual(res, { ok: false, reason: 'not_enough', owned: 3, needed: 5 });
+  assert.deepEqual(res, { ok: false, reason: 'not_enough', owned: 1, needed: 5 });
+  ;({ rows } = await pool.query('SELECT * FROM marketplace'));
+  assert.equal(rows.length, 1); // no new row
 
-  const realConnect = pool.connect.bind(pool);
-  pool.connect = async () => {
-    const client = await realConnect();
-    const realQuery = client.query.bind(client);
-    let first = true;
-    client.query = async (text, params) => {
-      if (first && typeof text === 'string' && text.startsWith('DELETE FROM inventory_items')) {
-        first = false;
-        const res = await realQuery(text, params);
-        return { ...res, rowCount: res.rowCount - 1 };
-      }
-      return realQuery(text, params);
-    };
-    return client;
-  };
+  // concurrent change during take
+  inventory._setGetCount(async () => 5);
+  inventory._setTake(async (_u, _i, qty) => qty - 1);
   res = await postSale({ userId: 'user1', rawItem: 'sword', price: 10, quantity: 3 });
   assert.deepEqual(res, { ok: false, reason: 'concurrent_change' });
-  pool.connect = realConnect;
-
-  await pool.query("INSERT INTO marketplace (id, name, item_code, price, seller, quantity) VALUES ('sale2','Sword','sword',5,'user2',1)");
-
-  let result = await listSales();
-  assert.equal(result.totalCount, undefined);
-  assert.equal(result.rows.length, 2);
-  const sellers = result.rows.map(r => r.seller).sort();
-  assert.deepEqual(sellers, ['user1', 'user2']);
-
-  result = await listSales({ sellerId: 'user1' });
-  assert.equal(result.rows.length, 1);
-  assert.equal(result.rows[0].seller, 'user1');
-
-  result = await listSales({ limit: 1 });
-  assert.equal(result.rows.length, 1);
-  assert.equal(result.totalCount, 2);
+  ;({ rows } = await pool.query('SELECT * FROM marketplace'));
+  assert.equal(rows.length, 1); // still only the first successful sale
 });

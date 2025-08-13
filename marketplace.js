@@ -10,78 +10,51 @@ const logger = require('./logger');
 // cancelled.
 async function postSale({ userId, rawItem, price = 0, quantity = 1 }) {
   const itemCode = await items.resolveItemCode(rawItem);
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
 
-    // lock and count the items we intend to sell
-    const { rows } = await client.query(
-      `SELECT instance_id
-         FROM inventory_items
-        WHERE owner_id = $1 AND item_id = $2
-        LIMIT $3
-        FOR UPDATE`,
-      [userId, itemCode, quantity]
-    );
-
-    if (rows.length < quantity) {
-      await client.query('ROLLBACK');
-      logger.warn('[marketplace.postSale] not_enough', {
-        userId,
-        itemCode,
-        price,
-        quantity,
-        owned: rows.length,
-        needed: quantity,
-      });
-      return { ok: false, reason: 'not_enough', owned: rows.length, needed: quantity };
-    }
-
-    const ids = rows.map(r => r.instance_id);
-    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
-    const delRes = await client.query(
-      `DELETE FROM inventory_items WHERE instance_id IN (${placeholders})`,
-      ids
-    );
-
-    if (delRes.rowCount !== quantity) {
-      await client.query('ROLLBACK');
-      logger.warn('[marketplace.postSale] concurrent_change', {
-        userId,
-        itemCode,
-        price,
-        quantity,
-        deleted: delRes.rowCount,
-      });
-      return { ok: false, reason: 'concurrent_change' };
-    }
-
-    const meta = await items.getItemMetaByCode(itemCode);
-    const name = meta?.name || itemCode;
-
-    const insertRes = await client.query(
-      `INSERT INTO marketplace (id, name, item_code, price, seller, quantity)
-       VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5)
-       RETURNING id`,
-      [name, itemCode, price, userId, quantity]
-    );
-    const saleId = insertRes.rows[0]?.id;
-
-    await client.query('COMMIT');
-    logger.info('[marketplace.postSale] success', {
+  const owned = await inventory.getCount(userId, itemCode);
+  if (owned < quantity) {
+    logger.warn('[marketplace.postSale] not_enough', {
       userId,
       itemCode,
       price,
       quantity,
-      saleId,
+      owned,
+      needed: quantity,
     });
-    return { ok: true, saleId, itemCode, price, quantity };
-  } catch (err) {
-    try { await client.query('ROLLBACK'); } catch {}
-    throw err;
-  } finally {
-    client.release();
+    return { ok: false, reason: 'not_enough', owned, needed: quantity };
   }
+
+  const removed = await inventory.take(userId, itemCode, quantity);
+  if (removed !== quantity) {
+    logger.warn('[marketplace.postSale] concurrent_change', {
+      userId,
+      itemCode,
+      price,
+      quantity,
+      deleted: removed,
+    });
+    return { ok: false, reason: 'concurrent_change' };
+  }
+
+  const meta = await items.getItemMetaByCode(itemCode);
+  const name = meta?.name || itemCode;
+
+  const { rows } = await pool.query(
+    `INSERT INTO marketplace (id, name, item_code, price, seller, quantity)
+     VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5)
+     RETURNING id`,
+    [name, itemCode, price, userId, quantity]
+  );
+  const saleId = rows[0]?.id;
+
+  logger.info('[marketplace.postSale] success', {
+    userId,
+    itemCode,
+    price,
+    quantity,
+    saleId,
+  });
+  return { ok: true, saleId, itemCode, price, quantity };
 }
 
 // ---------------------------------------------------------------------------
