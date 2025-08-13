@@ -19,7 +19,9 @@ function stubModule(file, exports) {
   const mem = newDb();
   const pgMem = mem.adapters.createPg();
   pool = new pgMem.Pool();
-  pool.query("CREATE TABLE marketplace (name TEXT, item_code TEXT, price INTEGER, seller TEXT, quantity INTEGER)");
+  pool.query(
+    "CREATE TABLE marketplace (id SERIAL PRIMARY KEY, name TEXT, item_code TEXT, price INTEGER, seller TEXT, quantity INTEGER)"
+  );
   pool.query("CREATE VIEW marketplace_v AS SELECT name, item_code, price, 'Weapons'::text AS category FROM marketplace");
   pool.query("CREATE TABLE inventory_items (instance_id TEXT PRIMARY KEY, owner_id TEXT, item_id TEXT, durability INTEGER, metadata JSONB)");
   for (let i = 1; i <= 5; i++) {

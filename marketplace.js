@@ -3,6 +3,7 @@ const { pool } = require('./pg-client');
 const inventory = require('./db/inventory');
 const items = require('./db/items');
 const { listSales } = require('./db/marketplace');
+const logger = require('./logger');
 
 // Create a marketplace listing for the provided item. Items are removed from the
 // seller's inventory immediately and held until the sale is purchased or
@@ -25,6 +26,14 @@ async function postSale({ userId, rawItem, price = 0, quantity = 1 }) {
 
     if (rows.length < quantity) {
       await client.query('ROLLBACK');
+      logger.warn('[marketplace.postSale] not_enough', {
+        userId,
+        itemCode,
+        price,
+        quantity,
+        owned: rows.length,
+        needed: quantity,
+      });
       return { ok: false, reason: 'not_enough', owned: rows.length, needed: quantity };
     }
 
@@ -37,18 +46,33 @@ async function postSale({ userId, rawItem, price = 0, quantity = 1 }) {
 
     if (delRes.rowCount !== quantity) {
       await client.query('ROLLBACK');
+      logger.warn('[marketplace.postSale] concurrent_change', {
+        userId,
+        itemCode,
+        price,
+        quantity,
+        deleted: delRes.rowCount,
+      });
       return { ok: false, reason: 'concurrent_change' };
     }
 
     const meta = await items.getItemMetaByCode(itemCode);
     const name = meta?.name || itemCode;
 
-    await client.query(
-      'INSERT INTO marketplace (name, item_code, price, seller, quantity) VALUES ($1,$2,$3,$4,$5)',
+    const insertRes = await client.query(
+      'INSERT INTO marketplace (name, item_code, price, seller, quantity) VALUES ($1,$2,$3,$4,$5) RETURNING id',
       [name, itemCode, price, userId, quantity]
     );
+    const saleId = insertRes.rows[0]?.id;
 
     await client.query('COMMIT');
+    logger.info('[marketplace.postSale] success', {
+      userId,
+      itemCode,
+      price,
+      quantity,
+      saleId,
+    });
     return { ok: true, itemCode, price, quantity };
   } catch (err) {
     try { await client.query('ROLLBACK'); } catch {}
