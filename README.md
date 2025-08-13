@@ -60,3 +60,7 @@ Use `/panel` to open a personal control panel. The response is ephemeral and vis
 
 Inventory, resource storage, and ship views support pagination. Use the `<` and `>` buttons to move between pages.
 
+## /sell command
+
+Use `/sell` to list an inventory item for sale on the marketplace. Provide an item code or name (item codes avoid ambiguity). Quantity defaults to 1 and price defaults to 0.
+

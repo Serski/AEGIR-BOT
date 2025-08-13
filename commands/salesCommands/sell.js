@@ -6,19 +6,19 @@ const clientManager = require('../../clientManager');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('sell')
-        .setDescription('Sell an item (use item codes to avoid ambiguity)')
+        .setDescription('List an inventory item for sale')
         .addStringOption((option) =>
             option.setName('item')
-                .setDescription('The item code (names may be ambiguous)')
+                .setDescription('Item code or name (codes avoid ambiguity)')
                 .setRequired(true)
         )
         .addIntegerOption((option) =>
             option.setName('quantity')
-                .setDescription('The quantity of the item')
+                .setDescription('Quantity of the item (defaults to 1)')
         )
         .addIntegerOption((option) =>
             option.setName('price')
-                .setDescription('The price of the item')
+                .setDescription('Price per item (defaults to 0)')
         ),
     async execute(interaction) {
         const userId = interaction.user.id;
