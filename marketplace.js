@@ -3,7 +3,21 @@ const shop = require('./shop');
 const clientManager = require('./clientManager');
 const logger = require('./logger');
 const db = require('./pg-client');
+const { pool } = require('./pg-client');
 const { EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
+
+async function fetchSales() {
+  const { rows } = await pool.query(`
+    SELECT
+      id,
+      name,
+      item    AS item_id,
+      price
+    FROM marketplace
+    ORDER BY name
+  `);
+  return rows;
+}
 class marketplace {
   /**Function for a player to post a sale.
    * Will take the number of items, the item name, and the price they want to sell it for.
@@ -40,16 +54,15 @@ class marketplace {
       return "You don't have enough of that item to sell it!";
     }
     charData.inventory[itemName] -= numberItems;
-    const saleData = { item_id: itemName, price, quantity: numberItems };
-    const res = await db.query(
-      'INSERT INTO marketplace (name, price, data, seller, seller_id) VALUES ($1,$2,$3,$4,$5) RETURNING id',
-      [itemName, price, saleData, userTag, userID]
-    );
-    const itemID = res.rows[0].id;
+    for (let i = 0; i < numberItems; i++) {
+      await db.query(
+        'INSERT INTO marketplace (name, item, price, seller, seller_id) VALUES ($1,$2,$3,$4,$5)',
+        [itemName, itemName, price, userTag, userID]
+      );
+    }
     await dbm.saveFile('characters', userTag, charData);
     let embed = new EmbedBuilder();
-    embed.setDescription(`<@${userID}> listed **${numberItems} ${meta.icon} ${itemName}** to the **/sales** page for ${clientManager.getEmoji("Gold")}**${price}**.`);
-    embed.setFooter({ text: `Sale ID: ${itemID}` });
+    embed.setDescription(`<@${userID}> listed **${numberItems} ${meta.icon} ${itemName}** to the **/sales** page for ${clientManager.getEmoji("Gold")}**${price}** each.`);
     return embed;
   }
 
@@ -57,99 +70,41 @@ class marketplace {
    * Create a embed list of sales. Will take page number and return embed and action rows
    */
   static async createSalesEmbed(page) {
-    page = Number(page);
-    const shopData = await dbm.loadCollection('shop');
-    const limit = 25;
-    const offset = (page - 1) * limit;
-    const { rows } = await db.query(
-      "SELECT id, name, price, data, data->>'item_id' AS item_id FROM marketplace ORDER BY name, id LIMIT $1 OFFSET $2",
-      [limit, offset]
-    );
-    const countRes = await db.query('SELECT COUNT(*) FROM marketplace');
-    const totalPages = Math.max(1, Math.ceil(Number(countRes.rows[0].count) / limit));
-
     const embed = new EmbedBuilder();
     embed.setTitle(clientManager.getEmoji('Gold') + 'Sales');
     embed.setColor(0x36393e);
 
-    let descriptionText = '';
+    const rows = await fetchSales();
+
     for (const sale of rows) {
-      const itemId = sale.item_id ?? sale.data?.item_id;
-      const quantity = Number(sale.data?.quantity ?? 0);
-      const price = Number(
-        sale.price ?? sale.data?.price ?? sale.data?.shopOptions?.['Price (#)'] ?? 0
-      );
-      const meta = await shop.getItemMetadata(itemId, shopData);
-      const itemName = sale.name || meta?.name || itemId;
-      const icon = meta?.icon || '';
-      let alignSpaces = ' ';
-      if (20 - itemName.length - ('' + price + '' + quantity).length > 0) {
-        alignSpaces = ' '.repeat(20 - itemName.length - ('' + price + '' + quantity).length);
-      }
-      descriptionText += `\`${sale.id}\` ${icon} **\`${quantity} ${itemName}${alignSpaces}${price}\`**${clientManager.getEmoji('Gold')}\n`;
+      embed.addFields({
+        name: sale.name,
+        value: `Price: ${sale.price}  •  ID: \`${sale.item_id}\`  •  Sale: \`${sale.id}\``,
+      });
     }
 
-    descriptionText += '\n';
-    embed.setDescription(descriptionText);
-
-    if (totalPages > 1) {
-      embed.setFooter({ text: `/buysale \nPage ${page} of ${totalPages}` });
-    } else {
-      embed.setFooter({ text: `/buysale` });
-    }
-
-    const rowsButtons = [];
-    const prevButton = new ButtonBuilder()
-      .setCustomId('switch_sale' + (page - 1))
-      .setLabel('<')
-      .setStyle(ButtonStyle.Secondary);
-    if (page === 1) prevButton.setDisabled(true);
-
-    const nextButton = new ButtonBuilder()
-      .setCustomId('switch_sale' + (page + 1))
-      .setLabel('>')
-      .setStyle(ButtonStyle.Secondary);
-    if (page === totalPages) nextButton.setDisabled(true);
-    rowsButtons.push(new ActionRowBuilder().addComponents(prevButton, nextButton));
-
-    return [embed, rowsButtons];
+    return [embed, []];
   }
  
 
   //Create a one page sales embed of just the sales for one player
   static async showSales(player, page) {
-    page = Number(page);
-    const shopData = await dbm.loadCollection('shop');
-    const limit = 25;
-    const offset = (page - 1) * limit;
-    const { rows } = await db.query(
-      "SELECT id, name, price, data, data->>'item_id' AS item_id FROM marketplace WHERE seller=$1 ORDER BY id LIMIT $2 OFFSET $3",
-      [player, limit, offset]
-    );
-    const countRes = await db.query('SELECT COUNT(*) FROM marketplace WHERE seller=$1', [player]);
-    const totalPages = Math.max(1, Math.ceil(Number(countRes.rows[0].count) / limit));
     const embed = new EmbedBuilder();
     embed.setTitle(`${player}'s Sales`);
     embed.setColor(0x36393e);
-    let descriptionText = '';
+
+    const { rows } = await pool.query(
+      `SELECT id, name, item AS item_id, price FROM marketplace WHERE seller=$1 ORDER BY id`,
+      [player]
+    );
+
     for (const sale of rows) {
-      const itemId = sale.item_id ?? sale.data?.item_id;
-      const quantity = Number(sale.data?.quantity ?? 0);
-      const price = Number(
-        sale.price ?? sale.data?.price ?? sale.data?.shopOptions?.['Price (#)'] ?? 0
-      );
-      const meta = await shop.getItemMetadata(itemId, shopData);
-      const itemName = sale.name || meta?.name || itemId;
-      const icon = meta?.icon || '';
-      let alignSpaces = ' ';
-      if (30 - itemName.length - ('' + price + '' + quantity).length > 0) {
-        alignSpaces = ' '.repeat(30 - itemName.length - ('' + price + '' + quantity).length);
-      }
-      descriptionText += `\`${sale.id}\` ${icon} **\`${quantity} ${itemName}${alignSpaces}${price}\`**${clientManager.getEmoji('Gold')}\n`;
+      embed.addFields({
+        name: sale.name,
+        value: `Price: ${sale.price}  •  ID: \`${sale.item_id}\`  •  Sale: \`${sale.id}\``,
+      });
     }
-    descriptionText += '\n';
-    embed.setDescription(descriptionText);
-    embed.setFooter({ text: `Page ${page} of ${totalPages}` });
+
     return embed;
   }
 
@@ -164,24 +119,18 @@ class marketplace {
     if (!charData[userTag] || !charData[sale.seller]) {
       return "Character not found!";
     }
-    const quantity = Number(sale.data?.quantity ?? 0);
-    const price = Number(
-      sale.price ?? sale.data?.price ?? sale.data?.shopOptions?.['Price (#)'] ?? 0
-    );
-    if (quantity < 0 || price < 0) {
+    const price = Number(sale.price ?? 0);
+    if (price < 0) {
       return "That sale has invalid data!";
     }
-    const itemId = sale.item_id ?? sale.data?.item_id;
+    const itemId = sale.item_id;
     if (sale.seller_id == userID) {
-      if (!charData[userTag].inventory[itemId]) {
-        charData[userTag].inventory[itemId] = 0;
-      }
-      charData[userTag].inventory[itemId] += quantity;
+      charData[userTag].inventory[itemId] = (charData[userTag].inventory[itemId] || 0) + 1;
       await db.query('DELETE FROM marketplace WHERE id=$1', [saleID]);
       await dbm.saveCollection('characters', charData);
       let embed = new EmbedBuilder();
       const meta = await shop.getItemMetadata(itemId, shopData);
-      embed.setDescription(`<@${userID}> bought **${quantity} ${meta?.icon || ''} ${itemId}** back from themselves. It was listed for ${clientManager.getEmoji("Gold")}**${price}**.`);
+      embed.setDescription(`<@${userID}> bought **${meta?.icon || ''} ${itemId}** back from themselves. It was listed for ${clientManager.getEmoji("Gold")}**${price}**.`);
       return embed;
     }
 
@@ -193,16 +142,12 @@ class marketplace {
     await dbm.setBalance(userTag, buyerBalance - price);
     await dbm.setBalance(sale.seller, sellerBalance + price);
 
-    if (!charData[userTag].inventory[itemId]) {
-      charData[userTag].inventory[itemId] = 0;
-    }
-
-    charData[userTag].inventory[itemId] += quantity;
+    charData[userTag].inventory[itemId] = (charData[userTag].inventory[itemId] || 0) + 1;
     await db.query('DELETE FROM marketplace WHERE id=$1', [saleID]);
     await dbm.saveCollection('characters', charData);
     let embed = new EmbedBuilder();
     const metaPurchase = await shop.getItemMetadata(itemId, shopData);
-    embed.setDescription(`<@${userID}> bought **${quantity} ${metaPurchase?.icon || ''} ${itemId}** from<@${sale.seller_id}> for ${clientManager.getEmoji("Gold")}**${price}**.`);
+    embed.setDescription(`<@${userID}> bought **${metaPurchase?.icon || ''} ${itemId}** from<@${sale.seller_id}> for ${clientManager.getEmoji("Gold")}**${price}**.`);
     return embed;
   }
 
@@ -213,22 +158,22 @@ class marketplace {
     if (!sale) {
       return "That sale doesn't exist!";
     }
-    const itemId = sale.item_id ?? sale.data?.item_id;
-    const quantity = Number(sale.data?.quantity ?? 0);
-    const price = Number(
-      sale.price ?? sale.data?.price ?? sale.data?.shopOptions?.['Price (#)'] ?? 0
-    );
+    const itemId = sale.item_id;
+    const price = Number(sale.price ?? 0);
     let embed = new EmbedBuilder();
     embed.setTitle(`Sale ${saleID}`);
     embed.setColor(0x36393e);
     const metaInspect = await shop.getItemMetadata(itemId, shopData);
-    embed.setDescription(`**${quantity} ${metaInspect?.icon || ''} ${itemId}** for ${clientManager.getEmoji("Gold")}**${price}**.`);
+    embed.setDescription(`**${metaInspect?.icon || ''} ${itemId}** for ${clientManager.getEmoji("Gold")}**${price}**.`);
     embed.setFooter({ text: `Seller: ${sale.seller}` });
     return embed;
   }
 
   static async getSale(saleID) {
-    const res = await db.query("SELECT *, data->>'item_id' AS item_id FROM marketplace WHERE id=$1", [saleID]);
+    const res = await db.query(
+      "SELECT id, name, item AS item_id, price, seller, seller_id FROM marketplace WHERE id=$1",
+      [saleID]
+    );
     return res.rows[0];
   }
 }

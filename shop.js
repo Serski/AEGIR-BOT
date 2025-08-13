@@ -1,11 +1,25 @@
 const dbm = require('./database-manager'); // Importing the database manager
 const db = require('./pg-client');
+const { pool } = require('./pg-client');
 const Discord = require('discord.js');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const clientManager = require('./clientManager');
 const dataGetters = require('./dataGetters');
 const logger = require('./logger');
 const { grantItemToPlayer } = require('./inventory-grants');
+
+async function fetchShopItems() {
+  const { rows } = await pool.query(`
+    SELECT
+      id,
+      name,
+      item    AS item_id,
+      price
+    FROM shop
+    ORDER BY name
+  `);
+  return rows; // [{id, name, item_id, price}, ...]
+}
 
 class shop {
   //Declare constants for class 
@@ -274,51 +288,16 @@ class shop {
       .setTitle('**Galactic Bazaar**')
       .setColor(0x2c3e50);
 
-    const divider = '────────────────────────';
+    const items = await fetchShopItems();
 
-    const { rows } = await db.query('SELECT id, name, item_id, price, data FROM shop');
-    const categories = {};
-
-    for (const row of rows) {
-      const data = row.data || {};
-      const category = data.category ?? data.infoOptions?.Category ?? 'Misc';
-      const priceVal = row.price ?? data.price ?? data.shopOptions?.['Price (#)'];
-      if (priceVal === '' || priceVal === undefined || priceVal === null) continue;
-      const price = Number(priceVal);
-      if (Number.isNaN(price)) continue;
-      if (!categories[category]) categories[category] = [];
-      categories[category].push({
-        emoji: data.icon ?? data.infoOptions?.Icon ?? '',
-        name: row.name ?? data.name ?? data.infoOptions?.Name ?? row.id,
-        price,
-        description: data.description ?? data.infoOptions?.Description ?? '',
-      });
-    }
-
-    for (const category of Object.keys(categories).sort()) {
-      const items = categories[category];
-      if (items.length === 0) continue;
-      const headerEmoji =
-        category === 'Ships' ? '🚀' : category === 'Resources' ? '📦' : '✨';
-      const maxName = Math.max(...items.map(i => i.name.length));
-      const maxPrice = Math.max(...items.map(i => i.price.toString().length));
-
-      const valueLines = items
-        .map(item => {
-          const namePart = item.name.padEnd(maxName + 2);
-          const pricePart = item.price.toString().padStart(maxPrice);
-          return `${item.emoji} \`${namePart}${pricePart}\` ⚙ Credits\n*${item.description}*`;
-        })
-        .join('\n');
-
+    for (const it of items) {
       embed.addFields({
-        name: `${headerEmoji} **${category}**`,
-        value: `${valueLines}\n${divider}`,
-        inline: false,
+        name: it.name,
+        value: `Price: ${it.price}  •  ID: \`${it.item_id}\``,
       });
     }
 
-    return [embed, []];
+    return embed;
   }
 
   static async renameCategory(oldCategory, newCategory) {
