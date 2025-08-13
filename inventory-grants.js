@@ -13,11 +13,10 @@ async function ensureItem(client, raw, category = 'Misc') {
 
 const { randomUUID } = require('crypto');
 
-async function grantItemToPlayer(client, characterId, itemKey, qty) {
+async function grantItemToPlayer(client, characterId, itemId, qty) {
   if (qty <= 0) {
     throw new Error('qty must be positive');
   }
-  const itemId = await ensureItem(client, itemKey);
   try {
     await client.query(
       `INSERT INTO inventory_items (instance_id, owner_id, item_id)

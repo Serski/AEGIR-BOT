@@ -79,14 +79,15 @@ test('grantItemToPlayer ensures item and inserts instances', async () => {
 
   const client = { query: (text, params) => pool.query(text, params) };
 
-  const canon = await grantItemToPlayer(client, 'char1', 'Wood', 2);
+  const canon = await ensureItem(client, 'Wood', 'Misc');
   assert.equal(canon, 'wood');
+  await grantItemToPlayer(client, 'char1', canon, 2);
 
   const { rows: itemRows } = await pool.query('SELECT id, category FROM items');
-  assert.deepEqual(itemRows, [{ id: 'wood', category: 'Misc' }]);
+  assert.deepEqual(itemRows, [{ id: canon, category: 'Misc' }]);
 
   const { rows: invRows } = await pool.query('SELECT owner_id, item_id FROM inventory_items');
   assert.equal(invRows.length, 2);
-  assert.ok(invRows.every((r) => r.owner_id === 'char1' && r.item_id === 'wood'));
+  assert.ok(invRows.every((r) => r.owner_id === 'char1' && r.item_id === canon));
 });
 

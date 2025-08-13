@@ -1421,57 +1421,59 @@ static async createInventoryEmbed(charID, page = 1) {
     return `Field ${fieldName} updated to ${newValue} for recipe ${recipeName}`;
   } 
 
-  static async buyItem(itemName, charID, numToBuy, channelId) {
-    let shopData = await dbm.loadCollection('shop');
-    itemName = await this.findItemName(itemName, shopData);
-    if (itemName == "ERROR") {
+  static async buyItem(shopKey, charID, numToBuy, channelId) {
+    const { rows } = await db.query(
+      `SELECT data, data->>'item_id' AS item_id, data->>'price' AS price
+         FROM shop WHERE id = $1`,
+      [shopKey]
+    );
+    if (!rows[0]) {
       return "Item not found!";
     }
-    let itemData = shopData[itemName];
-    let price = itemData.shopOptions["Price (#)"];
-
-    if (price === "ERROR" || price === "No Price Item!" || price === undefined || price === null || price === NaN || !(price > 0) || price == "") {
+    const row = rows[0];
+    const price = Number(row.price);
+    if (!price || !(price > 0)) {
       return "Not a valid item to purchase!";
     }
 
-    let channels = itemData.shopOptions.Channels;
+    const data = row.data || {};
+    const channels = data.channels || '';
     if (channels.includes("#") && !channels.includes(channelId)) {
       return "This item is not available in this channel!";
     }
 
-    let charData = await dbm.loadFile('characters', charID);
-
-    //Get user object from clientmanager
-    let user = await clientManager.getUser(charData.numericID);
+    const charData = await dbm.loadFile('characters', charID);
+    const user = await clientManager.getUser(charData.numericID);
 
     const totalCost = price * numToBuy;
     const currentBalance = await dbm.getBalance(charID);
+    const needRole = data.need_role || '';
     if (currentBalance < totalCost) {
       return "You do not have enough gold!";
-    } else if (itemData.shopOptions["Need Role"]) {
-      //Need Role is a string that may include several roles. Roles are enclosed in <@& and >, and there may be multiple roles. They may not be comma separated but commas and spaces may exist (though not always! Sometimes it will just be six roles one after another). Make sure at least one role is valid
-      let roles = itemData.shopOptions["Need Role"].split("<@&");
+    } else if (needRole) {
+      let roles = needRole.split("<@&");
       roles = roles.map(role => role.replace(">", ""));
       roles = roles.map(role => role.replace(",", ""));
       roles = roles.map(role => role.replace(/\s+/g, ""));
       roles = roles.filter(role => role.length > 0);
 
-      //Check if the user has the role
       let hasRole = false;
       for (let i = 0; i < roles.length; i++) {
         if (user.roles.cache.some(role => role.id === roles[i])) {
-          logger.debug(roles[i]);
           hasRole = true;
           break;
         }
       }
-      logger.debug(hasRole);
       if (!hasRole) {
-        return "You do not have the required role to buy this item! You must have one of the following role(s): " + itemData.shopOptions["Need Role"];
+        return "You do not have the required role to buy this item! You must have one of the following role(s): " + needRole;
       }
     }
 
-    const category = (itemData.infoOptions.Category || '').trim().toLowerCase();
+    const { rows: canonRows } = await db.query('SELECT resolve_item_id($1) AS canon_id', [row.item_id]);
+    const canonId = canonRows[0] ? canonRows[0].canon_id : row.item_id;
+    const { rows: catRows } = await db.query('SELECT category FROM items WHERE id=$1', [canonId]);
+    const category = (catRows[0]?.category || '').trim().toLowerCase();
+
     await db.tx(async t => {
       await t.query(
         `INSERT INTO balances (id, amount) VALUES ($1, $2)
@@ -1482,32 +1484,28 @@ static async createInventoryEmbed(charID, page = 1) {
       if (category === 'ships' || category === 'ship') {
         const char = require('./char');
         for (let i = 0; i < numToBuy; i++) {
-          char.addShip(charData, itemName);
+          char.addShip(charData, canonId);
         }
       } else {
-        const grantClient = {
-          query: (text, params) =>
-            /SELECT\s+id\s+FROM\s+items/i.test(text)
-              ? db.query(text, params)
-              : t.query(text, params),
-        };
-        await grantItemToPlayer(grantClient, charID, itemName, numToBuy);
+        await grantItemToPlayer(t, charID, canonId, numToBuy);
       }
     });
 
-    let returnString = "Succesfully bought " + numToBuy + " " + itemName;
+    let returnString = "Succesfully bought " + numToBuy + " " + canonId;
 
-    let roles = itemData.shopOptions["Give Role"].split("<@&");
+    let roles = (data.give_role || '').split("<@&");
     roles = roles.map(role => role.replace(">", ""));
     roles = roles.map(role => role.replace(",", ""));
     roles = roles.map(role => role.replace(/\s+/g, ""));
     roles = roles.filter(role => role.length > 0);
     for (let i = 0; i < roles.length; i++) {
-      user.roles.add(roles[i]);
+      if (!user.roles.cache.some(role => role.id === roles[i])) {
+        user.roles.add(roles[i]);
+      }
     }
 
-    if (itemData.shopOptions["Give Role"] != "") {
-      returnString += "\nAdded the following role(s): " + itemData.shopOptions["Give Role"];
+    if (data.give_role && data.give_role !== '') {
+      returnString += "\nAdded the following role(s): " + data.give_role;
     }
 
     if (category === 'ships' || category === 'ship') {
