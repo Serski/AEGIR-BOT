@@ -39,10 +39,10 @@ class marketplace {
       return "You don't have enough of that item to sell it!";
     }
     charData.inventory[itemName] -= numberItems;
-    const category = await shop.getItemCategory(itemName);
+    const saleData = { item_id: itemName, price, quantity: numberItems };
     const res = await db.query(
-      'INSERT INTO marketplace (item, category, price, number, seller, seller_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
-      [itemName, category, price, numberItems, userTag, userID]
+      'INSERT INTO marketplace (name, data, seller, seller_id) VALUES ($1,$2,$3,$4) RETURNING id',
+      [itemName, saleData, userTag, userID]
     );
     const itemID = res.rows[0].id;
     await dbm.saveFile('characters', userTag, charData);
@@ -61,7 +61,7 @@ class marketplace {
     const limit = 25;
     const offset = (page - 1) * limit;
     const { rows } = await db.query(
-      'SELECT id, item, price, number FROM marketplace ORDER BY item, id LIMIT $1 OFFSET $2',
+      "SELECT id, name, item, price, data, data->>'item_id' AS item_id FROM marketplace ORDER BY item, id LIMIT $1 OFFSET $2",
       [limit, offset]
     );
     const countRes = await db.query('SELECT COUNT(*) FROM marketplace');
@@ -73,15 +73,16 @@ class marketplace {
 
     let descriptionText = '';
     for (const sale of rows) {
-      const icon = await shop.getItemIcon(sale.item, shopData);
-      const number = sale.number;
-      const item = sale.item;
-      const price = sale.price;
+      const itemId = sale.item_id || sale.item || sale.data?.item_id;
+      const quantity = Number(sale.data?.quantity ?? 0);
+      const price = Number(sale.price ?? sale.data?.price ?? 0);
+      const itemName = sale.name || itemId;
+      const icon = await shop.getItemIcon(itemId, shopData);
       let alignSpaces = ' ';
-      if (20 - item.length - ('' + price + '' + number).length > 0) {
-        alignSpaces = ' '.repeat(20 - item.length - ('' + price + '' + number).length);
+      if (20 - itemName.length - ('' + price + '' + quantity).length > 0) {
+        alignSpaces = ' '.repeat(20 - itemName.length - ('' + price + '' + quantity).length);
       }
-      descriptionText += `\`${sale.id}\` ${icon} **\`${number} ${item}${alignSpaces}${price}\`**${clientManager.getEmoji('Gold')}\n`;
+      descriptionText += `\`${sale.id}\` ${icon} **\`${quantity} ${itemName}${alignSpaces}${price}\`**${clientManager.getEmoji('Gold')}\n`;
     }
 
     descriptionText += '\n';
@@ -118,7 +119,7 @@ class marketplace {
     const limit = 25;
     const offset = (page - 1) * limit;
     const { rows } = await db.query(
-      'SELECT id, item, price, number FROM marketplace WHERE seller=$1 ORDER BY id LIMIT $2 OFFSET $3',
+      "SELECT id, name, item, price, data, data->>'item_id' AS item_id FROM marketplace WHERE seller=$1 ORDER BY id LIMIT $2 OFFSET $3",
       [player, limit, offset]
     );
     const countRes = await db.query('SELECT COUNT(*) FROM marketplace WHERE seller=$1', [player]);
@@ -128,15 +129,16 @@ class marketplace {
     embed.setColor(0x36393e);
     let descriptionText = '';
     for (const sale of rows) {
-      const number = sale.number;
-      const item = sale.item;
-      const icon = await shop.getItemIcon(item, shopData);
-      const price = sale.price;
+      const itemId = sale.item_id || sale.item || sale.data?.item_id;
+      const quantity = Number(sale.data?.quantity ?? 0);
+      const price = Number(sale.price ?? sale.data?.price ?? 0);
+      const itemName = sale.name || itemId;
+      const icon = await shop.getItemIcon(itemId, shopData);
       let alignSpaces = ' ';
-      if (30 - item.length - ('' + price + '' + number).length > 0) {
-        alignSpaces = ' '.repeat(30 - item.length - ('' + price + '' + number).length);
+      if (30 - itemName.length - ('' + price + '' + quantity).length > 0) {
+        alignSpaces = ' '.repeat(30 - itemName.length - ('' + price + '' + quantity).length);
       }
-      descriptionText += `\`${sale.id}\` ${icon} **\`${number} ${item}${alignSpaces}${price}\`**${clientManager.getEmoji('Gold')}\n`;
+      descriptionText += `\`${sale.id}\` ${icon} **\`${quantity} ${itemName}${alignSpaces}${price}\`**${clientManager.getEmoji('Gold')}\n`;
     }
     descriptionText += '\n';
     embed.setDescription(descriptionText);
@@ -155,39 +157,41 @@ class marketplace {
     if (!charData[userTag] || !charData[sale.seller]) {
       return "Character not found!";
     }
-    if (sale.number < 0 || sale.price < 0) {
+    const quantity = Number(sale.data?.quantity ?? 0);
+    const price = Number(sale.price ?? sale.data?.price ?? 0);
+    if (quantity < 0 || price < 0) {
       return "That sale has invalid data!";
     }
-    const itemName = sale.item;
+    const itemId = sale.item_id || sale.item || sale.data?.item_id;
     if (sale.seller_id == userID) {
-      if (!charData[userTag].inventory[itemName]) {
-        charData[userTag].inventory[itemName] = 0;
+      if (!charData[userTag].inventory[itemId]) {
+        charData[userTag].inventory[itemId] = 0;
       }
-      charData[userTag].inventory[itemName] += sale.number;
+      charData[userTag].inventory[itemId] += quantity;
       await db.query('DELETE FROM marketplace WHERE id=$1', [saleID]);
       await dbm.saveCollection('characters', charData);
       let embed = new EmbedBuilder();
-      embed.setDescription(`<@${userID}> bought **${sale.number} ${await shop.getItemIcon(itemName, shopData)} ${itemName}** back from themselves. It was listed for ${clientManager.getEmoji("Gold")}**${sale.price}**.`);
+      embed.setDescription(`<@${userID}> bought **${quantity} ${await shop.getItemIcon(itemId, shopData)} ${itemId}** back from themselves. It was listed for ${clientManager.getEmoji("Gold")}**${price}**.`);
       return embed;
     }
 
     const buyerBalance = await dbm.getBalance(userTag);
-    if (buyerBalance < sale.price) {
+    if (buyerBalance < price) {
       return "You don't have enough money to buy that!";
     }
     const sellerBalance = await dbm.getBalance(sale.seller);
-    await dbm.setBalance(userTag, buyerBalance - sale.price);
-    await dbm.setBalance(sale.seller, sellerBalance + sale.price);
+    await dbm.setBalance(userTag, buyerBalance - price);
+    await dbm.setBalance(sale.seller, sellerBalance + price);
 
-    if (!charData[userTag].inventory[itemName]) {
-      charData[userTag].inventory[itemName] = 0;
+    if (!charData[userTag].inventory[itemId]) {
+      charData[userTag].inventory[itemId] = 0;
     }
 
-    charData[userTag].inventory[itemName] += Number(sale.number);
+    charData[userTag].inventory[itemId] += quantity;
     await db.query('DELETE FROM marketplace WHERE id=$1', [saleID]);
     await dbm.saveCollection('characters', charData);
     let embed = new EmbedBuilder();
-    embed.setDescription(`<@${userID}> bought **${sale.number} ${await shop.getItemIcon(itemName, shopData)} ${itemName}** from <@${sale.seller_id}> for ${clientManager.getEmoji("Gold")}**${sale.price}**.`);
+    embed.setDescription(`<@${userID}> bought **${quantity} ${await shop.getItemIcon(itemId, shopData)} ${itemId}** from<@${sale.seller_id}> for ${clientManager.getEmoji("Gold")}**${price}**.`);
     return embed;
   }
 
@@ -198,16 +202,19 @@ class marketplace {
     if (!sale) {
       return "That sale doesn't exist!";
     }
+    const itemId = sale.item_id || sale.item || sale.data?.item_id;
+    const quantity = Number(sale.data?.quantity ?? 0);
+    const price = Number(sale.price ?? sale.data?.price ?? 0);
     let embed = new EmbedBuilder();
     embed.setTitle(`Sale ${saleID}`);
     embed.setColor(0x36393e);
-    embed.setDescription(`**${sale.number} ${await shop.getItemIcon(sale.item, shopData)} ${sale.item}** for ${clientManager.getEmoji("Gold")}**${sale.price}**.`);
+    embed.setDescription(`**${quantity} ${await shop.getItemIcon(itemId, shopData)} ${itemId}** for ${clientManager.getEmoji("Gold")}**${price}**.`);
     embed.setFooter({ text: `Seller: ${sale.seller}` });
     return embed;
   }
 
   static async getSale(saleID) {
-    const res = await db.query('SELECT * FROM marketplace WHERE id=$1', [saleID]);
+    const res = await db.query("SELECT *, data->>'item_id' AS item_id FROM marketplace WHERE id=$1", [saleID]);
     return res.rows[0];
   }
 }
