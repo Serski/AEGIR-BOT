@@ -37,16 +37,11 @@ test.skip('buying a ship stores it separately from inventory', async () => {
   let balance = 100;
   let charData = { numericID: 'usernum', inventory: {}, ships: {} };
 
-  const row = {
-    id: 'Longboat',
-    item_id: 'longboat',
-    price: 10,
-    data: { item_id: 'longboat', name: 'Longboat', price: 10, category: 'Ships' }
-  };
+  const row = { id: 1, item_code: 'longboat', name: 'Longboat', price: 10, category: 'Ships' };
 
   const dbStub = {
     query: async (text, params) => {
-      if (/FROM shop/i.test(text)) {
+      if (/FROM\s+shop_v/i.test(text)) {
         return { rows: [row] };
       }
       if (/resolve_item_id/i.test(text)) {
@@ -93,15 +88,10 @@ test.skip('buying ship items with varied category casing routes to ships list', 
     await t.test(category, async () => {
       let balance = 100;
       let charData = { numericID: 'usernum', inventory: {}, ships: {} };
-      const row = {
-        id: 'Longboat',
-        item_id: 'longboat',
-        price: 10,
-        data: { item_id: 'longboat', name: 'Longboat', price: 10, category }
-      };
+      const row = { id: 1, item_code: 'longboat', name: 'Longboat', price: 10, category };
       const dbStub = {
         query: async (text, params) => {
-          if (/FROM shop/i.test(text)) return { rows: [row] };
+          if (/FROM\s+shop_v/i.test(text)) return { rows: [row] };
           if (/resolve_item_id/i.test(text)) return { rows: [{ canon_id: row.data.item_id }] };
           if (/FROM items/i.test(text)) return { rows: [{ category }] };
           return { rows: [] };
