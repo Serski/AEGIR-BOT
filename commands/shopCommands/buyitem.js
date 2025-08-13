@@ -3,9 +3,9 @@ const { pool } = require('../../pg-client');
 
 async function findShopItem(term) {
   const { rows } = await pool.query(`
-    SELECT id, name, item AS item_id, price
-    FROM shop
-    WHERE item = $1
+    SELECT id, name, item_code, price, category
+    FROM shop_v
+    WHERE LOWER(item_code) = $1
        OR name ILIKE $2
     LIMIT 1
   `, [term.toLowerCase(), term]);
@@ -28,7 +28,13 @@ async function buy(playerId, itemTerm, qty) {
     const item = await findShopItem(itemTerm);
     if (!item) throw new Error(`Item "${itemTerm}" not found in shop.`);
 
-    const priceTotal = (item.price || 0) * (qty || 1);
+    const category = (item.category || '').trim();
+    const price = Number(item.price);
+    if (!category || !price || !(price > 0)) {
+      throw new Error('Not a valid item to purchase!');
+    }
+
+    const priceTotal = price * (qty || 1);
 
     const balRes = await client.query(
       `SELECT gold FROM balances WHERE id = $1 FOR UPDATE`,
@@ -43,7 +49,7 @@ async function buy(playerId, itemTerm, qty) {
       await client.query(
         `INSERT INTO inventory_items (instance_id, owner_id, item_id, durability, metadata)
          VALUES (gen_random_uuid()::text, $1, $2, NULL, '{}'::jsonb)`,
-        [playerId, item.item_id]
+        [playerId, item.item_code]
       );
     }
 
