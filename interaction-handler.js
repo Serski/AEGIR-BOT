@@ -1,6 +1,6 @@
 const shop = require('./shop');
 const char = require('./char');
-const marketplace = require('./marketplace');
+const { createSalesEmbed } = require('./marketplace');
 const admin = require('./admin');
 const panel = require('./panel');
 const logger = require('./logger');
@@ -183,7 +183,7 @@ const incomeSwitch = async (interaction) => {
   await interaction.editReply({ embeds: [edittedEmbed], components: rows});
 };
 const salesSwitch = async (interaction) => {
-  let [edittedEmbed, rows] = await marketplace.createSalesEmbed(interaction.customId.slice(11));
+  let [edittedEmbed, rows] = await createSalesEmbed(interaction.customId.slice(11));
   await interaction.update({ embeds: [edittedEmbed], components: rows});
 };
 const allItemSwitch = async (interaction) => {

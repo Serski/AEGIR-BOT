@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const marketplace = require('../../marketplace');
+const { postSale } = require('../../marketplace');
 const items = require('../../db/items');
 const clientManager = require('../../clientManager');
 
@@ -34,7 +34,7 @@ module.exports = {
             return;
         }
 
-        const res = await marketplace.postSale({ userId, rawItem: itemCode, price, quantity: qty });
+        const res = await postSale({ userId, rawItem: itemCode, price, quantity: qty });
 
         if (!res.ok) {
             if (res.reason === 'not_enough') {
