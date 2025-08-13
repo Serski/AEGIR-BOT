@@ -35,9 +35,9 @@ module.exports = {
         await client.query('UPDATE balances SET amount = amount - $2 WHERE id = $1', [userId, item.price]);
       }
 
-      await grantItemToPlayer(userId, item.item_id, 1);
+      await grantItemToPlayer(userId, item.item_code, 1);
       await client.query('COMMIT');
-      return interaction.reply(`Bought 1 ${item.item_id} for ${item.price} gold.`);
+      return interaction.reply(`Bought 1 ${item.item_code} for ${item.price} gold.`);
     } catch (err) {
       try { await client.query('ROLLBACK'); } catch {}
       return interaction.reply({ content: 'Purchase failed.', ephemeral: true });
