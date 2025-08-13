@@ -50,7 +50,7 @@ test('buyItem stores stacks in inventory_items via transaction', async () => {
         return { rows: [{ canon_id: 'Apple' }] };
       }
       if (/FROM\s+shop/i.test(text)) {
-        return { rows: [{ item: 'Apple', price: 10, data: {} }] };
+        return { rows: [{ item_id: 'Apple', price: 10, data: {} }] };
       }
       if (/FROM\s+items/i.test(text)) {
         return { rows: [{ category: 'Food' }] };

@@ -39,7 +39,7 @@ test.skip('buying a ship stores it separately from inventory', async () => {
 
   const row = {
     id: 'Longboat',
-    item: 'longboat',
+    item_id: 'longboat',
     price: 10,
     data: { item_id: 'longboat', name: 'Longboat', price: 10, category: 'Ships' }
   };
@@ -95,7 +95,7 @@ test.skip('buying ship items with varied category casing routes to ships list', 
       let charData = { numericID: 'usernum', inventory: {}, ships: {} };
       const row = {
         id: 'Longboat',
-        item: 'longboat',
+        item_id: 'longboat',
         price: 10,
         data: { item_id: 'longboat', name: 'Longboat', price: 10, category }
       };

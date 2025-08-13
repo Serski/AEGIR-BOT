@@ -28,7 +28,7 @@ test('createShopEmbed shows only items with numeric prices', async () => {
   const rows = [
     {
       id: 'longboat',
-      item: 'longboat',
+      item_id: 'longboat',
       name: 'Longboat',
       price: 100,
       data: {
@@ -42,7 +42,7 @@ test('createShopEmbed shows only items with numeric prices', async () => {
     },
     {
       id: 'broken_ship',
-      item: 'broken_ship',
+      item_id: 'broken_ship',
       name: 'Broken Ship',
       price: 'abc',
       data: {
@@ -55,7 +55,7 @@ test('createShopEmbed shows only items with numeric prices', async () => {
     },
     {
       id: 'wood',
-      item: 'wood',
+      item_id: 'wood',
       name: 'Wood',
       price: 5,
       data: {
@@ -69,7 +69,7 @@ test('createShopEmbed shows only items with numeric prices', async () => {
     },
     {
       id: 'stone',
-      item: 'stone',
+      item_id: 'stone',
       name: 'Stone',
       price: null,
       data: {
