@@ -3,7 +3,7 @@ const { pool } = require('../pg-client');
 
 async function listSales() {
   const sql = `
-    SELECT id, name, item_code, price, category
+    SELECT name, item_code, price, category
     FROM marketplace_v
     ORDER BY name
   `;
