@@ -1,7 +1,7 @@
 //Passes saleID to inspectSale function in marketplace.js
 
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const marketplace = require('../../marketplace');
+const { showSales } = require('../../marketplace');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -20,7 +20,7 @@ module.exports = {
     async execute(interaction) {
         const player = interaction.options.getUser('player') ?? interaction.user;
         const page = interaction.options.getInteger('page') ?? 1;
-        const res = await marketplace.showSales(player.id, page);
+        const res = await showSales(player.id, page);
         if (typeof res === 'string') {
             await interaction.reply(res);
         } else {

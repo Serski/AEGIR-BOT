@@ -48,7 +48,7 @@ function stubModule(file, exports) {
   stubModule('db/items.js', items);
 })();
 
-const marketplace = require(marketplacePath);
+const { postSale, listSales } = require(marketplacePath);
 
 after(() => {
   for (const p of stubbed) delete require.cache[p];
@@ -56,14 +56,14 @@ after(() => {
 });
 
 test('postSale and listSales', async () => {
-  let res = await marketplace.postSale({ userId: 'user1', rawItem: 'sword', price: 10, quantity: 2 });
+  let res = await postSale({ userId: 'user1', rawItem: 'sword', price: 10, quantity: 2 });
   assert.equal(res.ok, true);
   assert.equal(res.itemCode, 'sword');
   assert.equal(res.price, 10);
   assert.equal(res.quantity, 2);
   assert.equal(typeof res.saleId, 'string');
 
-  res = await marketplace.postSale({ userId: 'user1', rawItem: 'sword', price: 10, quantity: 5 });
+  res = await postSale({ userId: 'user1', rawItem: 'sword', price: 10, quantity: 5 });
   assert.deepEqual(res, { ok: false, reason: 'not_enough', owned: 3, needed: 5 });
 
   const realConnect = pool.connect.bind(pool);
@@ -81,11 +81,11 @@ test('postSale and listSales', async () => {
     };
     return client;
   };
-  res = await marketplace.postSale({ userId: 'user1', rawItem: 'sword', price: 10, quantity: 3 });
+  res = await postSale({ userId: 'user1', rawItem: 'sword', price: 10, quantity: 3 });
   assert.deepEqual(res, { ok: false, reason: 'concurrent_change' });
   pool.connect = realConnect;
 
-  const sales = await marketplace.listSales();
+  const sales = await listSales();
   assert.deepEqual(sales, [
     { name: 'Sword', item_code: 'sword', price: 10, category: 'Weapons' },
   ]);
