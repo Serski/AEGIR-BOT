@@ -1,48 +1,47 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { getShopItemByNameOrId } = require('../../db/shop');
-const { grantItemToPlayer } = require('../../db/inventory');
-const { pool } = require('../../pg-client');
+const pool = require('../../pg-client');
+const inventory = require('../../db/inventory');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('buy')
     .setDescription('Buy a shop item')
     .addStringOption(option =>
-      option.setName('item')
-        .setDescription('Item name or ID')
+      option.setName('item_code')
+        .setDescription('Item code')
         .setRequired(true)
+    )
+    .addIntegerOption(option =>
+      option.setName('quantity')
+        .setDescription('Number of items to buy')
+        .setRequired(false)
+        .setMinValue(1)
     ),
   async execute(interaction) {
     const userId = interaction.user.id;
-    const nameOrId = interaction.options.getString('item');
-    const item = await getShopItemByNameOrId(nameOrId);
-    if (!item || !item.price) {
-      return interaction.reply({ content: 'Item not found or price missing.', ephemeral: true });
-    }
+    const itemCode = interaction.options.getString('item_code');
+    const qty = interaction.options.getInteger('quantity') ?? 1;
 
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-      const { rows } = await client.query('SELECT amount FROM balances WHERE id=$1 FOR UPDATE', [userId]);
-      const balance = rows[0]?.amount ?? 0;
-      if (balance < item.price) {
-        await client.query('ROLLBACK');
-        return interaction.reply({ content: 'Insufficient funds.', ephemeral: true });
-      }
-      if (rows.length === 0) {
-        await client.query('INSERT INTO balances (id, amount) VALUES ($1, $2)', [userId, balance - item.price]);
-      } else {
-        await client.query('UPDATE balances SET amount = amount - $2 WHERE id = $1', [userId, item.price]);
-      }
+    // read price from shop_v to prevent client-side spoofing
+    const { rows } = await pool.query(
+      `SELECT price, name FROM shop_v WHERE item_code = $1`,
+      [itemCode]
+    );
+    const row = rows[0];
+    if (!row) return interaction.reply({ ephemeral: true, content: `Item not in shop.` });
 
-      await grantItemToPlayer(userId, item.item_code, 1);
-      await client.query('COMMIT');
-      return interaction.reply(`Bought 1 ${item.item_code} for ${item.price} gold.`);
-    } catch (err) {
-      try { await client.query('ROLLBACK'); } catch {}
-      return interaction.reply({ content: 'Purchase failed.', ephemeral: true });
-    } finally {
-      client.release();
-    }
+    const total = (row.price || 0) * qty;
+
+    // charge balance (replace with your money module/logic)
+    const bal = await pool.query(`SELECT amount FROM balances WHERE id=$1`, [userId]);
+    const current = bal.rows[0]?.amount ?? 0;
+    if (current < total) return interaction.reply({ ephemeral: true, content: `Not enough money.` });
+
+    await pool.query(`UPDATE balances SET amount = amount - $2 WHERE id = $1`, [userId, total]);
+
+    // grant the item(s)
+    await inventory.give(userId, itemCode, qty);
+
+    return interaction.reply(`Bought ${qty} × ${row.name} for ${total}.`);
   }
 };
