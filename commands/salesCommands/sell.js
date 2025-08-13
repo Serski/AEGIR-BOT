@@ -1,13 +1,14 @@
 const { SlashCommandBuilder } = require('discord.js');
 const marketplace = require('../../marketplace');
+const items = require('../../db/items');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('sell')
-        .setDescription('Sell an item')
+        .setDescription('Sell an item (use item codes to avoid ambiguity)')
         .addStringOption((option) =>
             option.setName('item')
-                .setDescription('The item code or name')
+                .setDescription('The item code (names may be ambiguous)')
                 .setRequired(true)
         )
         .addIntegerOption((option) =>
@@ -24,7 +25,15 @@ module.exports = {
         const price = interaction.options.getInteger('price') ?? 0;
         const qty = interaction.options.getInteger('quantity') ?? 1;
 
-        const res = await marketplace.postSale({ userId, rawItem, price, quantity: qty });
+        let itemCode;
+        try {
+            itemCode = await items.resolveItemCode(rawItem);
+        } catch (err) {
+            await interaction.reply({ content: `Could not resolve \"${rawItem}\": ${err.message}`, ephemeral: true });
+            return;
+        }
+
+        const res = await marketplace.postSale({ userId, rawItem: itemCode, price, quantity: qty });
 
         if (!res.ok) {
             if (res.reason === 'not_enough') {
