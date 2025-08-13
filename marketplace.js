@@ -91,13 +91,18 @@ async function postSale({ userId, rawItem, price = 0, quantity = 1 }) {
 // Render a paginated list of all sales on the marketplace. Returns an embed and
 // an array of ActionRows for navigation buttons.
 async function createSalesEmbed(page = 1) {
-  const sales = await listSales();
   const perPage = 10;
-  const totalPages = Math.max(1, Math.ceil(sales.length / perPage));
-  const curPage = Math.min(Math.max(1, Number(page) || 1), totalPages);
-  const slice = sales.slice((curPage - 1) * perPage, curPage * perPage);
+  let curPage = Math.max(1, Number(page) || 1);
+  let offset = (curPage - 1) * perPage;
+  let { rows: sales, totalCount } = await listSales({ limit: perPage, offset });
+  const totalPages = Math.max(1, Math.ceil(totalCount / perPage));
+  if (curPage > totalPages) {
+    curPage = totalPages;
+    offset = (curPage - 1) * perPage;
+    ({ rows: sales } = await listSales({ limit: perPage, offset }));
+  }
 
-  const description = slice
+  const description = sales
     .map(({ name, price, category }) =>
       `• ${name} — Category: ${category} — ${price ?? 'N/A'} gold`
     )
@@ -135,19 +140,19 @@ async function createSalesEmbed(page = 1) {
 
 // Show the sales for a specific user. Returns an Embed or a string if none.
 async function showSales(userId, page = 1) {
-  const { rows } = await pool.query(
-    'SELECT id, name, price, quantity FROM marketplace WHERE seller = $1 ORDER BY name',
-    [userId]
-  );
-
-  if (rows.length === 0) return 'No sales found.';
-
   const perPage = 10;
-  const totalPages = Math.max(1, Math.ceil(rows.length / perPage));
-  const curPage = Math.min(Math.max(1, Number(page) || 1), totalPages);
-  const slice = rows.slice((curPage - 1) * perPage, curPage * perPage);
+  let curPage = Math.max(1, Number(page) || 1);
+  let offset = (curPage - 1) * perPage;
+  let { rows, totalCount } = await listSales({ sellerId: userId, limit: perPage, offset });
+  if (rows.length === 0) return 'No sales found.';
+  const totalPages = Math.max(1, Math.ceil(totalCount / perPage));
+  if (curPage > totalPages) {
+    curPage = totalPages;
+    offset = (curPage - 1) * perPage;
+    ({ rows } = await listSales({ sellerId: userId, limit: perPage, offset }));
+  }
 
-  const description = slice
+  const description = rows
     .map(({ id, name, price, quantity }) =>
       `ID: ${id} — ${quantity}× ${name} — ${price} gold each`
     )

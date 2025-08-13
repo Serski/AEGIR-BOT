@@ -28,7 +28,7 @@ function stubModule(file, exports) {
   pool.query(
     "CREATE TABLE marketplace (id TEXT PRIMARY KEY, name TEXT, item_code TEXT, price INTEGER, seller TEXT, quantity INTEGER)"
   );
-  pool.query("CREATE VIEW marketplace_v AS SELECT name, item_code, price, 'Weapons'::text AS category FROM marketplace");
+  pool.query("CREATE VIEW marketplace_v AS SELECT id, name, item_code, price, seller, quantity, 'Weapons'::text AS category FROM marketplace");
   pool.query("CREATE TABLE inventory_items (instance_id TEXT PRIMARY KEY, owner_id TEXT, item_id TEXT, durability INTEGER, metadata JSONB)");
   for (let i = 1; i <= 5; i++) {
     pool.query(
@@ -62,6 +62,7 @@ test('postSale and listSales', async () => {
   assert.equal(res.price, 10);
   assert.equal(res.quantity, 2);
   assert.equal(typeof res.saleId, 'string');
+  const saleId = res.saleId;
 
   res = await postSale({ userId: 'user1', rawItem: 'sword', price: 10, quantity: 5 });
   assert.deepEqual(res, { ok: false, reason: 'not_enough', owned: 3, needed: 5 });
@@ -85,8 +86,19 @@ test('postSale and listSales', async () => {
   assert.deepEqual(res, { ok: false, reason: 'concurrent_change' });
   pool.connect = realConnect;
 
-  const sales = await listSales();
-  assert.deepEqual(sales, [
-    { name: 'Sword', item_code: 'sword', price: 10, category: 'Weapons' },
-  ]);
+  await pool.query("INSERT INTO marketplace (id, name, item_code, price, seller, quantity) VALUES ('sale2','Sword','sword',5,'user2',1)");
+
+  let result = await listSales();
+  assert.equal(result.totalCount, undefined);
+  assert.equal(result.rows.length, 2);
+  const sellers = result.rows.map(r => r.seller).sort();
+  assert.deepEqual(sellers, ['user1', 'user2']);
+
+  result = await listSales({ sellerId: 'user1' });
+  assert.equal(result.rows.length, 1);
+  assert.equal(result.rows[0].seller, 'user1');
+
+  result = await listSales({ limit: 1 });
+  assert.equal(result.rows.length, 1);
+  assert.equal(result.totalCount, 2);
 });
