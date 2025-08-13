@@ -31,7 +31,7 @@ const addItem = async (interaction) => {
     const itemId = await ensureItem(db, itemName, itemCategory);
     const rowId = randomUUID();
     await db.query(
-      `INSERT INTO shop (id, data) VALUES ($1, jsonb_build_object('name',$2,'price',$3,'item_id',$4)) ON CONFLICT (id) DO UPDATE SET data=EXCLUDED.data`,
+      `INSERT INTO shop (id, data) VALUES ($1, jsonb_build_object('name',$2,'price',$3,'item_id',$4,'item',$4)) ON CONFLICT (id) DO UPDATE SET data=EXCLUDED.data`,
       [rowId, itemName, priceInt, itemId]
     );
     await interaction.reply({content: `Item '${itemName}' has been added to the item list. Use /shoplayout or ping Alex to add to shop.`, ephemeral: true});

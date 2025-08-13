@@ -39,7 +39,7 @@ class marketplace {
       return "You don't have enough of that item to sell it!";
     }
     charData.inventory[itemName] -= numberItems;
-    const saleData = { item_id: itemName, price, quantity: numberItems };
+    const saleData = { item_id: itemName, item: itemName, price, quantity: numberItems };
     const res = await db.query(
       'INSERT INTO marketplace (name, data, seller, seller_id) VALUES ($1,$2,$3,$4) RETURNING id',
       [itemName, saleData, userTag, userID]
@@ -75,7 +75,9 @@ class marketplace {
     for (const sale of rows) {
       const itemId = sale.item_id || sale.item || sale.data?.item_id;
       const quantity = Number(sale.data?.quantity ?? 0);
-      const price = Number(sale.price ?? sale.data?.price ?? 0);
+      const price = Number(
+        sale.price ?? sale.data?.price ?? sale.data?.shopOptions?.['Price (#)'] ?? 0
+      );
       const itemName = sale.name || itemId;
       const icon = await shop.getItemIcon(itemId, shopData);
       let alignSpaces = ' ';
@@ -131,7 +133,9 @@ class marketplace {
     for (const sale of rows) {
       const itemId = sale.item_id || sale.item || sale.data?.item_id;
       const quantity = Number(sale.data?.quantity ?? 0);
-      const price = Number(sale.price ?? sale.data?.price ?? 0);
+      const price = Number(
+        sale.price ?? sale.data?.price ?? sale.data?.shopOptions?.['Price (#)'] ?? 0
+      );
       const itemName = sale.name || itemId;
       const icon = await shop.getItemIcon(itemId, shopData);
       let alignSpaces = ' ';
@@ -158,7 +162,9 @@ class marketplace {
       return "Character not found!";
     }
     const quantity = Number(sale.data?.quantity ?? 0);
-    const price = Number(sale.price ?? sale.data?.price ?? 0);
+    const price = Number(
+      sale.price ?? sale.data?.price ?? sale.data?.shopOptions?.['Price (#)'] ?? 0
+    );
     if (quantity < 0 || price < 0) {
       return "That sale has invalid data!";
     }
@@ -204,7 +210,9 @@ class marketplace {
     }
     const itemId = sale.item_id || sale.item || sale.data?.item_id;
     const quantity = Number(sale.data?.quantity ?? 0);
-    const price = Number(sale.price ?? sale.data?.price ?? 0);
+    const price = Number(
+      sale.price ?? sale.data?.price ?? sale.data?.shopOptions?.['Price (#)'] ?? 0
+    );
     let embed = new EmbedBuilder();
     embed.setTitle(`Sale ${saleID}`);
     embed.setColor(0x36393e);
