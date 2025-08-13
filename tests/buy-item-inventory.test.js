@@ -35,16 +35,9 @@ const shopPath = path.join(root, 'shop.js');
 test('buyItem stores stacks in inventory_items via transaction', async () => {
   let balance = 100;
   let charData = { numericID: 'usernum' };
-  const shopData = {
-    Apple: {
-      infoOptions: { Category: 'Food' },
-      shopOptions: { 'Price (#)': 10, Channels: '', 'Need Role': '', 'Give Role': '' }
-    }
-  };
 
   let saveCalled = false;
   const dbmStub = {
-    loadCollection: async (col) => (col === 'shop' ? shopData : {}),
     loadFile: async () => charData,
     getBalance: async () => balance,
     saveFile: async () => { saveCalled = true; }
@@ -56,15 +49,18 @@ test('buyItem stores stacks in inventory_items via transaction', async () => {
       if (/resolve_item_id/i.test(text)) {
         return { rows: [{ canon_id: 'Apple' }] };
       }
-      return { rows: [{ id: 'Apple' }] };
+      if (/FROM\s+shop/i.test(text)) {
+        return { rows: [{ item_id: 'Apple', price: '10', data: {} }] };
+      }
+      if (/FROM\s+items/i.test(text)) {
+        return { rows: [{ category: 'Food' }] };
+      }
+      return { rows: [] };
     },
     tx: async (cb) => {
       const t = {
         query: async (text, params) => {
           executed.push(text);
-          if (/resolve_item_id/i.test(text)) {
-            return { rows: [{ canon_id: 'Apple' }] };
-          }
           return { rows: [] };
         }
       };
