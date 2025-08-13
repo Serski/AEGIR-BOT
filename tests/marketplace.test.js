@@ -57,7 +57,18 @@ function stubModule(file, exports) {
   const mem = newDb();
   const pgMem = mem.adapters.createPg();
   pool = new pgMem.Pool();
-  pool.query('CREATE TABLE marketplace (id SERIAL PRIMARY KEY, name TEXT, item TEXT, price INTEGER, data JSONB, seller TEXT, seller_id TEXT)');
+  pool.query(`CREATE TABLE marketplace (id SERIAL PRIMARY KEY, name TEXT, data JSONB, item TEXT, price INTEGER, seller TEXT, seller_id TEXT)`);
+  const origQuery = pool.query.bind(pool);
+  pool.query = (text, params) => {
+    if (/INSERT INTO marketplace \(name, data, seller, seller_id\)/i.test(text)) {
+      const sale = params[1];
+      return origQuery(
+        'INSERT INTO marketplace (name, data, item, price, seller, seller_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
+        [params[0], sale, sale.item_id, sale.price, params[2], params[3]]
+      );
+    }
+    return origQuery(text, params);
+  };
   stubModule('pg-client.js', { query: (text, params) => pool.query(text, params), pool });
 })();
 
@@ -85,9 +96,11 @@ test('posting and buying a sale updates inventories and balances', async () => {
 
   // post sale
   const embed = await marketplace.postSale(2, 'iron sword', 50, 'Seller#1234', 'sellerId');
-  const { rows } = await pool.query('SELECT id FROM marketplace');
+  const { rows } = await pool.query('SELECT id, item, price FROM marketplace');
   assert.equal(rows.length, 1);
   const saleID = rows[0].id;
+  assert.equal(rows[0].price, 50);
+  assert.equal(rows[0].item, 'Iron Sword');
   assert.equal(charData['Seller#1234'].inventory['Iron Sword'], 3);
   assert.ok(embed.description.includes('listed'));
 
@@ -128,27 +141,28 @@ test('buySale validates characters and sale data', async () => {
 
   // insert sale with negative price
   let { rows } = await pool.query(
-    "INSERT INTO marketplace (name, data, seller, seller_id) VALUES ($1,$2,$3,$4) RETURNING id",
-    ['Iron Sword', { item_id: 'Iron Sword', price: -10, quantity: 1 }, 'Seller#1234', 'sellerId']
+    "INSERT INTO marketplace (name, data, item, price, seller, seller_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id",
+    ['Iron Sword', { item_id: 'Iron Sword', price: -10, quantity: 1 }, 'Iron Sword', -10, 'Seller#1234', 'sellerId']
   );
   let res = await marketplace.buySale(rows[0].id, 'Buyer#5678', 'buyerId');
   assert.equal(res, 'That sale has invalid data!');
 
   await pool.query('DELETE FROM marketplace');
   rows = await pool.query(
-    "INSERT INTO marketplace (name, data, seller, seller_id) VALUES ($1,$2,$3,$4) RETURNING id",
-    ['Iron Sword', { item_id: 'Iron Sword', price: 10, quantity: -1 }, 'Seller#1234', 'sellerId']
+    "INSERT INTO marketplace (name, data, item, price, seller, seller_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id",
+    ['Iron Sword', { item_id: 'Iron Sword', price: 10, quantity: -1 }, 'Iron Sword', 10, 'Seller#1234', 'sellerId']
   );
   res = await marketplace.buySale(rows.rows[0].id, 'Buyer#5678', 'buyerId');
   assert.equal(res, 'That sale has invalid data!');
 
   await pool.query('DELETE FROM marketplace');
   rows = await pool.query(
-    "INSERT INTO marketplace (name, data, seller, seller_id) VALUES ($1,$2,$3,$4) RETURNING id",
-    ['Iron Sword', { item_id: 'Iron Sword', price: 10, quantity: 1 }, 'Seller#1234', 'sellerId']
+    "INSERT INTO marketplace (name, data, item, price, seller, seller_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id",
+    ['Iron Sword', { item_id: 'Iron Sword', price: 10, quantity: 1 }, 'Iron Sword', 10, 'Seller#1234', 'sellerId']
   );
   delete charData['Buyer#5678'];
   delete balances['Buyer#5678'];
   res = await marketplace.buySale(rows.rows[0].id, 'Buyer#5678', 'buyerId');
   assert.equal(res, 'Character not found!');
 });
+
