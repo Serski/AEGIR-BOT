@@ -47,7 +47,9 @@ test('buyItem stores stacks in inventory_items via transaction', async () => {
   const dbStub = {
     query: async (text) => {
       if (/FROM\s+shop_v/i.test(text)) {
-        return { rows: [{ item_code: 'Apple', name: 'Apple', price: 10, category: 'Food' }] };
+        const result = { rows: [{ id: 1, name: 'Apple', item_code: 'Apple', price: 10, category: 'Food' }] };
+        console.log('[test] shop_v rows', result.rows);
+        return result;
       }
       return { rows: [] };
     },

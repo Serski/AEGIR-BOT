@@ -42,10 +42,12 @@ test.skip('buying a ship stores it separately from inventory', async () => {
   const dbStub = {
     query: async (text, params) => {
       if (/FROM\s+shop_v/i.test(text)) {
-        return { rows: [row] };
+        const result = { rows: [row] };
+        console.log('[test] shop_v rows', result.rows);
+        return result;
       }
       if (/resolve_item_id/i.test(text)) {
-        return { rows: [{ canon_id: row.data.item_id }] };
+        return { rows: [{ canon_id: row.item_code }] };
       }
       if (/FROM items/i.test(text)) {
         return { rows: [{ category: 'Ships' }] };
@@ -91,8 +93,12 @@ test.skip('buying ship items with varied category casing routes to ships list', 
       const row = { id: 1, item_code: 'longboat', name: 'Longboat', price: 10, category };
       const dbStub = {
         query: async (text, params) => {
-          if (/FROM\s+shop_v/i.test(text)) return { rows: [row] };
-          if (/resolve_item_id/i.test(text)) return { rows: [{ canon_id: row.data.item_id }] };
+          if (/FROM\s+shop_v/i.test(text)) {
+            const result = { rows: [row] };
+            console.log('[test] shop_v rows', result.rows);
+            return result;
+          }
+          if (/resolve_item_id/i.test(text)) return { rows: [{ canon_id: row.item_code }] };
           if (/FROM items/i.test(text)) return { rows: [{ category }] };
           return { rows: [] };
         },
