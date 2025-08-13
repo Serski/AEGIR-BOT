@@ -38,23 +38,13 @@ test('transferring a ship gives it to ships collection only', async () => {
   let receiver = { inventory: {}, ships: {} };
   const giverTag = 'Giver#1111';
   const receiverTag = 'Receiver#2222';
-  const shopData = {
-    Longboat: { infoOptions: { Category: 'Ships', 'Transferrable (Y/N)': 'Yes' } }
-  };
+
+  const updates = [];
 
   const dbmStub = {
-    loadCollection: async (col) => {
-      if (col === 'shop') return shopData;
-      return { [giverTag]: giver, [receiverTag]: receiver };
-    },
     saveFile: async (col, id, data) => {
       if (id === giverTag) giver = data;
       if (id === receiverTag) receiver = data;
-    },
-    getInventory: async (id) => {
-      if (id === giverTag) return giver.inventory;
-      if (id === receiverTag) return receiver.inventory;
-      return {};
     },
     updateInventory: async (id, item, delta) => {
       updates.push({ id, item, delta });
@@ -62,18 +52,31 @@ test('transferring a ship gives it to ships collection only', async () => {
       target.inventory[item] = (target.inventory[item] || 0) + delta;
       if (target.inventory[item] <= 0) delete target.inventory[item];
     },
-    getItemDefinition: async () => ({})
+    getItemDefinition: async () => ({
+      infoOptions: { Category: 'Ships', 'Transferrable (Y/N)': 'Yes' }
+    })
   };
 
-  const shopStub = { findItemName: async (name) => name };
+  const dbStub = {
+    query: async (sql, params) => {
+      if (sql.includes('SELECT quantity FROM v_inventory')) {
+        return { rows: [{ quantity: giver.inventory[params[1]] || 0 }] };
+      }
+      return { rows: [] };
+    }
+  };
 
-  const updates = [];
+  const invGrantsStub = {
+    ensureItem: async (client, name) => name,
+    grantItemToPlayer: async () => {}
+  };
+
   const charModule = await mockImport(charPath, {
     './database-manager': dbmStub,
-    './shop': shopStub,
     './logger': { debug() {}, info() {}, error() {} },
     './clientManager': {},
-    './pg-client': {}
+    './pg-client': dbStub,
+    './inventory-grants': invGrantsStub
   });
 
   let added = 0;

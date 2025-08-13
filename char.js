@@ -1694,18 +1694,12 @@ class char {
       return "Amount must be greater than 0";
     }
 
-    //Check if player has item, if they do, remove it and give it to player
-    let collectionName = 'characters';
-    let shopData = await dbm.loadCollection('shop');
-
-    item = await shop.findItemName(item, shopData);
-    if (item === "ERROR") {
-      return "Not a valid item";
-    }
-
-    if (shopData[item].infoOptions["Transferrable (Y/N)"] == "No") {
+    const canonical = await ensureItem(db, item);
+    const def = await dbm.getItemDefinition(canonical);
+    if (def?.infoOptions?.["Transferrable (Y/N)"] === "No") {
       return "This item cannot be transferred!";
     }
+
     let charData;
     [playerGiving, charData] = await this.findPlayerData(playerGiving);
     if (!playerGiving) {
@@ -1718,35 +1712,28 @@ class char {
       return "Error: Player not found";
     }
 
-    if (charData && charData2) {
-      const invGiving = { ...(await dbm.getInventory(playerGiving)) };
-
-      if (invGiving[item] && invGiving[item] >= amount) {
-        const category = (shopData[item].infoOptions.Category || '').trim().toLowerCase();
-
-        // Update the normalized inventory tables
-        await this.removeItem(playerGiving, item, { qty: amount });
-        if (category === 'ships' || category === 'ship') {
-          for (let i = 0; i < amount; i++) {
-            char.addShip(charData2, item);
-          }
-        } else {
-          await this.addItem(player, item, { qty: amount });
-        }
-
-        // Refresh legacy inventory fields after updates
-        invGiving[item] -= amount;
-        if (invGiving[item] <= 0) delete invGiving[item];
-        charData.inventory = invGiving;
-        charData2.inventory = await dbm.getInventory(player);
-
-        await dbm.saveFile(collectionName, playerGiving, charData);
-        await dbm.saveFile(collectionName, player, charData2);
-        return true;
-      } else {
-        return "You don't have enough of that item!";
-      }
+    const { rows } = await db.query(
+      'SELECT quantity FROM v_inventory WHERE character_id=$1 AND item_id=$2',
+      [playerGiving, canonical]
+    );
+    const qty = rows[0]?.quantity || 0;
+    if (qty < amount) {
+      return "You don't have enough of that item!";
     }
+
+    await this.removeItem(playerGiving, canonical, { qty: amount });
+
+    const category = (def?.infoOptions?.Category || '').trim().toLowerCase();
+    if (category === 'ships' || category === 'ship') {
+      for (let i = 0; i < amount; i++) {
+        char.addShip(charData2, canonical);
+      }
+      await dbm.saveFile('characters', player, charData2);
+    } else {
+      await grantItemToPlayer(db, player, canonical, amount);
+    }
+
+    return true;
   }
 
   static async giveGoldToPlayer(playerGiving, player, gold) {
