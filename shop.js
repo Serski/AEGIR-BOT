@@ -276,7 +276,7 @@ class shop {
 
     const divider = '────────────────────────';
 
-    const { rows } = await db.query('SELECT id, name, item, price, data FROM shop');
+    const { rows } = await db.query('SELECT id, name, item_id, price, data FROM shop');
     const categories = {};
 
     for (const row of rows) {
@@ -339,7 +339,7 @@ class shop {
     page = Number(page);
     const itemsPerPage = 25;
 
-    const { rows } = await db.query('SELECT id, name, item, price, data FROM shop');
+    const { rows } = await db.query('SELECT id, name, item_id, price, data FROM shop');
 
     let itemCategories = {};
     for (const row of rows) {
@@ -1438,7 +1438,7 @@ static async createInventoryEmbed(charID, page = 1) {
 
   static async buyItem(shopKey, charID, numToBuy, channelId) {
     const { rows } = await db.query(
-      'SELECT item, price, data FROM shop WHERE id = $1',
+      'SELECT item_id, price, data FROM shop WHERE id = $1',
       [shopKey]
     );
     if (!rows[0]) {
@@ -1484,7 +1484,7 @@ static async createInventoryEmbed(charID, page = 1) {
       }
     }
 
-    const rawItem = row.item ?? row.data?.item_id;
+    const rawItem = row.item_id ?? row.data?.item_id ?? row.data?.item ?? row.data?.name;
     const { rows: canonRows } = await db.query('SELECT resolve_item_id($1) AS canon_id', [rawItem]);
     const canonId = canonRows[0] ? canonRows[0].canon_id : rawItem;
     const { rows: catRows } = await db.query('SELECT category FROM items WHERE id=$1', [canonId]);

@@ -1,12 +1,14 @@
-const { SlashCommandBuilder } = require('discord.js');
-const shop = require('../../shop');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { listShopItems } = require('../../db/shop');
 
 module.exports = {
-	data: new SlashCommandBuilder()
-		.setName('shop')
-		.setDescription('List shop items'),
-        async execute(interaction) {
-                const [embed, rows] = await shop.createShopEmbed();
-                await interaction.reply({ embeds: [embed], components: rows, ephemeral: true });
-        },
+  data: new SlashCommandBuilder()
+    .setName('shop')
+    .setDescription('List shop items'),
+  async execute(interaction) {
+    const items = await listShopItems();
+    const lines = items.map(i => `**${i.name}** — ${i.price == null ? 'N/A' : `${i.price} gold`}`);
+    const embed = new EmbedBuilder().setTitle('Shop Items').setDescription(lines.join('\n'));
+    await interaction.reply({ embeds: [embed], ephemeral: true });
+  },
 };
