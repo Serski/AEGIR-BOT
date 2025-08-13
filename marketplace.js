@@ -7,15 +7,9 @@ const { pool } = require('./pg-client');
 const { EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
 
 async function fetchSales() {
-  const { rows } = await pool.query(`
-    SELECT
-      id,
-      name,
-      item    AS item_id,
-      price
-    FROM marketplace
-    ORDER BY name
-  `);
+  const { rows } = await pool.query(
+    'SELECT id, name, item_code, price, category FROM marketplace_v ORDER BY name'
+  );
   return rows;
 }
 class marketplace {
@@ -26,7 +20,7 @@ class marketplace {
    * If they do, it will take the items from their inventory and add them to the marketplace under a created unique ID
    * Items will be added to the marketplace according to their item name and category- i.e. all iron swords will be next to each other, and the iron swords will be next to steel swords
    * */ 
-  static async postSale(numberItems, itemName, price, userTag, userID) {
+  static async postSale(numberItems, itemCode, price, userTag, userID) {
     let charData = await dbm.loadFile('characters', userTag);
     let shopData = await dbm.loadCollection('shop');
     if (!charData) {
@@ -38,31 +32,32 @@ class marketplace {
     if (price < 0) {
       return "Price must be at least 0!";
     }
-    // Find the item name using shop.findItemName
-    itemName = await shop.findItemName(itemName, shopData);
-    if (itemName == "ERROR") {
+    // Find the item code using shop.findItemName
+    itemCode = await shop.findItemName(itemCode, shopData);
+    if (itemCode == "ERROR") {
       return "That item doesn't exist!";
     }
 
-    const meta = await shop.getItemMetadata(itemName, shopData);
+    const meta = await shop.getItemMetadata(itemCode, shopData);
     if (meta?.transferrable === 'No') {
       return "That item is not transferrable!";
     }
 
     // Check if they have enough of the item
-    if (!charData.inventory[itemName] || charData.inventory[itemName] < numberItems) {
+    if (!charData.inventory[itemCode] || charData.inventory[itemCode] < numberItems) {
       return "You don't have enough of that item to sell it!";
     }
-    charData.inventory[itemName] -= numberItems;
+    charData.inventory[itemCode] -= numberItems;
+    const displayName = meta?.name || itemCode;
     for (let i = 0; i < numberItems; i++) {
       await db.query(
-        'INSERT INTO marketplace (name, item, price, seller, seller_id) VALUES ($1,$2,$3,$4,$5)',
-        [itemName, itemName, price, userTag, userID]
+        'INSERT INTO marketplace (name, item_code, price, seller, seller_id) VALUES ($1,$2,$3,$4,$5)',
+        [displayName, itemCode, price, userTag, userID]
       );
     }
     await dbm.saveFile('characters', userTag, charData);
     let embed = new EmbedBuilder();
-    embed.setDescription(`<@${userID}> listed **${numberItems} ${meta.icon} ${itemName}** to the **/sales** page for ${clientManager.getEmoji("Gold")}**${price}** each.`);
+    embed.setDescription(`<@${userID}> listed **${numberItems} ${meta.icon} ${displayName}** to the **/sales** page for ${clientManager.getEmoji("Gold")}**${price}** each.`);
     return embed;
   }
 
@@ -79,7 +74,7 @@ class marketplace {
     for (const sale of rows) {
       embed.addFields({
         name: sale.name,
-        value: `Price: ${sale.price}  •  ID: \`${sale.item_id}\`  •  Sale: \`${sale.id}\``,
+        value: `Category: ${sale.category}  •  Price: ${sale.price}  •  ID: \`${sale.item_code}\`  •  Sale: \`${sale.id}\``,
       });
     }
 
@@ -94,14 +89,14 @@ class marketplace {
     embed.setColor(0x36393e);
 
     const { rows } = await pool.query(
-      `SELECT id, name, item AS item_id, price FROM marketplace WHERE seller=$1 ORDER BY id`,
+      `SELECT id, name, item_code, price, category FROM marketplace_v WHERE seller=$1 ORDER BY name`,
       [player]
     );
 
     for (const sale of rows) {
       embed.addFields({
         name: sale.name,
-        value: `Price: ${sale.price}  •  ID: \`${sale.item_id}\`  •  Sale: \`${sale.id}\``,
+        value: `Category: ${sale.category}  •  Price: ${sale.price}  •  ID: \`${sale.item_code}\`  •  Sale: \`${sale.id}\``,
       });
     }
 
@@ -123,7 +118,7 @@ class marketplace {
     if (price < 0) {
       return "That sale has invalid data!";
     }
-    const itemId = sale.item_id;
+    const itemId = sale.item_code;
     if (sale.seller_id == userID) {
       charData[userTag].inventory[itemId] = (charData[userTag].inventory[itemId] || 0) + 1;
       await db.query('DELETE FROM marketplace WHERE id=$1', [saleID]);
@@ -158,20 +153,20 @@ class marketplace {
     if (!sale) {
       return "That sale doesn't exist!";
     }
-    const itemId = sale.item_id;
+    const itemId = sale.item_code;
     const price = Number(sale.price ?? 0);
     let embed = new EmbedBuilder();
     embed.setTitle(`Sale ${saleID}`);
     embed.setColor(0x36393e);
     const metaInspect = await shop.getItemMetadata(itemId, shopData);
-    embed.setDescription(`**${metaInspect?.icon || ''} ${itemId}** for ${clientManager.getEmoji("Gold")}**${price}**.`);
+    embed.setDescription(`**${metaInspect?.icon || ''} ${itemId}** _[${sale.category}]_ for ${clientManager.getEmoji("Gold")}**${price}**.`);
     embed.setFooter({ text: `Seller: ${sale.seller}` });
     return embed;
   }
 
   static async getSale(saleID) {
     const res = await db.query(
-      "SELECT id, name, item AS item_id, price, seller, seller_id FROM marketplace WHERE id=$1",
+      'SELECT id, name, item_code, price, seller, seller_id, category FROM marketplace_v WHERE id=$1',
       [saleID]
     );
     return res.rows[0];

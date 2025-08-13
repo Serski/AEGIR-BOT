@@ -2,16 +2,10 @@
 const { pool } = require('../pg-client');
 
 async function listSales() {
-  const sql = `
-    SELECT id,
-           COALESCE(NULLIF(data->>'name',''), id) AS name,
-           NULLIF(data->>'item_id','')           AS item_id,
-           NULLIF(data->>'price','')::int        AS price,
-           data
-    FROM marketplace
-    ORDER BY name NULLS LAST
-  `;
-  const { rows } = await pool.query(sql);
+  const { rows } = await pool.query(
+    'SELECT id, name, item_code, price, category FROM marketplace_v ORDER BY name'
+  );
   return rows;
 }
+
 module.exports = { listSales };
