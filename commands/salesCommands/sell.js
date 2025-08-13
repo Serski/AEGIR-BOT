@@ -1,6 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const marketplace = require('../../marketplace');
 const items = require('../../db/items');
+const clientManager = require('../../clientManager');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -44,6 +45,7 @@ module.exports = {
             return;
         }
 
-        await interaction.reply(`Listed ${qty} × ${res.itemCode} for ${price} each on the marketplace. Sale ID: ${res.saleId}`);
+        const emoji = clientManager.getEmoji('Gold') ?? '';
+        await interaction.reply(`Listed ${qty} × ${res.itemCode} for ${emoji}${price} each on the marketplace.`);
     }
 };
