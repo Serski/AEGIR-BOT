@@ -5,6 +5,9 @@ const admin = require('./admin');
 const panel = require('./panel');
 const logger = require('./logger');
 const dbm = require('./database-manager');
+const db = require('./pg-client');
+const { ensureItem } = require('./inventory-grants');
+const { randomUUID } = require('crypto');
 
 const sanitizeCategory = (category) => {
   const sanitized = (category || '').trim().toLowerCase();
@@ -16,10 +19,7 @@ const addItem = async (interaction) => {
   // Get the data entered by the user
   const itemName = interaction.fields.getTextInputValue('itemname');
   const itemPrice = interaction.fields.getTextInputValue('itemprice');
-  const itemDescription = interaction.fields.getTextInputValue('itemdescription');
   const itemCategory = sanitizeCategory(interaction.fields.getTextInputValue('itemcategory'));
-  const warshipStats = interaction.fields.getTextInputValue('warshipstats');
-  const itemId = itemName.trim().toLowerCase().replace(/\s+/g, '_');
 
   const priceInt = itemPrice ? parseInt(itemPrice) : undefined;
   if (itemPrice && isNaN(priceInt)) {
@@ -27,27 +27,13 @@ const addItem = async (interaction) => {
     return;
   }
 
-  // Call the addItem function from the Shop class with the collected information
   if (itemName) {
-    const itemData = {
-      Description: itemDescription,
-      Category: itemCategory,
-      "Transferrable (Y/N)": "Yes",
-    };
-    if (priceInt !== undefined) {
-      itemData["Price (#)"] = priceInt;
-    }
-    if (warshipStats) {
-      const stats = warshipStats.split(/[\s,]+/).filter(Boolean).map(v => parseInt(v));
-      if (stats[0] !== undefined && !isNaN(stats[0])) itemData.Attack = stats[0];
-      if (stats[1] !== undefined && !isNaN(stats[1])) itemData.Defence = stats[1];
-      if (stats[2] !== undefined && !isNaN(stats[2])) itemData.Speed = stats[2];
-      if (stats[3] !== undefined && !isNaN(stats[3])) itemData.HP = stats[3];
-    }
-    if (!(await dbm.getItemDefinition(itemId))) {
-      await dbm.saveItemDefinition(itemId, { name: itemName, category: itemCategory });
-    }
-    await shop.addItem(itemName, itemData);
+    const itemId = await ensureItem(db, itemName, itemCategory);
+    const rowId = randomUUID();
+    await db.query(
+      `INSERT INTO shop (id, data) VALUES ($1, jsonb_build_object('name',$2,'price',$3,'item_id',$4)) ON CONFLICT (id) DO UPDATE SET data=EXCLUDED.data`,
+      [rowId, itemName, priceInt, itemId]
+    );
     await interaction.reply({content: `Item '${itemName}' has been added to the item list. Use /shoplayout or ping Alex to add to shop.`, ephemeral: true});
   } else {
     // Handle missing information
