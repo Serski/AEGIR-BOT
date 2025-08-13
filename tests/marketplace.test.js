@@ -56,6 +56,11 @@ test('postSale and listSales', async () => {
   res = await marketplace.postSale({ userId: 'user1', rawItem: 'sword', price: 10, quantity: 5 });
   assert.deepEqual(res, { ok: false, reason: 'not_enough', owned: 3, needed: 5 });
 
+  const inventory = require(path.join(rootDir, 'db/inventory.js'));
+  inventory.take = async (userId, itemCode, qty) => qty - 1;
+  res = await marketplace.postSale({ userId: 'user1', rawItem: 'sword', price: 10, quantity: 3 });
+  assert.deepEqual(res, { ok: false, reason: 'concurrent_change' });
+
   const sales = await marketplace.listSales();
   assert.deepEqual(sales, [
     { name: 'Sword', item_code: 'sword', price: 10, category: 'Weapons' },
