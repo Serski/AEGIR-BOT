@@ -34,7 +34,7 @@ test('storage uses normalized inventory when legacy storage empty', async () => 
     }
   };
   const shopData = {
-    Wood: { infoOptions: { Category: 'Resources', Icon: ':wood:' } }
+    Wood: { data: { category: 'Resources', icon: ':wood:' } }
   };
   const dbmStub = {
     loadCollection: async (col) => (col === 'characters' ? charData : shopData),

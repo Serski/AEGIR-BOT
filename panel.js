@@ -84,7 +84,7 @@ module.exports = {
       }
       const category = row.category || 'Misc';
       if (!inventory[category]) inventory[category] = [];
-      const icon = shopData[row.item_id]?.infoOptions?.Icon || '';
+      const icon = shopData[row.item_id]?.data?.icon ?? shopData[row.item_id]?.infoOptions?.Icon ?? '';
       inventory[category].push({ item: row.name, qty: Number(row.quantity), icon });
     }
 
@@ -192,7 +192,7 @@ module.exports = {
       .map((r) => ({
         item: r.name,
         qty: Number(r.quantity),
-        icon: shopData[r.item_id]?.infoOptions?.Icon || '',
+        icon: shopData[r.item_id]?.data?.icon ?? shopData[r.item_id]?.infoOptions?.Icon ?? '',
       }))
       .sort((a, b) => a.item.localeCompare(b.item));
 

@@ -30,7 +30,8 @@ class marketplace {
       return "That item doesn't exist!";
     }
 
-    if (shopData[itemName].infoOptions["Transferrable (Y/N)"] == "No") {
+    const meta = await shop.getItemMetadata(itemName, shopData);
+    if (meta?.transferrable === 'No') {
       return "That item is not transferrable!";
     }
 
@@ -47,7 +48,7 @@ class marketplace {
     const itemID = res.rows[0].id;
     await dbm.saveFile('characters', userTag, charData);
     let embed = new EmbedBuilder();
-    embed.setDescription(`<@${userID}> listed **${numberItems} ${await shop.getItemIcon(itemName, shopData)} ${itemName}** to the **/sales** page for ${clientManager.getEmoji("Gold")}**${price}**.`);
+    embed.setDescription(`<@${userID}> listed **${numberItems} ${meta.icon} ${itemName}** to the **/sales** page for ${clientManager.getEmoji("Gold")}**${price}**.`);
     embed.setFooter({ text: `Sale ID: ${itemID}` });
     return embed;
   }
@@ -78,8 +79,9 @@ class marketplace {
       const price = Number(
         sale.price ?? sale.data?.price ?? sale.data?.shopOptions?.['Price (#)'] ?? 0
       );
-      const itemName = sale.name || itemId;
-      const icon = await shop.getItemIcon(itemId, shopData);
+      const meta = await shop.getItemMetadata(itemId, shopData);
+      const itemName = sale.name || meta?.name || itemId;
+      const icon = meta?.icon || '';
       let alignSpaces = ' ';
       if (20 - itemName.length - ('' + price + '' + quantity).length > 0) {
         alignSpaces = ' '.repeat(20 - itemName.length - ('' + price + '' + quantity).length);
@@ -136,8 +138,9 @@ class marketplace {
       const price = Number(
         sale.price ?? sale.data?.price ?? sale.data?.shopOptions?.['Price (#)'] ?? 0
       );
-      const itemName = sale.name || itemId;
-      const icon = await shop.getItemIcon(itemId, shopData);
+      const meta = await shop.getItemMetadata(itemId, shopData);
+      const itemName = sale.name || meta?.name || itemId;
+      const icon = meta?.icon || '';
       let alignSpaces = ' ';
       if (30 - itemName.length - ('' + price + '' + quantity).length > 0) {
         alignSpaces = ' '.repeat(30 - itemName.length - ('' + price + '' + quantity).length);
@@ -177,7 +180,8 @@ class marketplace {
       await db.query('DELETE FROM marketplace WHERE id=$1', [saleID]);
       await dbm.saveCollection('characters', charData);
       let embed = new EmbedBuilder();
-      embed.setDescription(`<@${userID}> bought **${quantity} ${await shop.getItemIcon(itemId, shopData)} ${itemId}** back from themselves. It was listed for ${clientManager.getEmoji("Gold")}**${price}**.`);
+      const meta = await shop.getItemMetadata(itemId, shopData);
+      embed.setDescription(`<@${userID}> bought **${quantity} ${meta?.icon || ''} ${itemId}** back from themselves. It was listed for ${clientManager.getEmoji("Gold")}**${price}**.`);
       return embed;
     }
 
@@ -197,7 +201,8 @@ class marketplace {
     await db.query('DELETE FROM marketplace WHERE id=$1', [saleID]);
     await dbm.saveCollection('characters', charData);
     let embed = new EmbedBuilder();
-    embed.setDescription(`<@${userID}> bought **${quantity} ${await shop.getItemIcon(itemId, shopData)} ${itemId}** from<@${sale.seller_id}> for ${clientManager.getEmoji("Gold")}**${price}**.`);
+    const metaPurchase = await shop.getItemMetadata(itemId, shopData);
+    embed.setDescription(`<@${userID}> bought **${quantity} ${metaPurchase?.icon || ''} ${itemId}** from<@${sale.seller_id}> for ${clientManager.getEmoji("Gold")}**${price}**.`);
     return embed;
   }
 
@@ -216,7 +221,8 @@ class marketplace {
     let embed = new EmbedBuilder();
     embed.setTitle(`Sale ${saleID}`);
     embed.setColor(0x36393e);
-    embed.setDescription(`**${quantity} ${await shop.getItemIcon(itemId, shopData)} ${itemId}** for ${clientManager.getEmoji("Gold")}**${price}**.`);
+    const metaInspect = await shop.getItemMetadata(itemId, shopData);
+    embed.setDescription(`**${quantity} ${metaInspect?.icon || ''} ${itemId}** for ${clientManager.getEmoji("Gold")}**${price}**.`);
     embed.setFooter({ text: `Seller: ${sale.seller}` });
     return embed;
   }

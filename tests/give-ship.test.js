@@ -53,7 +53,7 @@ test('transferring a ship gives it to ships collection only', async () => {
       if (target.inventory[item] <= 0) delete target.inventory[item];
     },
     getItemDefinition: async () => ({
-      infoOptions: { Category: 'Ships', 'Transferrable (Y/N)': 'Yes' }
+      data: { category: 'Ships', transferrable: 'Yes' }
     })
   };
 

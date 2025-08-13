@@ -109,7 +109,7 @@ class shop {
       const itemData = await dbm.loadFile('shop', itemName);
       newRecipeName = itemName;
       recipeData.recipeOptions.Name = itemName;
-      recipeData.recipeOptions.Icon = itemData.infoOptions.Icon;
+      recipeData.recipeOptions.Icon = itemData.data?.icon ?? itemData.infoOptions.Icon;
       recipeData.recipeOptions["Result 1"] = "1 " + itemName;
     } else {
       recipeData.recipeOptions.Name = newRecipeName;
@@ -145,13 +145,14 @@ class shop {
     for (let recipe of recipesToShow) {
       let category = "Uncategorized";
       if (shopData[recipe.recipeOptions.Name]) {
-        category = shopData[recipe.recipeOptions.Name].infoOptions.Category || category;
+        category = shopData[recipe.recipeOptions.Name].data?.category ?? shopData[recipe.recipeOptions.Name].infoOptions.Category ?? category;
       } else {
         // Search for comparison lower case
         let recipeName = recipe.recipeOptions.Name.toLowerCase();
         let index = itemNamesLower.indexOf(recipeName);
         if (index != -1) {
-          category = shopData[Object.keys(shopData)[index]].infoOptions.Category || category
+          const key = Object.keys(shopData)[index];
+          category = shopData[key].data?.category ?? shopData[key].infoOptions.Category ?? category;
         }
       }
       if (category == "") {
@@ -324,8 +325,10 @@ class shop {
     let data = await dbm.loadCollection('shop');
     let itemNames = Object.keys(data);
     for (let i = 0; i < itemNames.length; i++) {
-      if (data[itemNames[i]].infoOptions.Category == oldCategory) {
-        data[itemNames[i]].infoOptions.Category = newCategory;
+      const item = data[itemNames[i]];
+      if ((item.data?.category ?? item.infoOptions.Category) == oldCategory) {
+        if (item.data) item.data.category = newCategory;
+        if (item.infoOptions) item.infoOptions.Category = newCategory;
       }
     }
     await dbm.saveCollection('shop', data);
@@ -456,7 +459,7 @@ class shop {
       const items = rows.map(r => ({
         item: r.name,
         qty: Number(r.quantity),
-        icon: shopData[r.item_id]?.infoOptions?.Icon || ''
+        icon: shopData[r.item_id]?.data?.icon ?? shopData[r.item_id]?.infoOptions?.Icon ?? ''
       }));
 
       const pages = Math.max(1, Math.ceil(items.length / itemsPerPage));
@@ -535,7 +538,7 @@ static async createInventoryEmbed(charID, page = 1) {
     if (catLower === 'ships' || catLower === 'ship' || catLower === 'resources' || catLower === 'resource') continue;
     const category = row.category || 'Misc';
     if (!inventory[category]) inventory[category] = [];
-    const icon = shopData[row.item_id]?.infoOptions?.Icon || '';
+    const icon = shopData[row.item_id]?.data?.icon ?? shopData[row.item_id]?.infoOptions?.Icon ?? '';
     inventory[category].push({ item: row.name, qty: Number(row.quantity), icon });
   }
 
@@ -675,16 +678,48 @@ static async createInventoryEmbed(charID, page = 1) {
   }
 
   static async getItemCategory(itemName) {
-    const res = await db.query("SELECT data->'infoOptions'->>'Category' AS category FROM shop WHERE LOWER(id)=LOWER($1)", [itemName]);
+    const res = await db.query('SELECT data FROM shop WHERE LOWER(id)=LOWER($1)', [itemName]);
     if (!res.rows[0]) {
       return "ERROR";
     }
-    return res.rows[0].category;
+    const d = res.rows[0].data || {};
+    return d.category ?? d.infoOptions?.Category ?? null;
   }
 
   static async getItemIcon(itemName) {
-    const res = await db.query("SELECT data->'infoOptions'->>'Icon' AS icon FROM shop WHERE LOWER(id)=LOWER($1)", [itemName]);
-    return res.rows[0] ? res.rows[0].icon : "ERROR";
+    const res = await db.query('SELECT data FROM shop WHERE LOWER(id)=LOWER($1)', [itemName]);
+    if (!res.rows[0]) {
+      return "ERROR";
+    }
+    const d = res.rows[0].data || {};
+    return d.icon ?? d.infoOptions?.Icon ?? "ERROR";
+  }
+
+  static async getItemMetadata(itemId, shopData) {
+    if (shopData && shopData[itemId]) {
+      const item = shopData[itemId];
+      const data = item.data || {};
+      return {
+        name: item.name ?? data.name ?? item.infoOptions?.Name ?? itemId,
+        icon: data.icon ?? item.infoOptions?.Icon ?? '',
+        category: data.category ?? item.infoOptions?.Category ?? '',
+        transferrable: data.transferrable ?? item.infoOptions?.['Transferrable (Y/N)'] ?? '',
+        usage: data.usage ?? item.usageOptions ?? {},
+        data,
+      };
+    }
+    const res = await db.query('SELECT id, name, data FROM shop WHERE LOWER(id)=LOWER($1)', [itemId]);
+    if (!res.rows[0]) return null;
+    const row = res.rows[0];
+    const data = row.data || {};
+    return {
+      name: row.name ?? data.name ?? data.infoOptions?.Name ?? row.id,
+      icon: data.icon ?? data.infoOptions?.Icon ?? '',
+      category: data.category ?? data.infoOptions?.Category ?? '',
+      transferrable: data.transferrable ?? data.infoOptions?.['Transferrable (Y/N)'] ?? '',
+      usage: data.usage ?? data.usageOptions ?? {},
+      data,
+    };
   }
 
   static async inspect(itemName) {
@@ -1614,7 +1649,8 @@ static async createInventoryEmbed(charID, page = 1) {
         if (!shopData[item]) {
           return ("ERROR! Item " + item + " is not in shop" + "\n\nSubmitted layout string: \n " + layoutString);
         } else {
-          shopData[item].infoOptions.Category = categoryToEdit;
+          if (shopData[item].data) shopData[item].data.category = categoryToEdit;
+          if (shopData[item].infoOptions) shopData[item].infoOptions.Category = categoryToEdit;
         }
       }
       await dbm.saveCollection("shop", shopData);

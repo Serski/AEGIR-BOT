@@ -30,11 +30,10 @@ function stubModule(file, exports) {
 
   stubModule('logger.js', { debug() {}, info() {}, error() {} });
   stubModule('clientManager.js', { getEmoji: () => ':coin:' });
-  shopData = { 'Iron Sword': { infoOptions: { 'Transferrable (Y/N)': 'Yes' } } };
+  shopData = { 'Iron Sword': { data: { transferrable: 'Yes', category: 'Weapons', icon: ':sword:' } } };
   const shopStub = {
     findItemName: async name => name.toLowerCase() === 'iron sword' ? 'Iron Sword' : 'ERROR',
-    getItemCategory: async () => 'Weapons',
-    getItemIcon: async () => ':sword:'
+    getItemMetadata: async () => ({ icon: ':sword:', category: 'Weapons', transferrable: 'Yes', name: 'Iron Sword' })
   };
   stubModule('shop.js', shopStub);
 
