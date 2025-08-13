@@ -273,43 +273,40 @@ class shop {
 
     const divider = '────────────────────────';
 
-    const shopData = await dbm.loadCollection('shop');
+    const { rows } = await db.query('SELECT id, name, item, price, data FROM shop');
     const categories = {};
 
-    for (const [itemName, itemData] of Object.entries(shopData)) {
-      const category = itemData.infoOptions.Category || 'Misc';
-      if (!categories[category]) {
-        categories[category] = [];
-      }
+    for (const row of rows) {
+      const data = row.data || {};
+      const category = data.category ?? data.infoOptions?.Category ?? 'Misc';
+      const priceVal = row.price ?? data.price;
+      if (priceVal === '' || priceVal === undefined || priceVal === null) continue;
+      const price = Number(priceVal);
+      if (Number.isNaN(price)) continue;
+      if (!categories[category]) categories[category] = [];
       categories[category].push({
-        emoji: itemData.infoOptions.Icon || '',
-        name: itemData.infoOptions.Name || itemName,
-        price: itemData.shopOptions['Price (#)'],
-        description: itemData.infoOptions.Description || '',
+        emoji: data.icon ?? data.infoOptions?.Icon ?? '',
+        name: row.name ?? data.name ?? data.infoOptions?.Name ?? row.id,
+        price,
+        description: data.description ?? data.infoOptions?.Description ?? '',
       });
     }
 
     for (const category of Object.keys(categories).sort()) {
-      const items = categories[category]
-        .filter(item => {
-          if (item.price === '' || item.price === undefined || item.price === null) {
-            return false;
-          }
-          item.price = Number(item.price);
-          return !Number.isNaN(item.price);
-        });
-      if (items.length === 0) {
-        continue;
-      }
-      const headerEmoji = category === 'Ships' ? '🚀' : category === 'Resources' ? '📦' : '✨';
+      const items = categories[category];
+      if (items.length === 0) continue;
+      const headerEmoji =
+        category === 'Ships' ? '🚀' : category === 'Resources' ? '📦' : '✨';
       const maxName = Math.max(...items.map(i => i.name.length));
       const maxPrice = Math.max(...items.map(i => i.price.toString().length));
 
-      const valueLines = items.map(item => {
-        const namePart = item.name.padEnd(maxName + 2);
-        const pricePart = item.price.toString().padStart(maxPrice);
-        return `${item.emoji} \`${namePart}${pricePart}\` ⚙ Credits\n*${item.description}*`;
-      }).join('\n');
+      const valueLines = items
+        .map(item => {
+          const namePart = item.name.padEnd(maxName + 2);
+          const pricePart = item.price.toString().padStart(maxPrice);
+          return `${item.emoji} \`${namePart}${pricePart}\` ⚙ Credits\n*${item.description}*`;
+        })
+        .join('\n');
 
       embed.addFields({
         name: `${headerEmoji} **${category}**`,
@@ -317,13 +314,6 @@ class shop {
         inline: false,
       });
     }
-
-    // Buttons removed: previously created an ActionRowBuilder with Buy, Info, Close buttons
-    // const row = new ActionRowBuilder().addComponents(
-    //   new ButtonBuilder().setCustomId('shop_buy').setLabel('Buy').setStyle(ButtonStyle.Primary),
-    //   new ButtonBuilder().setCustomId('shop_info').setLabel('Info').setStyle(ButtonStyle.Primary),
-    //   new ButtonBuilder().setCustomId('shop_close').setLabel('Close').setStyle(ButtonStyle.Primary)
-    // );
 
     return [embed, []];
   }
@@ -343,35 +333,26 @@ class shop {
   static async createAllItemsEmbed(page) {
     page = Number(page);
     const itemsPerPage = 25;
-    // Load data from shop.json and shoplayout.json
-    const shopData = await dbm.loadCollection('shop');
-    //Turn shopData into an array of keys
-    let itemArray = Object.keys(shopData);
-    //Put the array into an array of categories each containing all items in the category, alphabetically
+
+    const { rows } = await db.query('SELECT id, name, item, price, data FROM shop');
+
     let itemCategories = {};
-    for (let i = 0; i < itemArray.length; i++) {
-      const itemName = itemArray[i];
-      const price = shopData[itemName].shopOptions['Price (#)'];
-
-      // Only include items that have a price value
-      if (price === '' || price === undefined || price === null) {
-        continue;
-      }
-
-      const category = shopData[itemName].infoOptions.Category;
-      if (!itemCategories[category]) {
-        itemCategories[category] = [];
-      }
-      itemCategories[category].push(itemName);
+    for (const row of rows) {
+      const data = row.data || {};
+      const priceVal = row.price ?? data.price;
+      if (priceVal === '' || priceVal === undefined || priceVal === null) continue;
+      if (Number.isNaN(Number(priceVal))) continue;
+      const category = data.category ?? data.infoOptions?.Category ?? 'Misc';
+      if (!itemCategories[category]) itemCategories[category] = [];
+      const itemName = row.name ?? data.name ?? data.infoOptions?.Name ?? row.id;
+      const icon = data.icon ?? data.infoOptions?.Icon ?? '';
+      itemCategories[category].push({ name: itemName, icon });
     }
 
-    //Sort categories alphabetically
-    itemCategories = Object.keys(itemCategories).sort().reduce((acc, key) => { 
+    const sortedCategories = Object.keys(itemCategories).sort().reduce((acc, key) => {
       acc[key] = itemCategories[key];
       return acc;
     }, {});
-
-
 
     let startIndices = [];
     startIndices[0] = 0;
@@ -379,8 +360,8 @@ class shop {
     let currIndice = 0;
     let currPageLength = 0;
     let i = 0;
-    for (const category in itemCategories) {
-      let length = itemCategories[category].length;
+    for (const category in sortedCategories) {
+      let length = sortedCategories[category].length;
       currPageLength += length;
       if (currPageLength > itemsPerPage) {
         currPageLength = length;
@@ -392,9 +373,8 @@ class shop {
 
     const pages = Math.ceil(startIndices.length);
 
-    //Can't use slice because it's an object
-    const pageItems = Object.keys(itemCategories).slice(
-      startIndices[page-1],
+    const pageItems = Object.keys(sortedCategories).slice(
+      startIndices[page - 1],
       startIndices[page] ? startIndices[page] : undefined
     );
 
@@ -405,58 +385,48 @@ class shop {
     let descriptionText = '';
 
     for (const category of pageItems) {
-      // Skip categories without priced items
-      if (!itemCategories[category] || itemCategories[category].length === 0) {
+      if (!sortedCategories[category] || sortedCategories[category].length === 0) {
         continue;
       }
 
       let endSpaces = "-";
-      if ((20 - category.length - 2) > 0) {
+      if (20 - category.length - 2 > 0) {
         endSpaces = "-".repeat(20 - category.length - 2);
       }
       descriptionText += `**\`--${category}${endSpaces}\`**\n`;
-      descriptionText += itemCategories[category]
-        .map((item) => {
-          const icon = shopData[item].infoOptions.Icon;
-
-          // Create the formatted line
-          return `${icon} ${item}`;
-        })
+      descriptionText += sortedCategories[category]
+        .map(item => `${item.icon} ${item.name}`)
         .join('\n');
       descriptionText += '\n';
     }
-    // Set the accumulated description
     embed.setDescription(descriptionText);
 
     if (pages > 1) {
-      embed.setFooter({text: `Page ${page} of ${pages}`});
+      embed.setFooter({ text: `Page ${page} of ${pages}` });
     }
 
-    const rows = [];
+    const rowsArr = [];
 
-    // Create a "Previous Page" button
     const prevButton = new ButtonBuilder()
-      .setCustomId('switch_alit' + (page-1))
+      .setCustomId('switch_alit' + (page - 1))
       .setLabel('<')
-      .setStyle(ButtonStyle.Secondary); // You can change the style to your preference
+      .setStyle(ButtonStyle.Secondary);
 
-    // Disable the button on the first page
     if (page == 1) {
       prevButton.setDisabled(true);
     }
 
     const nextButton = new ButtonBuilder()
-          .setCustomId('switch_alit' + (page+1))
-          .setLabel('>')
-          .setStyle(ButtonStyle.Secondary); // You can change the style to your preference
+      .setCustomId('switch_alit' + (page + 1))
+      .setLabel('>')
+      .setStyle(ButtonStyle.Secondary);
 
-    // Create a "Next Page" button if not on the last page
     if (page == pages) {
       nextButton.setDisabled(true);
     }
-    rows.push(new ActionRowBuilder().addComponents(prevButton, nextButton));
+    rowsArr.push(new ActionRowBuilder().addComponents(prevButton, nextButton));
 
-    return [embed, rows];
+    return [embed, rowsArr];
   }
 
     static async createCategoryEmbed(charID, category, page = 1, idPrefix = 'panel_cat_page') {
@@ -691,7 +661,7 @@ static async createInventoryEmbed(charID, page = 1) {
   }
 
   static async getItemPrice(itemName) {
-    const res = await db.query("SELECT data->'shopOptions'->>'Price (#)' AS price FROM shop WHERE LOWER(id)=LOWER($1)", [itemName]);
+    const res = await db.query('SELECT price FROM shop WHERE LOWER(id)=LOWER($1)', [itemName]);
     if (!res.rows[0]) {
       return "ERROR";
     }
@@ -724,15 +694,19 @@ static async createInventoryEmbed(charID, page = 1) {
 
     let data = shopData;
     let itemData = data[itemName];
-    
+
+    const { rows: priceRows } = await db.query('SELECT price, data FROM shop WHERE LOWER(id)=LOWER($1)', [itemName]);
+    const priceRow = priceRows[0] || {};
+    const priceVal = priceRow.price ?? priceRow.data?.price;
+
     const inspectEmbed = new Discord.EmbedBuilder()
       .setTitle('**__Item:__ ' +  itemData.infoOptions.Icon + " " + itemName + "**")
       .setColor(0x36393e);
 
     if (itemData) {
       let aboutString = "";
-      if (itemData.shopOptions["Price (#)"] != "") {
-        aboutString = "Price: " + clientManager.getEmoji("Gold") + " " + itemData.shopOptions["Price (#)"] + "\n";
+      if (priceVal !== '' && priceVal !== undefined && priceVal !== null) {
+        aboutString = "Price: " + clientManager.getEmoji("Gold") + " " + priceVal + "\n";
       }
       let descriptionString = "**Description:\n**" + itemData.infoOptions.Description;
       logger.debug(itemData.usageOptions["Is Usable (Y/N)"] == "Yes");
@@ -1423,15 +1397,14 @@ static async createInventoryEmbed(charID, page = 1) {
 
   static async buyItem(shopKey, charID, numToBuy, channelId) {
     const { rows } = await db.query(
-      `SELECT data, data->>'item_id' AS item_id, data->>'price' AS price
-         FROM shop WHERE id = $1`,
+      'SELECT item, price, data FROM shop WHERE id = $1',
       [shopKey]
     );
     if (!rows[0]) {
       return "Item not found!";
     }
     const row = rows[0];
-    const price = Number(row.price);
+    const price = Number(row.price ?? row.data?.price);
     if (!price || !(price > 0)) {
       return "Not a valid item to purchase!";
     }
@@ -1469,8 +1442,9 @@ static async createInventoryEmbed(charID, page = 1) {
       }
     }
 
-    const { rows: canonRows } = await db.query('SELECT resolve_item_id($1) AS canon_id', [row.item_id]);
-    const canonId = canonRows[0] ? canonRows[0].canon_id : row.item_id;
+    const rawItem = row.item ?? row.data?.item_id;
+    const { rows: canonRows } = await db.query('SELECT resolve_item_id($1) AS canon_id', [rawItem]);
+    const canonId = canonRows[0] ? canonRows[0].canon_id : rawItem;
     const { rows: catRows } = await db.query('SELECT category FROM items WHERE id=$1', [canonId]);
     const category = (catRows[0]?.category || '').trim().toLowerCase();
 
