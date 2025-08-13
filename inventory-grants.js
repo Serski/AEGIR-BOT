@@ -1,17 +1,14 @@
-async function resolveItemId(client, key) {
-  const { rows } = await client.query(
-    `SELECT id FROM items
-       WHERE LOWER(id) = LOWER($1)
-          OR LOWER(data->>'name') = LOWER($1)
-          OR LOWER(data->>'Name') = LOWER($1)
-          OR LOWER(data->'infoOptions'->>'Name') = LOWER($1)
-       LIMIT 1`,
-    [key]
+
+async function ensureItem(client, raw, category = 'Misc') {
+  const { rows } = await client.query('SELECT resolve_item_id($1) AS canon_id', [raw]);
+  const canonId = rows[0].canon_id;
+  await client.query(
+    `INSERT INTO items (id, category, data)
+         SELECT $1, $2, '{}'::jsonb
+          WHERE NOT EXISTS (SELECT 1 FROM items WHERE id = $1)`,
+    [canonId, category]
   );
-  if (!rows[0]) {
-    throw new Error('Item not found');
-  }
-  return rows[0].id;
+  return canonId;
 }
 
 const { randomUUID } = require('crypto');
@@ -20,7 +17,7 @@ async function grantItemToPlayer(client, characterId, itemKey, qty) {
   if (qty <= 0) {
     throw new Error('qty must be positive');
   }
-  const itemId = await resolveItemId(client, itemKey);
+  const itemId = await ensureItem(client, itemKey);
   try {
     await client.query(
       `INSERT INTO inventory_items (instance_id, owner_id, item_id)
@@ -45,6 +42,6 @@ async function grantItemToPlayer(client, characterId, itemKey, qty) {
 }
 
 module.exports = {
-  resolveItemId,
+  ensureItem,
   grantItemToPlayer,
 };

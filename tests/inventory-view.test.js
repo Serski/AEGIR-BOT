@@ -33,8 +33,15 @@ const root = path.join(__dirname, '..');
 const shopPath = path.join(root, 'shop.js');
 
 async function setupTest(itemName, category) {
-  const { newDb } = require('pg-mem');
+const { newDb, DataType } = require('pg-mem');
   const mem = newDb();
+  mem.public.registerFunction({
+    name: 'resolve_item_id',
+    args: [DataType.text],
+    returns: DataType.text,
+    implementation: (raw) => raw,
+    impure: false,
+  });
   const pgMem = mem.adapters.createPg();
   const pool = new pgMem.Pool();
 

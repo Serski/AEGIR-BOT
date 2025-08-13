@@ -52,11 +52,19 @@ test('buyItem stores stacks in inventory_items via transaction', async () => {
 
   const executed = [];
   const dbStub = {
-    query: async () => ({ rows: [{ id: 'Apple' }] }),
+    query: async (text) => {
+      if (/resolve_item_id/i.test(text)) {
+        return { rows: [{ canon_id: 'Apple' }] };
+      }
+      return { rows: [{ id: 'Apple' }] };
+    },
     tx: async (cb) => {
       const t = {
         query: async (text, params) => {
           executed.push(text);
+          if (/resolve_item_id/i.test(text)) {
+            return { rows: [{ canon_id: 'Apple' }] };
+          }
           return { rows: [] };
         }
       };
