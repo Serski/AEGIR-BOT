@@ -2,6 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const { postSale } = require('../../marketplace');
 const items = require('../../db/items');
 const clientManager = require('../../clientManager');
+const dbm = require('../../database-manager');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -22,6 +23,12 @@ module.exports = {
         ),
     async execute(interaction) {
         const userId = interaction.user.id;
+        const charData = await dbm.loadFile('characters', userId);
+        if (!charData) {
+            await interaction.reply({ content: "You haven't made a character! Use /newchar first", ephemeral: true });
+            return;
+        }
+
         const rawItem = interaction.options.getString('item');
         const price = interaction.options.getInteger('price') ?? 0;
         const qty = interaction.options.getInteger('quantity') ?? 1;
