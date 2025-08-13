@@ -35,13 +35,8 @@ test('resources and ships appear only in their submenus', async () => {
       numericID: 'player1'
     }
   };
-  const shopData = {
-    Longboat: { data: { category: 'Ships', icon: ':ship:' } },
-    Iron: { data: { category: 'Resources', icon: ':iron:' } },
-    Sword: { data: { category: 'Weapons', icon: ':sword:' } }
-  };
   const dbmStub = {
-    loadCollection: async (col) => (col === 'characters' ? charData : shopData),
+    loadCollection: async (col) => (col === 'characters' ? charData : {}),
     saveCollection: async () => {},
   };
   const dataGettersStub = { getCharFromNumericID: async (id) => id };
@@ -50,16 +45,16 @@ test('resources and ships appear only in their submenus', async () => {
   mockModule(path.join(root, 'pg-client.js'), {
     query: async (text, params = []) => {
       if (text.includes("category = 'Resources'")) {
-        return { rows: [{ character_id:'Player#0001', item_id:'Iron', quantity:5, name:'Iron', category:'Resources' }] };
+        return { rows: [{ character_id:'Player#0001', item_id:'Iron', quantity:5, name:'Iron', category:'Resources', icon: ':iron:' }] };
       }
       if (params[1] === 'Ships') {
-        return { rows: [{ character_id:'Player#0001', item_id:'Longboat', quantity:1, name:'Longboat', category:'Ships' }] };
+        return { rows: [{ character_id:'Player#0001', item_id:'Longboat', quantity:1, name:'Longboat', category:'Ships', icon: ':ship:' }] };
       }
       if (text.includes('FROM v_inventory')) {
         return { rows: [
-          { character_id:'Player#0001', item_id:'Sword', quantity:2, name:'Sword', category:'Weapons' },
-          { character_id:'Player#0001', item_id:'Iron', quantity:5, name:'Iron', category:'Resources' },
-          { character_id:'Player#0001', item_id:'Longboat', quantity:1, name:'Longboat', category:'Ships' },
+          { character_id:'Player#0001', item_id:'Sword', quantity:2, name:'Sword', category:'Weapons', icon: ':sword:' },
+          { character_id:'Player#0001', item_id:'Iron', quantity:5, name:'Iron', category:'Resources', icon: ':iron:' },
+          { character_id:'Player#0001', item_id:'Longboat', quantity:1, name:'Longboat', category:'Ships', icon: ':ship:' },
         ] };
       }
       return { rows: [{ id: 'dummy' }] };

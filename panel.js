@@ -67,14 +67,18 @@ module.exports = {
     }
 
     const { rows } = await db.query(
-      `SELECT character_id, item_id, quantity, name, category
-         FROM v_inventory
-        WHERE character_id = $1
-        ORDER BY category, name`,
+      `SELECT vi.character_id,
+              vi.item_id,
+              vi.quantity,
+              vi.name,
+              vi.category,
+              COALESCE(it.data->>'icon', it.data->'infoOptions'->>'Icon', '') AS icon
+         FROM v_inventory vi
+         LEFT JOIN items it ON vi.item_id = it.id
+        WHERE vi.character_id = $1
+        ORDER BY vi.category, vi.name`,
       [charID]
     );
-
-    const shopData = await dbm.loadCollection('shop');
 
     const inventory = {};
     for (const row of rows) {
@@ -84,8 +88,7 @@ module.exports = {
       }
       const category = row.category || 'Misc';
       if (!inventory[category]) inventory[category] = [];
-      const icon = shopData[row.item_id]?.data?.icon ?? shopData[row.item_id]?.infoOptions?.Icon ?? '';
-      inventory[category].push({ item: row.name, qty: Number(row.quantity), icon });
+      inventory[category].push({ item: row.name, qty: Number(row.quantity), icon: row.icon || '' });
     }
 
     const categories = Object.keys(inventory).sort();
@@ -179,21 +182,21 @@ module.exports = {
     }
 
     const { rows } = await db.query(
-      `SELECT character_id, item_id, quantity, name
-         FROM v_inventory
-        WHERE character_id = $1
-          AND category = 'Resources'
-        ORDER BY name`,
+      `SELECT vi.character_id,
+              vi.item_id,
+              vi.quantity,
+              vi.name,
+              COALESCE(it.data->>'icon', it.data->'infoOptions'->>'Icon', '') AS icon
+         FROM v_inventory vi
+         LEFT JOIN items it ON vi.item_id = it.id
+        WHERE vi.character_id = $1
+          AND vi.category = 'Resources'
+        ORDER BY vi.name`,
       [charID]
     );
 
-    const shopData = await dbm.loadCollection('shop');
     const items = rows
-      .map((r) => ({
-        item: r.name,
-        qty: Number(r.quantity),
-        icon: shopData[r.item_id]?.data?.icon ?? shopData[r.item_id]?.infoOptions?.Icon ?? '',
-      }))
+      .map((r) => ({ item: r.name, qty: Number(r.quantity), icon: r.icon || '' }))
       .sort((a, b) => a.item.localeCompare(b.item));
 
     const pages = Math.max(1, Math.ceil(items.length / itemsPerPage));
