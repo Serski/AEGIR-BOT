@@ -10,7 +10,7 @@ const { grantItemToPlayer } = require('./inventory-grants');
 class shop {
   //Declare constants for class 
   static infoOptions = ['Name', 'Icon', 'Category', 'Image', 'Description', 'Transferrable (Y/N)', 'Attack', 'Defence', 'Speed', 'HP'];
-  static shopOptions = ['Price (#)', 'Need Role', 'Give Role', 'Take Role', 'Quantity (#)', 'Channels'];
+  static shopOptions = ['Need Role', 'Give Role', 'Take Role', 'Quantity (#)', 'Channels'];
   static usageOptions = [
       'Is Usable (Y/N)', 'Removed on Use (Y/N)', 'Can Use Multiple (Y/N)', 'Need Any Of Roles', 'Need All Of Roles', 'Need None Of Roles', 'Give Role', 'Take Role',
       'Show Image', 'Show Message', 'Give/Take Money (#)', 'Cooldown in Hours (#)',
@@ -53,26 +53,28 @@ class shop {
   static async addItem(itemName, givenData) {
     //Items include 4 arrays of maps, each map for a category of options. Make these 4, and make each value blank
     let itemData = {
+      item_id: itemName,
+      item: itemName, // legacy mirror
+      price: '',
       "infoOptions": this.infoOptions.reduce((acc, option) => {
         acc[option] = "";
         return acc;
-      }
-      , {}),
+      }, {}),
       "shopOptions": this.shopOptions.reduce((acc, option) => {
         acc[option] = "";
         return acc;
-      }
-      , {}),
+      }, {}),
       "usageOptions": this.usageOptions.reduce((acc, option) => {
         acc[option] = "";
         return acc;
-      }
-      , {}),
+      }, {}),
     };
     itemData.infoOptions.Name = itemName;
     //Given data is a map of some elements that have been set, though its unknown which option they are for. Iterate through and set the values
     for (let [key, value] of Object.entries(givenData)) {
-      if (this.infoOptions.includes(key)) {
+      if (key === 'price' || key === 'Price (#)') {
+        itemData.price = value;
+      } else if (this.infoOptions.includes(key)) {
         itemData.infoOptions[key] = value;
       } else if (this.shopOptions.includes(key)) {
         itemData.shopOptions[key] = value;
@@ -239,21 +241,21 @@ class shop {
 
     // Create a new itemData object with the new options
     let newItemData = {
+      item_id: itemData.item_id || itemName,
+      item: itemData.item_id || itemName, // legacy mirror
+      price: itemData.price ?? itemData.shopOptions?.['Price (#)'] ?? '',
       "infoOptions": this.infoOptions.reduce((acc, option) => {
         acc[option] = itemData.infoOptions[option] || "";
         return acc;
-      }
-      , {}),
+      }, {}),
       "shopOptions": this.shopOptions.reduce((acc, option) => {
         acc[option] = itemData.shopOptions[option] || "";
         return acc;
-      }
-      , {}),
+      }, {}),
       "usageOptions": this.usageOptions.reduce((acc, option) => {
         acc[option] = itemData.usageOptions[option] || "";
         return acc;
-      }
-      , {}),
+      }, {}),
     };
 
     await dbm.saveFile('shop', itemName, newItemData);
@@ -279,7 +281,7 @@ class shop {
     for (const row of rows) {
       const data = row.data || {};
       const category = data.category ?? data.infoOptions?.Category ?? 'Misc';
-      const priceVal = row.price ?? data.price;
+      const priceVal = row.price ?? data.price ?? data.shopOptions?.['Price (#)'];
       if (priceVal === '' || priceVal === undefined || priceVal === null) continue;
       const price = Number(priceVal);
       if (Number.isNaN(price)) continue;
@@ -339,7 +341,7 @@ class shop {
     let itemCategories = {};
     for (const row of rows) {
       const data = row.data || {};
-      const priceVal = row.price ?? data.price;
+      const priceVal = row.price ?? data.price ?? data.shopOptions?.['Price (#)'];
       if (priceVal === '' || priceVal === undefined || priceVal === null) continue;
       if (Number.isNaN(Number(priceVal))) continue;
       const category = data.category ?? data.infoOptions?.Category ?? 'Misc';
@@ -661,11 +663,15 @@ static async createInventoryEmbed(charID, page = 1) {
   }
 
   static async getItemPrice(itemName) {
-    const res = await db.query('SELECT price FROM shop WHERE LOWER(id)=LOWER($1)', [itemName]);
+    const res = await db.query('SELECT price, data FROM shop WHERE LOWER(id)=LOWER($1)', [itemName]);
     if (!res.rows[0]) {
       return "ERROR";
     }
-    return res.rows[0].price === null ? "No Price Item!" : res.rows[0].price;
+    const row = res.rows[0];
+    const priceVal = row.price ?? row.data?.price ?? row.data?.shopOptions?.['Price (#)'];
+    return priceVal === '' || priceVal === undefined || priceVal === null
+      ? "No Price Item!"
+      : priceVal;
   }
 
   static async getItemCategory(itemName) {
@@ -697,7 +703,7 @@ static async createInventoryEmbed(charID, page = 1) {
 
     const { rows: priceRows } = await db.query('SELECT price, data FROM shop WHERE LOWER(id)=LOWER($1)', [itemName]);
     const priceRow = priceRows[0] || {};
-    const priceVal = priceRow.price ?? priceRow.data?.price;
+    const priceVal = priceRow.price ?? priceRow.data?.price ?? priceRow.data?.shopOptions?.['Price (#)'];
 
     const inspectEmbed = new Discord.EmbedBuilder()
       .setTitle('**__Item:__ ' +  itemData.infoOptions.Icon + " " + itemName + "**")
@@ -905,7 +911,7 @@ static async createInventoryEmbed(charID, page = 1) {
     Two pages, one for Info and Shop Options, one for Usage Options
     Page 1: Info and Shop Options- split between Info Options and Shop Options.
     Info Options: Name, Icon, Category, Image, Description
-    Shop Options: Price, Need Role, Give Role, Take Role
+    Shop Options: Need Role, Give Role, Take Role
     Page 2: Usage Options
     Usage Options: Is Usable, Removed on Use, Need Role, Give Role, Take Role, Show an Image, Show a Message, Give/Take Money, Cooldown, Give Item, Give Item 2, Give Item 3, Take Item, Take Item 2, Take Item 3, Give Item, Give Item 2, Give Item 3, Change Prestige, Change Martial, Change Intrigue
     */
@@ -1404,7 +1410,8 @@ static async createInventoryEmbed(charID, page = 1) {
       return "Item not found!";
     }
     const row = rows[0];
-    const price = Number(row.price ?? row.data?.price);
+    const priceVal = row.price ?? row.data?.price ?? row.data?.shopOptions?.['Price (#)'];
+    const price = Number(priceVal);
     if (!price || !(price > 0)) {
       return "Not a valid item to purchase!";
     }

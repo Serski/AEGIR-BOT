@@ -1,5 +1,8 @@
 {
   "Wood": {
+    "item_id": "Wood",
+    "item": "Wood",
+    "price": 1,
     "infoOptions": {
       "Name": "Wood",
       "Icon": "🪵",
@@ -9,7 +12,6 @@
       "Transferrable (Y/N)": "Yes"
     },
     "shopOptions": {
-      "Price (#)": 1,
       "Need Role": "",
       "Give Role": "",
       "Take Role": "",
@@ -49,6 +51,9 @@
     }
   },
   "Alloy Frame Modules": {
+    "item_id": "Alloy Frame Modules",
+    "item": "Alloy Frame Modules",
+    "price": 10,
     "infoOptions": {
       "Name": "Alloy Frame Modules",
       "Icon": "⚙️",
@@ -58,7 +63,6 @@
       "Transferrable (Y/N)": "Yes"
     },
     "shopOptions": {
-      "Price (#)": 10,
       "Need Role": "",
       "Give Role": "",
       "Take Role": "",
@@ -98,6 +102,9 @@
     }
   },
   "Plasma Core Cells": {
+    "item_id": "Plasma Core Cells",
+    "item": "Plasma Core Cells",
+    "price": 10,
     "infoOptions": {
       "Name": "Plasma Core Cells",
       "Icon": "🔋",
@@ -107,7 +114,6 @@
       "Transferrable (Y/N)": "Yes"
     },
     "shopOptions": {
-      "Price (#)": 10,
       "Need Role": "",
       "Give Role": "",
       "Take Role": "",
