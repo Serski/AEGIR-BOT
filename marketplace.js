@@ -142,7 +142,7 @@ async function showSales(userId, page = 1) {
 // Display details of a single sale by ID.
 async function inspectSale(saleId) {
   const { rows } = await pool.query(
-    'SELECT id, name, price, quantity, seller FROM marketplace WHERE id = $1',
+    'SELECT id, name, price, quantity, seller FROM marketplace_v WHERE id = $1',
     [saleId]
   );
   if (!rows[0]) return 'Sale not found.';
