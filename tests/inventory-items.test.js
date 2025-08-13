@@ -30,7 +30,7 @@ test('inventory embed shows non-stackable items', async () => {
     'Player#0001': { numericID: 'player1' }
   };
   const shopData = {
-    Sword: { infoOptions: { Category: 'Weapons', Icon: ':sword:' } }
+    Sword: { data: { category: 'Weapons', icon: ':sword:' } }
   };
   const dbmStub = {
     loadCollection: async (col) => (col === 'characters' ? charData : shopData),
@@ -55,7 +55,7 @@ test('inventory embed includes legacy inline inventory', async () => {
     'Player#0001': { numericID: 'player1' }
   };
   const shopData = {
-    Apple: { infoOptions: { Category: 'Food', Icon: ':apple:' } }
+    Apple: { data: { category: 'Food', icon: ':apple:' } }
   };
   const dbmStub = {
     loadCollection: async (col) => (col === 'characters' ? charData : shopData),

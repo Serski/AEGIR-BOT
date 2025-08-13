@@ -31,7 +31,7 @@ test('createCategoryEmbed shows items for category', async () => {
   delete require.cache[require.resolve(shopPath)];
 
   const charData = { 'Player#0001': { numericID: 'player1' } };
-  const shopData = { Wood: { infoOptions: { Category: 'Resources', Icon: ':wood:' } } };
+  const shopData = { Wood: { data: { category: 'Resources', icon: ':wood:' } } };
   const dbmStub = {
     loadCollection: async (col) => (col === 'characters' ? charData : shopData),
     saveCollection: async () => {},
@@ -54,7 +54,7 @@ test('createCategoryEmbed handles misc category', async () => {
   delete require.cache[require.resolve(shopPath)];
 
   const charData = { 'Player#0001': { numericID: 'player1' } };
-  const shopData = { Mystery: { infoOptions: { Category: 'Misc', Icon: ':?' } } };
+  const shopData = { Mystery: { data: { category: 'Misc', icon: ':?' } } };
   const dbmStub = {
     loadCollection: async (col) => (col === 'characters' ? charData : shopData),
     saveCollection: async () => {},

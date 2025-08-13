@@ -649,6 +649,7 @@ class char {
     let charData = await dbm.loadFile(charactersCollection, charID);
     const shopCollection = 'shop';
     let itemData = await dbm.loadFile(shopCollection, itemName);
+    const usageOptions = itemData.data?.usage ?? itemData.usageOptions;
 
     let user = await clientManager.getUser(charData.numericID);
 
@@ -658,23 +659,23 @@ class char {
       return "You do not have enough of this item!";
     }
 
-    if (itemData.usageOptions["Can Use Multiple (Y/N)"] != "Yes" && numToUse > 1) {
+    if (usageOptions["Can Use Multiple (Y/N)"] != "Yes" && numToUse > 1) {
       return "You can only use one of this item!";
     }
 
-    if (itemData.usageOptions["Is Usable (Y/N)"] != "Yes") {
+    if (usageOptions["Is Usable (Y/N)"] != "Yes") {
       return "Item is not usable!";
     }
 
-    if (itemData.usageOptions["Removed on Use (Y/N)"] == "Yes") {
+    if (usageOptions["Removed on Use (Y/N)"] == "Yes") {
       charData.inventory[itemName] -= numToUse;
     }
 
 
     //There are multiple role options, either Need Any Of Roles or Need All Of Roles. If Need Any Of Roles, check if user has any of the roles. If Need All Of Roles, check if user has all of the roles
-    if (itemData.usageOptions["Need Any Of Roles"]) {
+    if (usageOptions["Need Any Of Roles"]) {
       //Roles are enclosed in <@& and >, and there may be multiple roles. They may not be comma separated but commas and spaces may exist
-      let roles = itemData.usageOptions["Need Any Of Roles"].split("<@&");
+      let roles = usageOptions["Need Any Of Roles"].split("<@&");
       roles = roles.map(role => role.replace(">", ""));
       roles = roles.map(role => role.replace(",", ""));
       roles = roles.map(role => role.replace(/\s+/g, ""));
@@ -687,12 +688,12 @@ class char {
         }
       }
       if (!hasRole) {
-        return "You do not have the required role to use this item! You must have one of " + itemData.usageOptions["Need Any Of Roles"];
+        return "You do not have the required role to use this item! You must have one of " + usageOptions["Need Any Of Roles"];
       }
     }
 
-    if (itemData.usageOptions["Need All Of Roles"]) {
-      let roles = itemData.usageOptions["Need All Of Roles"].split("<@&");
+    if (usageOptions["Need All Of Roles"]) {
+      let roles = usageOptions["Need All Of Roles"].split("<@&");
       roles = roles.map(role => role.replace(">", ""));
       roles = roles.map(role => role.replace(",", ""));
       roles = roles.map(role => role.replace(/\s+/g, ""));
@@ -705,12 +706,12 @@ class char {
         }
       }
       if (!hasRole) {
-        return "You do not have all the required roles to use this item! You must have all of " + itemData.usageOptions["Need All Of Roles"];
+        return "You do not have all the required roles to use this item! You must have all of " + usageOptions["Need All Of Roles"];
       }
     }
 
-    if (itemData.usageOptions["Need None Of Roles"]) {
-      let roles = itemData.usageOptions["Need None Of Roles"].split("<@&");
+    if (usageOptions["Need None Of Roles"]) {
+      let roles = usageOptions["Need None Of Roles"].split("<@&");
       roles = roles.map(role => role.replace(">", ""));
       roles = roles.map(role => role.replace(",", ""));
       roles = roles.map(role => role.replace(/\s+/g, ""));
@@ -723,30 +724,30 @@ class char {
         }
       }
       if (hasRole) {
-        return "You have a role that prevents you from using this item! You must not have any from " + itemData.usageOptions["Need None Of Roles"];
+        return "You have a role that prevents you from using this item! You must not have any from " + usageOptions["Need None Of Roles"];
       }
     }
 
-    if (itemData.usageOptions["Cooldown in Hours (#)"]) {
+    if (usageOptions["Cooldown in Hours (#)"]) {
       if (charData.cooldowns.usageCooldowns[itemName] <= Math.round(Date.now() / 1000) || !charData.cooldowns.usageCooldowns[itemName]) {
-        charData.cooldowns.usageCooldowns[itemName] = Math.round(Date.now() / 1000) + (itemData.usageOptions["Cooldown in Hours (#)"] * 3600);
+        charData.cooldowns.usageCooldowns[itemName] = Math.round(Date.now() / 1000) + (usageOptions["Cooldown in Hours (#)"] * 3600);
       } else {
         return "You have used this item recently! Can be used again <t:" + charData.cooldowns.usageCooldowns[itemName] + ":R>";
       }
     }
 
-    returnEmbed.setTitle("**__Used:__ " + (numToUse > 1 ? numToUse + " " : "") + itemData.infoOptions.Icon + " " + itemName + "**");
+    returnEmbed.setTitle("**__Used:__ " + (numToUse > 1 ? numToUse + " " : "") + (itemData.data?.icon || itemData.infoOptions.Icon || '') + " " + itemName + "**");
 
-    if (itemData.usageOptions["Show Image"].length > 0) {
-      returnEmbed.setImage(itemData.usageOptions["Show Image"]);
+    if (usageOptions["Show Image"].length > 0) {
+      returnEmbed.setImage(usageOptions["Show Image"]);
     }
-    if (itemData.usageOptions["Show Message"].length > 0) {
-      returnEmbed.setDescription(itemData.usageOptions["Show Message"]);
+    if (usageOptions["Show Message"].length > 0) {
+      returnEmbed.setDescription(usageOptions["Show Message"]);
     }
 
-    if (itemData.usageOptions["Give/Take Money (#)"] && itemData.usageOptions["Give/Take Money (#)"] != 0 && itemData.usageOptions["Give/Take Money (#)"] != "") {
+    if (usageOptions["Give/Take Money (#)"] && usageOptions["Give/Take Money (#)"] != 0 && usageOptions["Give/Take Money (#)"] != "") {
       //If they are taking money, make sure they have enough
-      let totalGold = parseInt(itemData.usageOptions["Give/Take Money (#)"]) * numToUse;
+      let totalGold = parseInt(usageOptions["Give/Take Money (#)"]) * numToUse;
       const bal = await dbm.getBalance(userID);
       if (bal + totalGold < 0 && totalGold < 0) {
         return "You do not have enough money to use this item!";
@@ -764,7 +765,7 @@ class char {
     let statString = "";
     let itemChanged = false;
     let itemString = "";
-    for (let [key, value] of Object.entries(itemData.usageOptions)) {
+    for (let [key, value] of Object.entries(usageOptions)) {
       if (value == 0 || value == "" || !value) {
         continue;
       }
@@ -788,7 +789,7 @@ class char {
         }
         charData.inventory[item] += num;
         itemChanged = true;
-        itemString = item + ": " +  shopData[item].infoOptions.Icon + "+" + parseInt(num) + "\n" + itemString;
+        itemString = item + ": " +  (shopData[item].data?.icon || shopData[item].infoOptions.Icon || '') + "+" + parseInt(num) + "\n" + itemString;
       }
 
       if (key.startsWith("Take Item")) {
@@ -796,32 +797,32 @@ class char {
         let num = value.split(" ")[0];
         num = parseInt(num) * numToUse;
         if (!charData.inventory[item] || charData.inventory[item] < num) {
-          return "You do not have " + shopData[item].infoOptions.Icon + " " + num + " " + item;
+          return "You do not have " + (shopData[item].data?.icon || shopData[item].infoOptions.Icon || '') + " " + num + " " + item;
         }
         charData.inventory[item] -= num;
         itemChanged = true;
-        itemString += item + ": " + shopData[item].infoOptions.Icon + "-" + parseInt(num) + "\n";
+        itemString += item + ": " + (shopData[item].data?.icon || shopData[item].infoOptions.Icon || '') + "-" + parseInt(num) + "\n";
       }
     }
 
-    if (itemData.usageOptions["Give Role"]) {
-      giveRoles = itemData.usageOptions["Give Role"].split("<@&");
+    if (usageOptions["Give Role"]) {
+      giveRoles = usageOptions["Give Role"].split("<@&");
       giveRoles = giveRoles.map(role => role.replace(">", ""));
       giveRoles = giveRoles.map(role => role.replace(",", ""));
       giveRoles = giveRoles.map(role => role.replace(/\s+/g, ""));
       giveRoles = giveRoles.filter(role => role.length > 0);
 
-      returnEmbed.addFields({ name: '**Added Roles:**', value: itemData.usageOptions["Give Role"] });
+      returnEmbed.addFields({ name: '**Added Roles:**', value: usageOptions["Give Role"] });
     }
 
-    if (itemData.usageOptions["Take Role"]) {
-      takeRoles = itemData.usageOptions["Take Role"].split("<@&");
+    if (usageOptions["Take Role"]) {
+      takeRoles = usageOptions["Take Role"].split("<@&");
       takeRoles = takeRoles.map(role => role.replace(">", ""));
       takeRoles = takeRoles.map(role => role.replace(",", ""));
       takeRoles = takeRoles.map(role => role.replace(/\s+/g, ""));
       takeRoles = takeRoles.filter(role => role.length > 0);
 
-      returnEmbed.addFields({ name: '**Removed Roles:**', value: itemData.usageOptions["Take Role"] });
+      returnEmbed.addFields({ name: '**Removed Roles:**', value: usageOptions["Take Role"] });
     }
 
     if (statChanged) {
@@ -1077,7 +1078,7 @@ class char {
             }
             charData[charID].inventory[rewardName] += rewardQuantity;
 
-            valueString += rewardName + ": " + shopData[rewardName].infoOptions.Icon + "+" + rewardQuantity + "\n";
+            valueString += rewardName + ": " + (shopData[rewardName].data?.icon || shopData[rewardName].infoOptions.Icon || '') + "+" + rewardQuantity + "\n";
           }
         }
         if (valueString.length == 0) {
@@ -1696,7 +1697,7 @@ class char {
 
     const canonical = await ensureItem(db, item);
     const def = await dbm.getItemDefinition(canonical);
-    if (def?.infoOptions?.["Transferrable (Y/N)"] === "No") {
+    if ((def?.data?.transferrable ?? def?.infoOptions?.["Transferrable (Y/N)"]) === "No") {
       return "This item cannot be transferred!";
     }
 
@@ -1723,7 +1724,7 @@ class char {
 
     await this.removeItem(playerGiving, canonical, { qty: amount });
 
-    const category = (def?.infoOptions?.Category || '').trim().toLowerCase();
+    const category = (def?.data?.category ?? def?.infoOptions?.Category ?? '').trim().toLowerCase();
     if (category === 'ships' || category === 'ship') {
       for (let i = 0; i < amount; i++) {
         char.addShip(charData2, canonical);

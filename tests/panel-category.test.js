@@ -36,9 +36,9 @@ test('resources and ships appear only in their submenus', async () => {
     }
   };
   const shopData = {
-    Longboat: { infoOptions: { Category: 'Ships', Icon: ':ship:' } },
-    Iron: { infoOptions: { Category: 'Resources', Icon: ':iron:' } },
-    Sword: { infoOptions: { Category: 'Weapons', Icon: ':sword:' } }
+    Longboat: { data: { category: 'Ships', icon: ':ship:' } },
+    Iron: { data: { category: 'Resources', icon: ':iron:' } },
+    Sword: { data: { category: 'Weapons', icon: ':sword:' } }
   };
   const dbmStub = {
     loadCollection: async (col) => (col === 'characters' ? charData : shopData),
