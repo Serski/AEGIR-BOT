@@ -86,10 +86,13 @@ test('posting and buying a sale updates inventories and balances', async () => {
   // post sale
   const embed = await marketplace.postSale(2, 'iron sword', 50, 'Seller#1234', 'sellerId');
   assert.ok(embed.description.includes('listed'));
-  let { rows } = await pool.query('SELECT id, name, item_code, price FROM marketplace_v ORDER BY id');
+  let { rows } = await pool.query('SELECT id, name, item_code, price, category FROM marketplace_v ORDER BY id');
+  console.log('[test] marketplace_v rows', rows);
   assert.equal(rows.length, 2);
   assert.equal(rows[0].price, 50);
   assert.equal(rows[0].name, 'Iron Sword');
+  assert.equal(rows[0].item_code, 'Iron Sword');
+  assert.equal(rows[0].category, 'Weapons');
   assert.equal(charData['Seller#1234'].inventory['Iron Sword'], 3);
 
   // buy first sale
