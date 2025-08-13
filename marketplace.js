@@ -40,10 +40,10 @@ class marketplace {
       return "You don't have enough of that item to sell it!";
     }
     charData.inventory[itemName] -= numberItems;
-    const saleData = { item_id: itemName, item: itemName, price, quantity: numberItems };
+    const saleData = { item_id: itemName, price, quantity: numberItems };
     const res = await db.query(
-      'INSERT INTO marketplace (name, data, seller, seller_id) VALUES ($1,$2,$3,$4) RETURNING id',
-      [itemName, saleData, userTag, userID]
+      'INSERT INTO marketplace (name, price, data, seller, seller_id) VALUES ($1,$2,$3,$4,$5) RETURNING id',
+      [itemName, price, saleData, userTag, userID]
     );
     const itemID = res.rows[0].id;
     await dbm.saveFile('characters', userTag, charData);
@@ -62,7 +62,7 @@ class marketplace {
     const limit = 25;
     const offset = (page - 1) * limit;
     const { rows } = await db.query(
-      "SELECT id, name, item, price, data, data->>'item_id' AS item_id FROM marketplace ORDER BY item, id LIMIT $1 OFFSET $2",
+      "SELECT id, name, price, data, data->>'item_id' AS item_id FROM marketplace ORDER BY name, id LIMIT $1 OFFSET $2",
       [limit, offset]
     );
     const countRes = await db.query('SELECT COUNT(*) FROM marketplace');
@@ -74,7 +74,7 @@ class marketplace {
 
     let descriptionText = '';
     for (const sale of rows) {
-      const itemId = sale.item_id || sale.item || sale.data?.item_id;
+      const itemId = sale.item_id ?? sale.data?.item_id;
       const quantity = Number(sale.data?.quantity ?? 0);
       const price = Number(
         sale.price ?? sale.data?.price ?? sale.data?.shopOptions?.['Price (#)'] ?? 0
@@ -123,7 +123,7 @@ class marketplace {
     const limit = 25;
     const offset = (page - 1) * limit;
     const { rows } = await db.query(
-      "SELECT id, name, item, price, data, data->>'item_id' AS item_id FROM marketplace WHERE seller=$1 ORDER BY id LIMIT $2 OFFSET $3",
+      "SELECT id, name, price, data, data->>'item_id' AS item_id FROM marketplace WHERE seller=$1 ORDER BY id LIMIT $2 OFFSET $3",
       [player, limit, offset]
     );
     const countRes = await db.query('SELECT COUNT(*) FROM marketplace WHERE seller=$1', [player]);
@@ -133,7 +133,7 @@ class marketplace {
     embed.setColor(0x36393e);
     let descriptionText = '';
     for (const sale of rows) {
-      const itemId = sale.item_id || sale.item || sale.data?.item_id;
+      const itemId = sale.item_id ?? sale.data?.item_id;
       const quantity = Number(sale.data?.quantity ?? 0);
       const price = Number(
         sale.price ?? sale.data?.price ?? sale.data?.shopOptions?.['Price (#)'] ?? 0
@@ -171,7 +171,7 @@ class marketplace {
     if (quantity < 0 || price < 0) {
       return "That sale has invalid data!";
     }
-    const itemId = sale.item_id || sale.item || sale.data?.item_id;
+    const itemId = sale.item_id ?? sale.data?.item_id;
     if (sale.seller_id == userID) {
       if (!charData[userTag].inventory[itemId]) {
         charData[userTag].inventory[itemId] = 0;
@@ -213,7 +213,7 @@ class marketplace {
     if (!sale) {
       return "That sale doesn't exist!";
     }
-    const itemId = sale.item_id || sale.item || sale.data?.item_id;
+    const itemId = sale.item_id ?? sale.data?.item_id;
     const quantity = Number(sale.data?.quantity ?? 0);
     const price = Number(
       sale.price ?? sale.data?.price ?? sale.data?.shopOptions?.['Price (#)'] ?? 0

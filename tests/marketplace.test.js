@@ -59,11 +59,11 @@ function stubModule(file, exports) {
   pool.query(`CREATE TABLE marketplace (id SERIAL PRIMARY KEY, name TEXT, data JSONB, item TEXT, price INTEGER, seller TEXT, seller_id TEXT)`);
   const origQuery = pool.query.bind(pool);
   pool.query = (text, params) => {
-    if (/INSERT INTO marketplace \(name, data, seller, seller_id\)/i.test(text)) {
-      const sale = params[1];
+    if (/INSERT INTO marketplace \(name, price, data, seller, seller_id\)/i.test(text)) {
+      const sale = params[2];
       return origQuery(
-        'INSERT INTO marketplace (name, data, item, price, seller, seller_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
-        [params[0], sale, sale.item_id, sale.price, params[2], params[3]]
+        'INSERT INTO marketplace (name, price, data, item, seller, seller_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
+        [params[0], params[1], sale, sale.item_id, params[3], params[4]]
       );
     }
     return origQuery(text, params);
@@ -95,11 +95,11 @@ test('posting and buying a sale updates inventories and balances', async () => {
 
   // post sale
   const embed = await marketplace.postSale(2, 'iron sword', 50, 'Seller#1234', 'sellerId');
-  const { rows } = await pool.query('SELECT id, item, price FROM marketplace');
+  const { rows } = await pool.query('SELECT id, name, price FROM marketplace');
   assert.equal(rows.length, 1);
   const saleID = rows[0].id;
   assert.equal(rows[0].price, 50);
-  assert.equal(rows[0].item, 'Iron Sword');
+  assert.equal(rows[0].name, 'Iron Sword');
   assert.equal(charData['Seller#1234'].inventory['Iron Sword'], 3);
   assert.ok(embed.description.includes('listed'));
 

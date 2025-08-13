@@ -1,12 +1,16 @@
-const { SlashCommandBuilder } = require('discord.js');
-const marketplace = require('../../marketplace');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { listSales } = require('../../db/marketplace');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('sales')
         .setDescription('List sales'),
     async execute(interaction) {
-        let [embed, rows] = await marketplace.createSalesEmbed(1, interaction);
-        await interaction.reply({ embeds: [embed], components: rows});
+        const sales = await listSales();
+        const description = sales
+            .map(({ name, price }) => `• ${name} — ${price ?? 'N/A'} gold`)
+            .join('\n');
+        const embed = new EmbedBuilder().setDescription(description || 'No sales found.');
+        await interaction.reply({ embeds: [embed], ephemeral: true });
     },
 };
