@@ -95,22 +95,28 @@ test('posting and buying a sale updates inventories and balances', async () => {
 
   // post sale
   const embed = await marketplace.postSale(2, 'iron sword', 50, 'Seller#1234', 'sellerId');
-  const { rows } = await pool.query('SELECT id, name, price FROM marketplace');
-  assert.equal(rows.length, 1);
-  const saleID = rows[0].id;
+  assert.ok(embed.description.includes('listed'));
+  let { rows } = await pool.query('SELECT id, name, price FROM marketplace ORDER BY id');
+  assert.equal(rows.length, 2);
   assert.equal(rows[0].price, 50);
   assert.equal(rows[0].name, 'Iron Sword');
   assert.equal(charData['Seller#1234'].inventory['Iron Sword'], 3);
-  assert.ok(embed.description.includes('listed'));
 
-  // buy sale
-  const buyEmbed = await marketplace.buySale(saleID, 'Buyer#5678', 'buyerId');
-  assert.equal(charData['Buyer#5678'].inventory['Iron Sword'], 2);
+  // buy first sale
+  let buyEmbed1 = await marketplace.buySale(rows[0].id, 'Buyer#5678', 'buyerId');
+  assert.ok(buyEmbed1.description.includes('bought'));
+  assert.equal(charData['Buyer#5678'].inventory['Iron Sword'], 1);
   assert.equal(balances['Seller#1234'], 150);
   assert.equal(balances['Buyer#5678'], 150);
-  const { rows: remaining } = await pool.query('SELECT * FROM marketplace');
+
+  // buy second sale
+  let buyEmbed2 = await marketplace.buySale(rows[1].id, 'Buyer#5678', 'buyerId');
+  assert.ok(buyEmbed2.description.includes('bought'));
+  assert.equal(charData['Buyer#5678'].inventory['Iron Sword'], 2);
+  assert.equal(balances['Seller#1234'], 200);
+  assert.equal(balances['Buyer#5678'], 100);
+  let { rows: remaining } = await pool.query('SELECT * FROM marketplace');
   assert.equal(remaining.length, 0);
-  assert.ok(buyEmbed.description.includes('bought'));
 });
 
 test('postSale validates input', async () => {
@@ -140,24 +146,16 @@ test('buySale validates characters and sale data', async () => {
 
   // insert sale with negative price
   let { rows } = await pool.query(
-    "INSERT INTO marketplace (name, data, item, price, seller, seller_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id",
-    ['Iron Sword', { item_id: 'Iron Sword', price: -10, quantity: 1 }, 'Iron Sword', -10, 'Seller#1234', 'sellerId']
+    "INSERT INTO marketplace (name, item, price, seller, seller_id) VALUES ($1,$2,$3,$4,$5) RETURNING id",
+    ['Iron Sword', 'Iron Sword', -10, 'Seller#1234', 'sellerId']
   );
   let res = await marketplace.buySale(rows[0].id, 'Buyer#5678', 'buyerId');
   assert.equal(res, 'That sale has invalid data!');
 
   await pool.query('DELETE FROM marketplace');
   rows = await pool.query(
-    "INSERT INTO marketplace (name, data, item, price, seller, seller_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id",
-    ['Iron Sword', { item_id: 'Iron Sword', price: 10, quantity: -1 }, 'Iron Sword', 10, 'Seller#1234', 'sellerId']
-  );
-  res = await marketplace.buySale(rows.rows[0].id, 'Buyer#5678', 'buyerId');
-  assert.equal(res, 'That sale has invalid data!');
-
-  await pool.query('DELETE FROM marketplace');
-  rows = await pool.query(
-    "INSERT INTO marketplace (name, data, item, price, seller, seller_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id",
-    ['Iron Sword', { item_id: 'Iron Sword', price: 10, quantity: 1 }, 'Iron Sword', 10, 'Seller#1234', 'sellerId']
+    "INSERT INTO marketplace (name, item, price, seller, seller_id) VALUES ($1,$2,$3,$4,$5) RETURNING id",
+    ['Iron Sword', 'Iron Sword', 10, 'Seller#1234', 'sellerId']
   );
   delete charData['Buyer#5678'];
   delete balances['Buyer#5678'];
