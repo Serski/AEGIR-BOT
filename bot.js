@@ -95,6 +95,12 @@ client.once('ready', () => {
 client.on(Events.InteractionCreate, async interaction => {
   if (interaction.isChatInputCommand()) {
     const command = client.commands.get(interaction.commandName);
+    if (!command || typeof command.execute !== 'function') {
+      console.warn(`[warn] command ${interaction.commandName} missing execute()`);
+      return interaction
+        .reply({ ephemeral: true, content: "Sorry, that command isn't available right now." })
+        .catch(() => {});
+    }
     try {
       await command.execute(interaction);
     } catch (err) {
