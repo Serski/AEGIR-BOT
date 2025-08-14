@@ -344,13 +344,13 @@ When selected grants the:
   
     mapData = mapData[mapName];
   
-    let userData = await dbm.loadFile('characters', tag);
-    if (!userData.editingFields) {
-      userData.editingFields = {};
+    let editingFields = await dbm.getEditingFields(tag);
+    if (!editingFields) {
+      editingFields = {};
     }
-    userData.editingFields["Map Edited"] = mapName;
-    userData.editingFields["Map Type Edited"] = mapType;
-    await dbm.saveFile('characters', tag, userData);
+    editingFields["Map Edited"] = mapName;
+    editingFields["Map Type Edited"] = mapType;
+    await dbm.setEditingFields(tag, editingFields);
   
     // Construct the edit menu embed
     const embed = new EmbedBuilder()
@@ -415,13 +415,13 @@ When selected grants the:
   
   static async editMapField(charTag, field, value) {
     // Load the maps collection
-    let charData = await dbm.loadFile('characters', charTag);
-    if (!charData.editingFields || !charData.editingFields["Map Edited"] || !charData.editingFields["Map Type Edited"]) {
+    let editingFields = await dbm.getEditingFields(charTag);
+    if (!editingFields || !editingFields["Map Edited"] || !editingFields["Map Type Edited"]) {
       return "You must use /editmapmenu first to select a map to edit";
     }
-    let data = await dbm.loadFile('keys', charData.editingFields["Map Type Edited"] + 's');
-    let mapName = charData.editingFields["Map Edited"];
-    let mapType = charData.editingFields["Map Type Edited"];
+    let data = await dbm.loadFile('keys', editingFields["Map Type Edited"] + 's');
+    let mapName = editingFields["Map Edited"];
+    let mapType = editingFields["Map Type Edited"];
     if (data[mapName] == undefined) {
       return "Map not found! Must match the exact name of the map, case sensitive."
     }
@@ -1158,20 +1158,19 @@ When selected grants the:
         "\n`[7] Income Delay: ` " + delayString
       );
 
-    let userData = await dbm.loadFile("characters", charTag);
-    if (!userData.editingFields) {
-      userData.editingFields = {};
+    let editingFields = await dbm.getEditingFields(charTag);
+    if (!editingFields) {
+      editingFields = {};
     }
-    userData.editingFields["Income Edited"] = income;
-    await dbm.saveFile("characters", charTag, userData);
+    editingFields["Income Edited"] = income;
+    await dbm.setEditingFields(charTag, editingFields);
 
     return returnEmbed;
   }
 
   static async editIncomeField(fieldNumber, charTag, newValue) {
-    let userData = await dbm.loadFile("characters", charTag)
-    let editingFields = userData.editingFields;
-    let income = editingFields["Income Edited"];
+    let editingFields = await dbm.getEditingFields(charTag);
+    let income = editingFields ? editingFields["Income Edited"] : undefined;
     let incomeList = await dbm.loadFile("keys", "incomeList");
     let incomeValue = incomeList[income];
     let shopData = await dbm.loadCollection("shop");

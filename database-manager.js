@@ -170,6 +170,22 @@ async function findCharacterByNumericID(numericID) {
   return res.rows[0] ? res.rows[0].id : undefined;
 }
 
+async function getEditingFields(id) {
+  const res = await db.query(
+    "SELECT data->'editingFields' AS editingFields FROM characters WHERE id=$1",
+    [id]
+  );
+  return res.rows[0] ? res.rows[0].editingfields : undefined;
+}
+
+async function setEditingFields(id, editingFields) {
+  await db.query(
+    `INSERT INTO characters (id, data) VALUES ($1, jsonb_build_object('editingFields', $2::jsonb))
+     ON CONFLICT (id) DO UPDATE SET data = jsonb_set(COALESCE(characters.data, '{}'::jsonb), '{editingFields}', $2::jsonb)`,
+    [id, editingFields]
+  );
+}
+
 async function seedTableIfEmpty(table, filePath) {
   const countRes = await db.query(`SELECT COUNT(*) FROM ${table}`);
   if (Number(countRes.rows[0].count) === 0) {
@@ -317,6 +333,8 @@ module.exports = {
   loadCollectionFileNames,
   saveFile,
   loadFile,
+  getEditingFields,
+  setEditingFields,
   findCharacterByNumericID,
   docDelete,
   fieldDelete,
