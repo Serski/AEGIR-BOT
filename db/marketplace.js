@@ -14,10 +14,10 @@ async function listSales({ sellerId, limit, offset, cursor } = {}) {
   }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   let sql = `
-    SELECT id, name, item_code, price, quantity, seller, category
+    SELECT id, name, item_code AS item_id, price, quantity, seller
     FROM marketplace_v
     ${where}
-    ORDER BY ${cursor ? 'id' : 'name'}
+    ORDER BY ${cursor ? 'id' : 'name NULLS LAST'}
   `;
   if (limit !== undefined) {
     params.push(limit);

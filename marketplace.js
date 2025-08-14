@@ -76,8 +76,8 @@ async function createSalesEmbed(page = 1) {
   }
 
   const description = sales
-    .map(({ name, price, category }) =>
-      `• ${name} — Category: ${category} — ${price ?? 'N/A'} gold`
+    .map(({ name, item_id, price, quantity, seller }) =>
+      `• ${quantity}× ${name} (${item_id}) — ${price ?? 'N/A'} gold — Seller: <@${seller}>`
     )
     .join('\n');
 
