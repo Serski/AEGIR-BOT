@@ -98,7 +98,7 @@ class char {
           Legitimacy: 0
         },
         shireID: 0,
-        numericID: numericID,
+        numeric_id: numericID,
       };
       // initialise balance, inventory and starting cooldowns in dedicated tables
       await dbm.setBalance(playerID, 200);
@@ -227,7 +227,7 @@ class char {
     let charArray = balanceRows.map(row => ({
       key: row.id,
       balance: Number(row.amount),
-      numericID: charData[row.id] ? charData[row.id].numericID : '0'
+      numeric_id: charData[row.id] ? charData[row.id].numeric_id : '0'
     }));
     charArray.sort((a, b) => b.balance - a.balance);
 
@@ -242,7 +242,7 @@ class char {
     let superstring = "";
     for (let i = start; i < end; i++) {
       const char = charArray[i];
-      superstring += "** <@" + char.numericID + "> **: " + char.balance + "\n";
+      superstring += "** <@" + char.numeric_id + "> **: " + char.balance + "\n";
     }
 
     const balanceEmbed = {
@@ -656,7 +656,7 @@ class char {
     }
     const usageOptions = itemData.data?.usage ?? itemData.data?.usageOptions;
 
-    let user = await clientManager.getUser(charData.numericID);
+    let user = await clientManager.getUser(charData.numeric_id);
 
     //Check if user has item
 
@@ -1794,7 +1794,7 @@ class char {
       player = player.replace("<@", "");
       player = player.replace(">", "");
       for (let [key, value] of Object.entries(data)) {
-        if (value.numericID === player) {
+        if (value.numeric_id === player) {
           return [key, value];
         }
       }

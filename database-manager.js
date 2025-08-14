@@ -37,9 +37,9 @@ async function init() {
     await db.query(`CREATE TABLE IF NOT EXISTS ${t} (id TEXT PRIMARY KEY, data JSONB)`);
   }
 
-  // index for quick lookups by numericID
+  // index for quick lookups by numeric_id
   await db.query(
-    "CREATE INDEX IF NOT EXISTS idx_characters_numericID ON characters ((data->>'numericID'))"
+    "CREATE INDEX IF NOT EXISTS idx_characters_numeric_id ON characters ((data->>'numeric_id'))"
   );
 
   await db.query(
@@ -164,7 +164,7 @@ async function logData() {
 
 async function findCharacterByNumericID(numericID) {
   const res = await db.query(
-    "SELECT id FROM characters WHERE data->>'numericID' = $1",
+    "SELECT id FROM characters WHERE data->>'numeric_id' = $1",
     [String(numericID)]
   );
   return res.rows[0] ? res.rows[0].id : undefined;

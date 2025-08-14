@@ -35,7 +35,7 @@ const shopPath = path.join(root, 'shop.js');
 
 test.skip('buying a ship stores it separately from inventory', async () => {
   let balance = 100;
-  let charData = { numericID: 'usernum', inventory: {}, ships: {} };
+  let charData = { numeric_id: 'usernum', inventory: {}, ships: {} };
 
   const row = { id: 1, item_code: 'longboat', name: 'Longboat', price: 10, category: 'Ships' };
 
@@ -86,7 +86,7 @@ test.skip('buying ship items with varied category casing routes to ships list', 
   for (const category of ['Ship', 'ships']) {
     await t.test(category, async () => {
       let balance = 100;
-      let charData = { numericID: 'usernum', inventory: {}, ships: {} };
+      let charData = { numeric_id: 'usernum', inventory: {}, ships: {} };
       const row = { id: 1, item_code: 'longboat', name: 'Longboat', price: 10, category };
       const dbStub = {
         query: async (text, params) => {
