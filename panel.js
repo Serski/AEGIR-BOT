@@ -41,8 +41,11 @@ function selectRow() {
 module.exports = {
   mainEmbed: async function (charID) {
     charID = await dataGetters.getCharFromNumericID(charID);
-    const charData = await dbm.loadCollection('characters');
-    if (charID === 'ERROR' || !charData[charID]) {
+    if (charID !== 'ERROR') {
+      const { rowCount, rows } = await db.query('SELECT 1 FROM characters WHERE id=$1', [charID]);
+      if ((rowCount ?? rows.length) === 0) charID = 'ERROR';
+    }
+    if (charID === 'ERROR') {
       const embed = new EmbedBuilder()
         .setColor(0x36393e)
         .setDescription('Character not found.');
@@ -59,8 +62,11 @@ module.exports = {
     charID = await dataGetters.getCharFromNumericID(charID);
     page = Number(page);
     const itemsPerPage = 25;
-    const charData = await dbm.loadCollection('characters');
-    if (charID === 'ERROR' || !charData[charID]) {
+    if (charID !== 'ERROR') {
+      const { rowCount, rows } = await db.query('SELECT 1 FROM characters WHERE id=$1', [charID]);
+      if ((rowCount ?? rows.length) === 0) charID = 'ERROR';
+    }
+    if (charID === 'ERROR') {
       const embed = new EmbedBuilder()
         .setColor(0x36393e)
         .setDescription('Character not found.');
@@ -180,8 +186,11 @@ module.exports = {
     charID = await dataGetters.getCharFromNumericID(charID);
     page = Number(page);
     const itemsPerPage = 25;
-    const charData = await dbm.loadCollection('characters');
-    if (charID === 'ERROR' || !charData[charID]) {
+    if (charID !== 'ERROR') {
+      const { rowCount, rows } = await db.query('SELECT 1 FROM characters WHERE id=$1', [charID]);
+      if ((rowCount ?? rows.length) === 0) charID = 'ERROR';
+    }
+    if (charID === 'ERROR') {
       const embed = new EmbedBuilder()
         .setColor(0x36393e)
         .setDescription('Character not found.');
