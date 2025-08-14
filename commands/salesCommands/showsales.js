@@ -2,6 +2,8 @@
 
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { showSales } = require('../../marketplace');
+const characters = require('../../db/characters');
+const logger = require('../../logger');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -18,13 +20,19 @@ module.exports = {
                 .setRequired(false)
         ),
     async execute(interaction) {
-        const player = interaction.options.getUser('player') ?? interaction.user;
-        const page = interaction.options.getInteger('page') ?? 1;
-        const res = await showSales(player.id, page);
-        if (typeof res === 'string') {
-            await interaction.reply(res);
-        } else {
-            await interaction.reply({ embeds: [res] });
+        try {
+            const player = interaction.options.getUser('player') ?? interaction.user;
+            const page = interaction.options.getInteger('page') ?? 1;
+            const playerId = await characters.ensureAndGetId(player);
+            const res = await showSales(playerId, page);
+            if (typeof res === 'string') {
+                await interaction.reply(res);
+            } else {
+                await interaction.reply({ embeds: [res] });
+            }
+        } catch (error) {
+            logger.error('Failed to show sales:', error);
+            await interaction.reply({ content: 'Failed to show sales. Please try again.', ephemeral: true });
         }
     },
 };
