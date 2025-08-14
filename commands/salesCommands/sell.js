@@ -22,33 +22,42 @@ module.exports = {
                 .setDescription('Price per item (defaults to 0)')
         ),
     async execute(interaction) {
-        const user = interaction.user;
-        const charId = await characters.ensureAndGetId(user);
-
-        const rawItem = interaction.options.getString('item');
-        const price = interaction.options.getInteger('price') ?? 0;
-        const qty = interaction.options.getInteger('quantity') ?? 1;
-
-        let itemCode;
         try {
-            itemCode = await items.resolveItemCode(rawItem);
-        } catch (err) {
-            await interaction.reply({ content: `Could not resolve \"${rawItem}\": ${err.message}`, ephemeral: true });
-            return;
-        }
+            const user = interaction.user;
+            const charId = await characters.ensureAndGetId(user);
 
-        const res = await postSale({ userId: charId, itemCode, price, quantity: qty });
+            const rawItem = interaction.options.getString('item');
+            const price = interaction.options.getInteger('price') ?? 0;
+            const qty = interaction.options.getInteger('quantity') ?? 1;
 
-        if (!res.ok) {
-            if (res.reason === 'not_enough') {
-                await interaction.reply({ content: `You have ${res.owned} but need ${res.needed}.`, ephemeral: true });
-            } else {
-                await interaction.reply({ content: 'Failed to list that sale.', ephemeral: true });
+            let itemCode;
+            try {
+                itemCode = await items.resolveItemCode(rawItem);
+            } catch (err) {
+                await interaction.reply({ content: `Could not resolve \"${rawItem}\": ${err.message}`, ephemeral: true });
+                return;
             }
-            return;
-        }
 
-        const emoji = clientManager.getEmoji('Gold') ?? '';
-        await interaction.reply(`Listed ${qty} × ${res.itemCode} for ${emoji}${price} each on the marketplace.`);
+            const res = await postSale({ userId: charId, itemCode, price, quantity: qty });
+
+            if (!res.ok) {
+                if (res.reason === 'not_enough') {
+                    await interaction.reply({ content: `You have ${res.owned} but need ${res.needed}.`, ephemeral: true });
+                } else {
+                    await interaction.reply({ content: 'Failed to list that sale.', ephemeral: true });
+                }
+                return;
+            }
+
+            const emoji = clientManager.getEmoji('Gold') ?? '';
+            await interaction.reply(`Listed ${qty} × ${res.itemCode} for ${emoji}${price} each on the marketplace.`);
+        } catch (err) {
+            console.error(err.stack);
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp({ content: 'Failed to process your request.', ephemeral: true });
+            } else {
+                await interaction.reply({ content: 'Failed to process your request.', ephemeral: true });
+            }
+        }
     }
 };

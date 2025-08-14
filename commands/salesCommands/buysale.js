@@ -14,15 +14,24 @@ module.exports = {
                 .setRequired(true)
         ),
     async execute(interaction) {
-        const saleID = interaction.options.getString('saleid');
-        const userTag = interaction.user.tag;
-        const userID = await characters.ensureAndGetId(interaction.user);
-        let replyString = await buySale(saleID, userTag, userID);
-        //if embed, display embed, otherwise display string
-        if (typeof (replyString) == 'string') {
-            await interaction.reply(replyString);
-        } else {
-            await interaction.reply({ embeds: [replyString] });
+        try {
+            const saleID = interaction.options.getString('saleid');
+            const userTag = interaction.user.tag;
+            const userID = await characters.ensureAndGetId(interaction.user);
+            let replyString = await buySale(saleID, userTag, userID);
+            //if embed, display embed, otherwise display string
+            if (typeof (replyString) == 'string') {
+                await interaction.reply(replyString);
+            } else {
+                await interaction.reply({ embeds: [replyString] });
+            }
+        } catch (err) {
+            console.error(err.stack);
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp({ content: 'Failed to process your request.', ephemeral: true });
+            } else {
+                await interaction.reply({ content: 'Failed to process your request.', ephemeral: true });
+            }
         }
     },
 };
