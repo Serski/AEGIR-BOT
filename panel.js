@@ -11,6 +11,7 @@ const dbm = require('./database-manager');
 const dataGetters = require('./dataGetters');
 const clientManager = require('./clientManager');
 const db = require('./pg-client');
+const inventory = require('./db/inventory');
 
 function selectRow() {
   return new ActionRowBuilder().addComponents(
@@ -66,19 +67,21 @@ module.exports = {
       return [embed, []];
     }
 
-    const { rows } = await db.query(
-      `SELECT vi.character_id,
-              vi.item_id,
-              vi.quantity,
-              vi.name,
-              vi.category,
-              COALESCE(it.data->>'icon', it.data->'infoOptions'->>'Icon', '') AS icon
-         FROM v_inventory vi
-         LEFT JOIN items it ON vi.item_id = it.id
-        WHERE vi.character_id = $1
-        ORDER BY vi.category, vi.name`,
-      [charID]
-    );
+    const rows = await inventory.getInventoryView(charID);
+
+    const itemIds = [...new Set(rows.map((r) => r.item_id))];
+    let iconMap = {};
+    if (itemIds.length > 0) {
+      const { rows: iconRows } = await db.query(
+        `SELECT id, COALESCE(data->>'icon', data->'infoOptions'->>'Icon', '') AS icon
+           FROM items
+          WHERE id = ANY($1)`,
+        [itemIds]
+      );
+      for (const r of iconRows) {
+        iconMap[r.id] = r.icon || '';
+      }
+    }
 
     const inventory = {};
     for (const row of rows) {
@@ -88,7 +91,11 @@ module.exports = {
       }
       const category = row.category || 'Misc';
       if (!inventory[category]) inventory[category] = [];
-      inventory[category].push({ item: row.name, qty: Number(row.quantity), icon: row.icon || '' });
+      inventory[category].push({
+        item: row.name,
+        qty: Number(row.quantity),
+        icon: iconMap[row.item_id] || '',
+      });
     }
 
     const categories = Object.keys(inventory).sort();
@@ -181,22 +188,25 @@ module.exports = {
       return [embed, []];
     }
 
-    const { rows } = await db.query(
-      `SELECT vi.character_id,
-              vi.item_id,
-              vi.quantity,
-              vi.name,
-              COALESCE(it.data->>'icon', it.data->'infoOptions'->>'Icon', '') AS icon
-         FROM v_inventory vi
-         LEFT JOIN items it ON vi.item_id = it.id
-        WHERE vi.character_id = $1
-          AND vi.category = 'Resources'
-        ORDER BY vi.name`,
-      [charID]
-    );
+    const rows = await inventory.getInventoryView(charID);
+    const resourceRows = rows.filter((r) => r.category === 'Resources');
 
-    const items = rows
-      .map((r) => ({ item: r.name, qty: Number(r.quantity), icon: r.icon || '' }))
+    const itemIds = [...new Set(resourceRows.map((r) => r.item_id))];
+    let iconMap = {};
+    if (itemIds.length > 0) {
+      const { rows: iconRows } = await db.query(
+        `SELECT id, COALESCE(data->>'icon', data->'infoOptions'->>'Icon', '') AS icon
+           FROM items
+          WHERE id = ANY($1)`,
+        [itemIds]
+      );
+      for (const r of iconRows) {
+        iconMap[r.id] = r.icon || '';
+      }
+    }
+
+    const items = resourceRows
+      .map((r) => ({ item: r.name, qty: Number(r.quantity), icon: iconMap[r.item_id] || '' }))
       .sort((a, b) => a.item.localeCompare(b.item));
 
     const pages = Math.max(1, Math.ceil(items.length / itemsPerPage));
