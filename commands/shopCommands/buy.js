@@ -1,6 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const pool = require('../../pg-client');
 const inventory = require('../../db/inventory');
+const characters = require('../../db/characters');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -18,7 +19,7 @@ module.exports = {
         .setMinValue(1)
     ),
   async execute(interaction) {
-    const userId = interaction.user.id;
+    const userId = await characters.ensureAndGetId(interaction.user);
     const itemCode = interaction.options.getString('item_code');
     const qty = interaction.options.getInteger('quantity') ?? 1;
 
