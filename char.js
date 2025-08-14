@@ -7,7 +7,6 @@ const db = require('./pg-client');
 const { grantItemToPlayer, ensureItem } = require('./inventory-grants');
 const inventory = require('./db/inventory');
 const itemsDB = require('./db/items');
-const charactersDB = require('./db/characters');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, createWebhook } = require('discord.js');
 // No configuration fields are required from config.js in this module.
 
@@ -650,7 +649,7 @@ class char {
       let returnEmbed = new EmbedBuilder();
       const userID = charID;
       const charactersCollection = 'characters';
-      let charData = await charactersDB.getById(charID);
+      let charData = await dbm.loadFile('characters', charID);
     let itemData = await itemsDB.getItemByNameOrCode(itemName);
     if (!itemData) {
       return "Item not found!";
@@ -839,7 +838,7 @@ class char {
       returnEmbed.addFields({ name: '**Items:**', value: itemString });
     }
 
-    await charactersDB.update(charID, charData);
+    await dbm.saveFile('characters', charID, charData);
 
       //If theres an error, give 
     if (takeRoles) {

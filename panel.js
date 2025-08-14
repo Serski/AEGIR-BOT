@@ -83,22 +83,22 @@ module.exports = {
       }
     }
 
-    const inventory = {};
+    const inventoryMap = {};
     for (const row of rows) {
       const catLower = (row.category || '').toLowerCase();
       if (catLower === 'ships' || catLower === 'ship' || catLower === 'resources' || catLower === 'resource') {
         continue;
       }
       const category = row.category || 'Misc';
-      if (!inventory[category]) inventory[category] = [];
-      inventory[category].push({
+      if (!inventoryMap[category]) inventoryMap[category] = [];
+      inventoryMap[category].push({
         item: row.name,
         qty: Number(row.quantity),
         icon: iconMap[row.item_id] || '',
       });
     }
 
-    const categories = Object.keys(inventory).sort();
+    const categories = Object.keys(inventoryMap).sort();
     if (categories.length === 0) {
       const embed = new EmbedBuilder()
         .setTitle('Inventory')
@@ -112,7 +112,7 @@ module.exports = {
     let currPageLength = 0;
     let i = 0;
     for (const category of categories) {
-      const length = inventory[category].length;
+      const length = inventoryMap[category].length;
       currPageLength += length;
       if (currPageLength > itemsPerPage) {
         currPageLength = length;
@@ -138,7 +138,7 @@ module.exports = {
         endSpaces = '-'.repeat(20 - category.length - 2);
       }
       descriptionText += `**\`--${category}${endSpaces}\`**\n`;
-      descriptionText += inventory[category]
+      descriptionText += inventoryMap[category]
         .map(({ item, qty, icon }) => {
           let alignSpaces = ' ';
           if (30 - item.length - ('' + qty).length > 0) {

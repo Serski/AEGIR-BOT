@@ -1,36 +1,32 @@
-// db/characters.js
-const db = require('../pg-client');
+const pool = require('../pg-client');
 
-async function getById(id) {
-  const { rows } = await db.query(
-    'SELECT data FROM characters WHERE id = $1',
-    [id]
-  );
-  return rows[0]?.data || null;
+function asTag(user) {
+  return (user.tag || `${user.username}${user.discriminator ? '#' + user.discriminator : ''}`).toLowerCase();
 }
 
-async function update(id, data) {
-  await db.query(
-    'UPDATE characters SET data = $2 WHERE id = $1',
-    [id, data]
-  );
-}
+exports.ensureAndGetId = async (user) => {
+  const numeric = String(user.id);
+  const uname   = user.username.toLowerCase();
+  const tag     = asTag(user);
 
-async function ensure(user) {
-  const charId = user.id;
-  await db.query(
-    `INSERT INTO characters (id, data)
-     VALUES ($1, $2)
-     ON CONFLICT (id) DO NOTHING`,
-    [
-      charId,
-      JSON.stringify({
-        name: user.username,
-        created_at: new Date().toISOString(),
-      }),
-    ]
+  const find = await pool.query(
+    `SELECT id
+       FROM characters
+      WHERE lower(id) IN ($1,$2)
+         OR data->>'numeric_id' = $3
+      LIMIT 1`,
+    [uname, tag, numeric]
   );
-  return charId;
-}
+  if (find.rows.length) return find.rows[0].id;
 
-module.exports = { getById, update, ensure };
+  const data = {
+    tag: (user.tag || null),
+    numeric_id: numeric,
+    created_at: new Date().toISOString()
+  };
+  await pool.query(
+    `INSERT INTO characters (id, data) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING`,
+    [uname, JSON.stringify(data)]
+  );
+  return uname;
+};
