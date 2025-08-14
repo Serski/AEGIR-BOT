@@ -398,33 +398,34 @@ class char {
   }
 
   static async say(userID, message, channelID) {
-    let charData = await dbm.loadFile('characters', userID);
-    if (charData) {
-      let webhookName = charData.name;
-      //if charData.icon is undefined, set it to the default avatar
-      let webhookAvatar = charData.icon ? charData.icon : 'https://cdn.discordapp.com/attachments/890351376004157440/1332678517888126986/NEW_LOGO_CLEAN_smallish.png?ex=6798c416&is=67977296&hm=ada5afdd0bcb677d3a0a1ca6aabe55f554810e3044048ac4e5cd85d0d73e7f0d&';
-      let webhookMessage = message;
-
-      try {
-        // Create a webhook
-        let webhook = await channelID.createWebhook({ name: webhookName, avatar: webhookAvatar });
-
-        // Send a message using the webhook
-        await webhook.send({
-          content: webhookMessage,
-          username: webhookName,
-          avatarURL: webhookAvatar,
-        });
-
-        // Delete the webhook after sending the message
-        await webhook.delete();
-
-        return "Message sent!";
-      } catch (error) {
-        throw error;
-      }
-    } else {
+    const { rows } = await db.query('SELECT data FROM characters WHERE id = $1', [userID]);
+    const charData = rows[0]?.data;
+    if (!charData) {
       return "You haven't made a character! Use /newchar first";
+    }
+
+    let webhookName = charData.name;
+    //if charData.icon is undefined, set it to the default avatar
+    let webhookAvatar = charData.icon ? charData.icon : 'https://cdn.discordapp.com/attachments/890351376004157440/1332678517888126986/NEW_LOGO_CLEAN_smallish.png?ex=6798c416&is=67977296&hm=ada5afdd0bcb677d3a0a1ca6aabe55f554810e3044048ac4e5cd85d0d73e7f0d&';
+    let webhookMessage = message;
+
+    try {
+      // Create a webhook
+      let webhook = await channelID.createWebhook({ name: webhookName, avatar: webhookAvatar });
+
+      // Send a message using the webhook
+      await webhook.send({
+        content: webhookMessage,
+        username: webhookName,
+        avatarURL: webhookAvatar,
+      });
+
+      // Delete the webhook after sending the message
+      await webhook.delete();
+
+      return "Message sent!";
+    } catch (error) {
+      throw error;
     }
   }
 
