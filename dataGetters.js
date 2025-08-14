@@ -8,7 +8,7 @@ class dataGetters {
     if (direct.rows[0]) return idStr;
 
     const res = await db.query(
-      "SELECT id FROM characters WHERE data->>'numericID' = $1",
+      "SELECT id FROM characters WHERE data->>'numeric_id' = $1",
       [idStr]
     );
     return res.rows[0]?.id || 'ERROR';

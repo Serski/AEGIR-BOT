@@ -44,8 +44,8 @@ after(() => {
 
 test('getCharFromNumericID retrieves matching character', async (t) => {
   const ids = await insertCharacters(pool, [
-    { id: 'UserOne#0001', data: { numericID: 101 } },
-    { id: 'UserTwo#0002', data: { numericID: 202 } }
+    { id: 'UserOne#0001', data: { numeric_id: 101 } },
+    { id: 'UserTwo#0002', data: { numeric_id: 202 } }
   ]);
 
   t.after(() => cleanupCharacters(pool, ids));
