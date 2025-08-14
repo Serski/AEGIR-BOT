@@ -281,6 +281,20 @@ module.exports = {
   },
 
   shipsEmbed: async function (charID, page = 1) {
+    charID = await dataGetters.getCharFromNumericID(charID);
+    page = Number(page);
+    let charExists = false;
+    if (charID !== 'ERROR') {
+      const { rows } = await db.query('SELECT 1 FROM characters WHERE id = $1', [charID]);
+      charExists = rows.length > 0;
+    }
+    if (charID === 'ERROR' || !charExists) {
+      const embed = new EmbedBuilder()
+        .setColor(0x36393e)
+        .setDescription('Character not found.');
+      return [embed, []];
+    }
+
     let [embed, rows] = await shop.createCategoryEmbed(
       charID,
       'Ships',
