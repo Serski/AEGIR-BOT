@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
-const char = require('../../char'); // Importing the database manager
+const characters = require('../../db/characters');
+const db = require('../../pg-client');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -9,14 +10,14 @@ module.exports = {
         .addIntegerOption(option => option.setName('gold').setDescription('The amount of gold to set').setRequired(true))
         .setDefaultMemberPermissions(0),
     async execute(interaction) {
-        const player = interaction.options.getUser('player').toString();
+        await characters.ensureAndGetId(interaction.user);
+        const targetUser = interaction.options.getUser('player');
+        const playerId = await characters.ensureAndGetId(targetUser);
         const gold = interaction.options.getInteger('gold');
-        const response = await char.setPlayerGold(player, gold);
-
-        if (response) {
-            return interaction.reply(`Set gold to ${gold} for ${player}`);
-        } else {
-            return interaction.reply('Something went wrong');
-        }
+        await db.query(
+            'INSERT INTO balances (id, amount) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET amount = EXCLUDED.amount',
+            [playerId, gold]
+        );
+        return interaction.reply(`Set gold to ${gold} for ${targetUser}`);
     },
 };
