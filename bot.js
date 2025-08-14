@@ -53,6 +53,7 @@ if (!token || !clientId || !guildId) {
 const Discord           = require('discord.js');
 const interactionHandler = require('./interaction-handler');
 const char               = require('./char');
+const db                 = require('./pg-client');
 const dbm                = require('./database-manager');
 const admin              = require('./admin');
 
@@ -125,11 +126,7 @@ client.on('guildMemberRemove', member => {
 client.on('userUpdate', async (oldUser, newUser) => {
   const oldName = oldUser.tag;
   const newName = newUser.tag;
-  const data = await dbm.loadFile('characters', oldName);
-  if (data) {
-    await dbm.saveFile('characters', newName, data);
-    await dbm.docDelete('characters', oldName);
-  }
+  await db.query('UPDATE characters SET id=$1 WHERE id=$2', [newName, oldName]);
 });
 
 function botMidnightLoop() {
