@@ -65,7 +65,7 @@ test('postSale handles inventory operations correctly', async () => {
   // success path
   inventory._setGetCount(async () => 5);
   inventory._setTake(async (_u, _i, qty) => qty);
-  let res = await postSale({ userId: 'user1', rawItem: 'sword', price: 10, quantity: 2 });
+  let res = await postSale({ userId: 'user1', itemCode: 'sword', price: 10, quantity: 2 });
   assert.equal(res.ok, true);
   assert.equal(res.itemCode, 'sword');
   assert.equal(res.price, 10);
@@ -77,7 +77,7 @@ test('postSale handles inventory operations correctly', async () => {
   // not enough items
   inventory._setGetCount(async () => 1);
   inventory._setTake(async () => { throw new Error('should not be called'); });
-  res = await postSale({ userId: 'user1', rawItem: 'sword', price: 10, quantity: 5 });
+  res = await postSale({ userId: 'user1', itemCode: 'sword', price: 10, quantity: 5 });
   assert.deepEqual(res, { ok: false, reason: 'not_enough', owned: 1, needed: 5 });
   ;({ rows } = await pool.query('SELECT * FROM marketplace'));
   assert.equal(rows.length, 1); // no new row
@@ -85,7 +85,7 @@ test('postSale handles inventory operations correctly', async () => {
   // concurrent change during take
   inventory._setGetCount(async () => 5);
   inventory._setTake(async (_u, _i, qty) => qty - 1);
-  res = await postSale({ userId: 'user1', rawItem: 'sword', price: 10, quantity: 3 });
+  res = await postSale({ userId: 'user1', itemCode: 'sword', price: 10, quantity: 3 });
   assert.deepEqual(res, { ok: false, reason: 'concurrent_change' });
   ;({ rows } = await pool.query('SELECT * FROM marketplace'));
   assert.equal(rows.length, 1); // still only the first successful sale

@@ -8,8 +8,10 @@ const logger = require('./logger');
 // Create a marketplace listing for the provided item. Items are removed from the
 // seller's inventory immediately and held until the sale is purchased or
 // cancelled.
-async function postSale({ userId, rawItem, price = 0, quantity = 1 }) {
-  const itemCode = await items.resolveItemCode(rawItem);
+//
+// `itemCode` must already be resolved to a valid item identifier before calling
+// this function.
+async function postSale({ userId, itemCode, price = 0, quantity = 1 }) {
 
   const owned = await inventory.getCount(userId, itemCode);
   if (owned < quantity) {

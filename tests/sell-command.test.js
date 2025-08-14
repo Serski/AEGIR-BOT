@@ -22,7 +22,7 @@ test('/sell lists item and ensures character', async (t) => {
   mockModule(path.join(root, 'marketplace.js'), {
     postSale: async (args) => {
       postArgs = args;
-      return { ok: true, itemCode: args.rawItem, price: args.price, quantity: args.quantity };
+      return { ok: true, itemCode: args.itemCode, price: args.price, quantity: args.quantity };
     },
   });
   mockModule(path.join(root, 'db', 'items.js'), {
@@ -62,7 +62,7 @@ test('/sell lists item and ensures character', async (t) => {
   await command.execute(interaction);
 
   assert.equal(ensureCalled, true);
-  assert.deepEqual(postArgs, { userId: 'charX', rawItem: 'sword', price: 0, quantity: 1 });
+  assert.deepEqual(postArgs, { userId: 'charX', itemCode: 'sword', price: 0, quantity: 1 });
   assert.equal(replyPayload, 'Listed 1 × sword for 0 each on the marketplace.');
 
   t.after(() => {

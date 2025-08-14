@@ -37,7 +37,7 @@ module.exports = {
             return;
         }
 
-        const res = await postSale({ userId: charId, rawItem: itemCode, price, quantity: qty });
+        const res = await postSale({ userId: charId, itemCode, price, quantity: qty });
 
         if (!res.ok) {
             if (res.reason === 'not_enough') {
