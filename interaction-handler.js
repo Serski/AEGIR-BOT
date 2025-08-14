@@ -196,8 +196,10 @@ const itemSwitch = async (interaction) => {
   await interaction.update({ embeds: [edittedEmbed], components: [rows]});
 };
 const balaSwitch = async (interaction) => {
-  let [edittedEmbed, rows] = await char.balanceAll(interaction.customId[11])
-  await interaction.update({ embeds: [edittedEmbed], components: rows});
+  const { balanceAll } = require('./commands/charCommands/balanceall');
+  const page = parseInt(interaction.customId.substring(11), 10);
+  const [edittedEmbed, rows] = await balanceAll(page);
+  await interaction.update({ embeds: [edittedEmbed], components: rows });
 };
 const helpSwitch = async (interaction) => {
   //This one is odder, will either have the 11th character be "A" or "R" for admin or regular help. The 12th character will be the page number.
