@@ -22,10 +22,26 @@ async function resolveItemCode(raw) {
 
 async function getItemMetaByCode(itemCode) {
   const { rows } = await pool.query(
-    `SELECT id AS item_code, data->>'name' AS name, data->>'category' AS category
-     FROM items WHERE id = $1`, [itemCode]
+    `SELECT id AS item_code,
+            data->>'name' AS name,
+            data->>'category' AS category,
+            COALESCE(data->>'icon', data->'infoOptions'->>'Icon') AS icon
+       FROM items WHERE id = $1`,
+    [itemCode]
   );
   return rows[0] || null;
 }
 
-module.exports = { resolveItemCode, getItemMetaByCode };
+// Fetch a full item row (including JSON data) by item code or name
+async function getItemByNameOrCode(term) {
+  const { rows } = await pool.query(
+    `SELECT id AS item_code, data
+       FROM items
+      WHERE id = $1 OR LOWER(data->>'name') = LOWER($1)
+      LIMIT 1`,
+    [term]
+  );
+  return rows[0] || null;
+}
+
+module.exports = { resolveItemCode, getItemMetaByCode, getItemByNameOrCode };

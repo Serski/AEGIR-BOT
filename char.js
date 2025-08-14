@@ -5,6 +5,9 @@ const logger = require('./logger');
 const axios = require('axios');
 const db = require('./pg-client');
 const { grantItemToPlayer, ensureItem } = require('./inventory-grants');
+const inventory = require('./db/inventory');
+const itemsDB = require('./db/items');
+const charactersDB = require('./db/characters');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, createWebhook } = require('discord.js');
 // No configuration fields are required from config.js in this module.
 
@@ -633,31 +636,34 @@ class char {
     //   'Show Image', 'Show Message', 'Give/Take Money (#)', 'Cooldown in Hours (#)',
     //   'Give Item', 'Give Item 2', 'Give Item 3', 'Give Item 4', 'Give Item 5',
     //   'Take Item', 'Take Item 2', 'Take Item 3', 'Take Item 4', 'Take Item 5',
-    //   'Change Legitimacy (#)', 'Change Prestige (#)', 'Change Martial (#)', 'Change Intrigue (#)', 'Change Devotion (#)', 'Revive (Y/N)', 'Durability (#)'
-    // ];
-    let shopData = await dbm.loadCollection('shop');
-    itemName = await shop.findItemName(itemName, shopData);
+      //   'Change Legitimacy (#)', 'Change Prestige (#)', 'Change Martial (#)', 'Change Intrigue (#)', 'Change Devotion (#)', 'Revive (Y/N)', 'Durability (#)'
+      // ];
+      itemName = await shop.findItemName(itemName);
 
-    if (!numToUse) {
-      numToUse = 1;
-    } else if (numToUse < 1) {
-      return "Must use at least 1";
+      if (!numToUse) {
+        numToUse = 1;
+      } else if (numToUse < 1) {
+        return "Must use at least 1";
+      }
+
+      let returnEmbed = new EmbedBuilder();
+      const userID = charID;
+      const charactersCollection = 'characters';
+      let charData = await charactersDB.getById(charID);
+    let itemData = await itemsDB.getItemByNameOrCode(itemName);
+    if (!itemData) {
+      return "Item not found!";
     }
-
-    let returnEmbed = new EmbedBuilder();
-    const charactersCollection = 'characters';
-    let charData = await dbm.loadFile(charactersCollection, charID);
-    const shopCollection = 'shop';
-    let itemData = await dbm.loadFile(shopCollection, itemName);
-    const usageOptions = itemData.data?.usage ?? itemData.usageOptions;
+    const usageOptions = itemData.data?.usage ?? itemData.data?.usageOptions;
 
     let user = await clientManager.getUser(charData.numericID);
 
     //Check if user has item
 
-    if (!charData.inventory[itemName] || charData.inventory[itemName] < numToUse) {
-      return "You do not have enough of this item!";
-    }
+      const ownedQty = await inventory.getCount(charID, itemData.item_code);
+      if (ownedQty < numToUse) {
+        return "You do not have enough of this item!";
+      }
 
     if (usageOptions["Can Use Multiple (Y/N)"] != "Yes" && numToUse > 1) {
       return "You can only use one of this item!";
@@ -667,9 +673,9 @@ class char {
       return "Item is not usable!";
     }
 
-    if (usageOptions["Removed on Use (Y/N)"] == "Yes") {
-      charData.inventory[itemName] -= numToUse;
-    }
+      if (usageOptions["Removed on Use (Y/N)"] == "Yes") {
+        await inventory.take(charID, itemData.item_code, numToUse);
+      }
 
 
     //There are multiple role options, either Need Any Of Roles or Need All Of Roles. If Need Any Of Roles, check if user has any of the roles. If Need All Of Roles, check if user has all of the roles
@@ -736,7 +742,7 @@ class char {
       }
     }
 
-    returnEmbed.setTitle("**__Used:__ " + (numToUse > 1 ? numToUse + " " : "") + (itemData.data?.icon || itemData.infoOptions.Icon || '') + " " + itemName + "**");
+      returnEmbed.setTitle("**__Used:__ " + (numToUse > 1 ? numToUse + " " : "") + (itemData.data?.icon || itemData.data?.infoOptions?.Icon || '') + " " + itemName + "**");
 
     if (usageOptions["Show Image"].length > 0) {
       returnEmbed.setImage(usageOptions["Show Image"]);
@@ -780,29 +786,29 @@ class char {
         statString += stat + ": " + clientManager.getEmoji(stat) + (parseInt(value) < 0 ? parseInt(value) : "+" + parseInt(value)) +  "\n";
       }
 
-      if (key.startsWith("Give Item")) {
-        let item = value.split(" ").slice(1).join(" ");
-        let num = value.split(" ")[0];
-        num = parseInt(num) * numToUse;
-        if (!charData.inventory[item]) {
-          charData.inventory[item] = 0;
+        if (key.startsWith("Give Item")) {
+          let item = value.split(" ").slice(1).join(" ");
+          let num = parseInt(value.split(" ")[0]) * numToUse;
+          const code = await itemsDB.resolveItemCode(item);
+          await inventory.give(charID, code, num);
+          itemChanged = true;
+          const meta = await itemsDB.getItemMetaByCode(code);
+          itemString = meta.name + ": +" + parseInt(num) + "\n" + itemString;
         }
-        charData.inventory[item] += num;
-        itemChanged = true;
-        itemString = item + ": " +  (shopData[item].data?.icon || shopData[item].infoOptions.Icon || '') + "+" + parseInt(num) + "\n" + itemString;
-      }
 
-      if (key.startsWith("Take Item")) {
-        let item = value.split(" ").slice(1).join(" ");
-        let num = value.split(" ")[0];
-        num = parseInt(num) * numToUse;
-        if (!charData.inventory[item] || charData.inventory[item] < num) {
-          return "You do not have " + (shopData[item].data?.icon || shopData[item].infoOptions.Icon || '') + " " + num + " " + item;
+        if (key.startsWith("Take Item")) {
+          let item = value.split(" ").slice(1).join(" ");
+          let num = parseInt(value.split(" ")[0]) * numToUse;
+          const code = await itemsDB.resolveItemCode(item);
+          const have = await inventory.getCount(charID, code);
+          if (have < num) {
+            return "You do not have " + num + " " + item;
+          }
+          await inventory.take(charID, code, num);
+          itemChanged = true;
+          const meta = await itemsDB.getItemMetaByCode(code);
+          itemString += meta.name + ": -" + parseInt(num) + "\n";
         }
-        charData.inventory[item] -= num;
-        itemChanged = true;
-        itemString += item + ": " + (shopData[item].data?.icon || shopData[item].infoOptions.Icon || '') + "-" + parseInt(num) + "\n";
-      }
     }
 
     if (usageOptions["Give Role"]) {
@@ -832,7 +838,7 @@ class char {
       returnEmbed.addFields({ name: '**Items:**', value: itemString });
     }
 
-    await dbm.saveFile(charactersCollection, charID, charData);
+    await charactersDB.update(charID, charData);
 
       //If theres an error, give 
     if (takeRoles) {
@@ -1002,9 +1008,8 @@ class char {
 
   //Creates cooldowns embed, followed by a return string if any recipes are completed
   static async craftingCooldowns(charID) {
-    let charData = await dbm.loadCollection('characters');
-    let shopData = await dbm.loadCollection('shop');
-    let recipeData = await dbm.loadCollection('recipes');
+      let charData = await dbm.loadCollection('characters');
+      let recipeData = await dbm.loadCollection('recipes');
     let finishedCrafts = [];
 
     if (!charData[charID].cooldowns.craftSlots) {
@@ -1078,7 +1083,13 @@ class char {
             }
             charData[charID].inventory[rewardName] += rewardQuantity;
 
-            valueString += rewardName + ": " + (shopData[rewardName].data?.icon || shopData[rewardName].infoOptions.Icon || '') + "+" + rewardQuantity + "\n";
+              const rewardCode = await itemsDB.resolveItemCode(rewardName).catch(() => null);
+              let icon = '';
+              if (rewardCode) {
+                const meta = await itemsDB.getItemMetaByCode(rewardCode);
+                if (meta) icon = meta.icon || '';
+              }
+              valueString += rewardName + ": " + icon + "+" + rewardQuantity + "\n";
           }
         }
         if (valueString.length == 0) {
@@ -1547,10 +1558,9 @@ class char {
     return errorMembers;
   }
 
-  static async store(player, item, amount) {
-    let collectionName = 'characters';
-    let shopData = await dbm.loadCollection('shop');
-    item = await shop.findItemName(item, shopData);
+    static async store(player, item, amount) {
+      let collectionName = 'characters';
+      item = await shop.findItemName(item);
     let charData;
     [player, charData] = await this.findPlayerData(player);
     if (!player) {
@@ -1582,10 +1592,9 @@ class char {
     }
   }
 
-  static async grab(player, item, amount) {
-    let collectionName = 'characters';
-    let shopData = await dbm.loadCollection('shop');
-    item = await shop.findItemName(item, shopData);
+    static async grab(player, item, amount) {
+      let collectionName = 'characters';
+      item = await shop.findItemName(item);
     let charData;
     [player, charData] = await this.findPlayerData(player);
     if (!player) {
