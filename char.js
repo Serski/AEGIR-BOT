@@ -411,12 +411,13 @@ class char {
     }
   }
 
-  static async incomes(userID, numericID) {
+  static async incomes(charID) {
     let collectionName = 'characters';
 
     // Load the data
-    let charData = await dbm.loadFile(collectionName, userID);
+    let charData = await dbm.loadFile(collectionName, charID);
     let incomeListFromRoles = await dbm.loadFile('keys', 'incomeList');
+    const numericID = charData.numeric_id;
 
     var now = new Date();
 
@@ -517,11 +518,11 @@ class char {
       superstring += "\n";
     }
 
-    await this.changeBalance(userID, total);
+    await this.changeBalance(charID, total);
     superstring +=  clientManager.getEmoji("Gold") + " **__Total Gold :__** `" + total + "`\n";
 
     for (let [resource, amount] of Object.entries(resourceMap)) {
-      await this.changeInventory(userID, resource, amount);
+      await this.changeInventory(charID, resource, amount);
       superstring += clientManager.getEmoji(resource) + " **__Total " + resource + " :__** `" + amount + "`\n";
     }
 
@@ -544,7 +545,7 @@ class char {
     
     charData.incomeAvailable = false;
 
-    await dbm.saveFile(collectionName, userID, charData);
+    await dbm.saveFile(collectionName, charID, charData);
     
     const incomeEmbed = {
       color: 0x36393e,
