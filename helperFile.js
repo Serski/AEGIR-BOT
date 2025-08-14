@@ -1,22 +1,22 @@
 const dbm = require('./database-manager');
 const clientManager = require('./clientManager');
 const logger = require('./logger');
+const db = require('./pg-client');
 
-// Load the shop collection, add the "Need None Of Roles" field to each document's usageOptions, and save the collection back to the database
-// This is a one-time script to add the "Need None Of Roles" field to each document's usageOptions
+// Iterate through all items in the database and append the "Need None Of Roles" field
+// to each record's usageOptions. This is a one-time script to backfill the field.
 // Usage: node addNeedNoneOfRolesToShop.js
 async function addNeedNoneOfRolesToShop() {
-    // Load the shop collection
-    const shopCollection = await dbm.loadCollection('shop');
+    // Load all items from the database
+    const { rows } = await db.query('SELECT id, data FROM items');
 
-    // Add the "Need None Of Roles" field to each document's usageOptions
-    for (let shopItem in shopCollection) {
-        shopItem = shopCollection[shopItem];
-        shopItem.usageOptions["Need None Of Roles"] = "";
+    // Add the "Need None Of Roles" field to each item's usageOptions and update
+    for (const row of rows) {
+        const data = row.data || {};
+        if (!data.usageOptions) data.usageOptions = {};
+        data.usageOptions["Need None Of Roles"] = "";
+        await db.query('UPDATE items SET data = $2 WHERE id = $1', [row.id, data]);
     }
-
-    // Save the shop collection back to the database
-    await dbm.saveCollection('shop', shopCollection);
 }
 
 async function getResourceEmojis() {
