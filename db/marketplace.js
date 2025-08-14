@@ -14,7 +14,7 @@ async function listSales({ sellerId, limit, offset, cursor } = {}) {
   }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   let sql = `
-    SELECT id, name, item_code AS item_id, price, quantity, seller
+    SELECT id, name, item_id, price, quantity, seller
     FROM marketplace_v
     ${where}
     ORDER BY ${cursor ? 'id' : 'name NULLS LAST'}
