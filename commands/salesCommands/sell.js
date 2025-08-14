@@ -2,7 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const { postSale } = require('../../marketplace');
 const items = require('../../db/items');
 const clientManager = require('../../clientManager');
-const db = require('../../pg-client');
+const characters = require('../../db/characters');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -23,11 +23,8 @@ module.exports = {
         ),
     async execute(interaction) {
         const userId = interaction.user.id;
-        const { rowCount } = await db.query('SELECT 1 FROM characters WHERE id = $1', [userId]);
-        if (rowCount === 0) {
-            await interaction.reply({ content: "You haven't made a character! Use /newchar first", ephemeral: true });
-            return;
-        }
+        // ensure a characters row exists; no-op if it already does
+        await characters.ensure(interaction.user);
 
         const rawItem = interaction.options.getString('item');
         const price = interaction.options.getInteger('price') ?? 0;

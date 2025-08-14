@@ -16,4 +16,21 @@ async function update(id, data) {
   );
 }
 
-module.exports = { getById, update };
+async function ensure(user) {
+  const charId = user.id;
+  await db.query(
+    `INSERT INTO characters (id, data)
+     VALUES ($1, $2)
+     ON CONFLICT (id) DO NOTHING`,
+    [
+      charId,
+      JSON.stringify({
+        name: user.username,
+        created_at: new Date().toISOString(),
+      }),
+    ]
+  );
+  return charId;
+}
+
+module.exports = { getById, update, ensure };
