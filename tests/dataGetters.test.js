@@ -3,7 +3,6 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 
 const rootDir = path.resolve(__dirname, '..');
-const dbmPath = path.join(rootDir, 'database-manager.js');
 const dataGettersPath = path.join(rootDir, 'dataGetters.js');
 const pgClientPath = path.join(rootDir, 'pg-client.js');
 const loggerPath = path.join(rootDir, 'logger.js');
@@ -33,11 +32,9 @@ let pool;
   };
 })();
 
-const dbm = require(dbmPath);
 const dataGetters = require(dataGettersPath);
 
 after(() => {
-  delete require.cache[dbmPath];
   delete require.cache[dataGettersPath];
   delete require.cache[pgClientPath];
   delete require.cache[loggerPath];
@@ -45,8 +42,8 @@ after(() => {
 });
 
 test('getCharFromNumericID retrieves matching character', async () => {
-  await dbm.saveFile('characters', 'UserOne#0001', { numericID: 101 });
-  await dbm.saveFile('characters', 'UserTwo#0002', { numericID: 202 });
+  await pool.query('INSERT INTO characters (id, data) VALUES ($1, $2)', ['UserOne#0001', { numericID: 101 }]);
+  await pool.query('INSERT INTO characters (id, data) VALUES ($1, $2)', ['UserTwo#0002', { numericID: 202 }]);
 
   assert.equal(await dataGetters.getCharFromNumericID(202), 'UserTwo#0002');
   assert.equal(await dataGetters.getCharFromNumericID(999), 'ERROR');

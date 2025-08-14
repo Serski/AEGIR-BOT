@@ -67,6 +67,7 @@ test('buyItem stores stacks in inventory_items via transaction', async () => {
   const shopModule = await mockImport(shopPath, {
     './database-manager': dbmStub,
     './pg-client': dbStub,
+    './db/items': { getItemMetaByCode: async code => ({ item_code: code, name: code }) },
     './clientManager': { getUser: async () => ({ roles: { cache: { some: () => false }, add: () => {} } }) },
     './logger': { debug() {}, info() {}, error() {} },
     './char': { addShip: () => {} }
