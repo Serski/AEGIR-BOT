@@ -39,16 +39,12 @@ function selectRow() {
 
 module.exports = {
   mainEmbed: async function (charID) {
-    charID = await dataGetters.getCharFromNumericID(charID);
-    let charExists = false;
-    if (charID !== 'ERROR') {
-      const { rows } = await db.query(
-        'SELECT 1 FROM characters WHERE id = $1',
-        [charID]
-      );
-      charExists = rows.length > 0;
-    }
-    if (charID === 'ERROR' || !charExists) {
+    const { rows } = await db.query(
+      'SELECT 1 FROM characters WHERE id = $1',
+      [charID]
+    );
+    const charExists = rows.length > 0;
+    if (!charExists) {
       const embed = new EmbedBuilder()
         .setColor(0x36393e)
         .setDescription('Character not found.');
@@ -66,18 +62,14 @@ module.exports = {
   },
 
   inventoryEmbed: async function (charID, page = 1) {
-    charID = await dataGetters.getCharFromNumericID(charID);
     page = Number(page);
     const itemsPerPage = 25;
-    let charExists = false;
-    if (charID !== 'ERROR') {
-      const { rows } = await db.query(
-        'SELECT 1 FROM characters WHERE id = $1',
-        [charID]
-      );
-      charExists = rows.length > 0;
-    }
-    if (charID === 'ERROR' || !charExists) {
+    const { rows: charRows } = await db.query(
+      'SELECT 1 FROM characters WHERE id = $1',
+      [charID]
+    );
+    const charExists = charRows.length > 0;
+    if (!charExists) {
       const embed = new EmbedBuilder()
         .setColor(0x36393e)
         .setDescription('Character not found.');

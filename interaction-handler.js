@@ -8,6 +8,7 @@ const dbm = require('./database-manager');
 const db = require('./pg-client');
 const { ensureItem } = require('./inventory-grants');
 const { randomUUID } = require('crypto');
+const characters = require('./db/characters');
 
 const sanitizeCategory = (category) => {
   const sanitized = (category || '').trim().toLowerCase();
@@ -214,34 +215,38 @@ const helpSwitch = async (interaction) => {
 
 const panelInvSwitch = async (interaction) => {
   const page = parseInt(interaction.customId.slice(15));
-  let [edittedEmbed, rows] = await panel.inventoryEmbed(interaction.user.tag, page);
+  const charId = await characters.ensureAndGetId(interaction.user);
+  let [edittedEmbed, rows] = await panel.inventoryEmbed(charId, page);
   await interaction.update({ embeds: [edittedEmbed], components: rows });
 };
 
 const panelStoreSwitch = async (interaction) => {
   const page = parseInt(interaction.customId.slice(16));
-  let [edittedEmbed, rows] = await panel.storageEmbed(interaction.user.id, page);
+  const charId = await characters.ensureAndGetId(interaction.user);
+  let [edittedEmbed, rows] = await panel.storageEmbed(charId, page);
   await interaction.update({ embeds: [edittedEmbed], components: rows });
 };
 
 const panelShipSwitch = async (interaction) => {
   const page = parseInt(interaction.customId.slice(15));
-  let [edittedEmbed, rows] = await panel.shipsEmbed(interaction.user.id, page);
+  const charId = await characters.ensureAndGetId(interaction.user);
+  let [edittedEmbed, rows] = await panel.shipsEmbed(charId, page);
   await interaction.update({ embeds: [edittedEmbed], components: rows });
 };
 
 const panelSelect = async (interaction) => {
   const choice = interaction.values[0];
+  const charId = await characters.ensureAndGetId(interaction.user);
   let edittedEmbed;
   let rows;
   if (choice === 'inventory') {
-    [edittedEmbed, rows] = await panel.inventoryEmbed(interaction.user.tag, 1);
+    [edittedEmbed, rows] = await panel.inventoryEmbed(charId, 1);
   } else if (choice === 'resources') {
-    [edittedEmbed, rows] = await panel.storageEmbed(interaction.user.id, 1);
+    [edittedEmbed, rows] = await panel.storageEmbed(charId, 1);
   } else if (choice === 'ships') {
-    [edittedEmbed, rows] = await panel.shipsEmbed(interaction.user.id, 1);
+    [edittedEmbed, rows] = await panel.shipsEmbed(charId, 1);
   } else {
-    [edittedEmbed, rows] = await panel.mainEmbed(interaction.user.id);
+    [edittedEmbed, rows] = await panel.mainEmbed(charId);
   }
   await interaction.update({ embeds: [edittedEmbed], components: rows });
 };

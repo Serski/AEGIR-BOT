@@ -38,6 +38,7 @@ function setupHandler(panelImpl) {
   pool = new pgMem.Pool();
   stubModule('pg-client.js', { query: (text, params) => pool.query(text, params), pool });
   stubModule('panel.js', panelImpl);
+  stubModule('db/characters.js', { ensureAndGetId: async (user) => user.tag });
   delete require.cache[handlerPath];
   return require(handlerPath);
 }
@@ -100,7 +101,7 @@ function panelSelectTest(choice, expectedFn) {
     const interaction = createSelectInteraction(choice);
     await handler.handle(interaction);
     assert.equal(called.fn, expectedFn);
-    const expectedId = expectedFn === 'inventory' ? 'TestUser#0001' : '123456789012345678';
+    const expectedId = 'TestUser#0001';
     assert.equal(called.id, expectedId);
     if (called.page) assert.equal(called.page, 1);
     const expectedEmbed = {
@@ -137,7 +138,7 @@ function paginationTest(customId, expectedFn, expectedPage) {
     const interaction = createButtonInteraction(customId);
     await handler.handle(interaction);
     assert.equal(called.fn, expectedFn);
-    const expectedId = expectedFn === 'inventory' ? 'TestUser#0001' : '123456789012345678';
+    const expectedId = 'TestUser#0001';
     assert.deepEqual(called, { fn: expectedFn, id: expectedId, page: expectedPage });
     const expectedEmbed = {
       inventory: 'invEmbed',
