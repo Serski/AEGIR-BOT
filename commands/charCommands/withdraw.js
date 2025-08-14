@@ -1,5 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
-const char = require('../../char'); // Importing the database manager
+const characters = require('../../db/characters');
+const db = require('../../pg-client');
+const dbm = require('../../database-manager');
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -9,14 +11,22 @@ module.exports = {
             option.setName('quantity')
                 .setDescription('Quantity to withdraw')
                 .setRequired(true)),
-	async execute(interaction) {
-		const charID = interaction.user.tag;
+        async execute(interaction) {
+                const charID = await characters.ensureAndGetId(interaction.user);
         const quantity = interaction.options.getInteger('quantity');
-            let replyEmbed = await char.withdraw(charID, quantity);
-            if (typeof(replyEmbed) == 'string') {
-                await interaction.reply(replyEmbed);
-            } else {
-                await interaction.reply("Withdrew " + quantity + " gold from bank");
+            const charData = await dbm.loadFile('characters', charID);
+            if (!charData) {
+                return interaction.reply("You haven't made a character! Use /newchar first");
             }
-	},
+            if ((charData.bank || 0) < quantity) {
+                return interaction.reply("You don't have enough gold!");
+            }
+            await db.query(
+                'INSERT INTO balances (id, amount) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET amount = balances.amount + EXCLUDED.amount',
+                [charID, quantity]
+            );
+            charData.bank -= quantity;
+            await dbm.saveFile('characters', charID, charData);
+            await interaction.reply("Withdrew " + quantity + " gold from bank");
+        },
 };
