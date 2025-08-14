@@ -2,6 +2,7 @@
 
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { buySale } = require('../../marketplace');
+const characters = require('../../db/characters');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -15,7 +16,7 @@ module.exports = {
     async execute(interaction) {
         const saleID = interaction.options.getString('saleid');
         const userTag = interaction.user.tag;
-        const userID = interaction.user.id;
+        const userID = await characters.ensureAndGetId(interaction.user);
         let replyString = await buySale(saleID, userTag, userID);
         //if embed, display embed, otherwise display string
         if (typeof (replyString) == 'string') {

@@ -30,12 +30,9 @@ function mockModule(modulePath, mock) {
 test('createCategoryEmbed shows items for category', async () => {
   delete require.cache[require.resolve(shopPath)];
 
-  const dataGettersStub = { getCharFromNumericID: async (id) => id };
-
   mockModule(path.join(root, 'pg-client.js'), { query: async () => ({ rows: [{ character_id:'Player#0001', item_id:'Wood', quantity:2, name:'Wood', category:'Resources' }] }) });
   mockModule(path.join(root, 'db/inventory.js'), { getCount: async () => 0 });
   mockModule(path.join(root, 'clientManager.js'), { getEmoji: () => ':coin:' });
-  mockModule(path.join(root, 'dataGetters.js'), dataGettersStub);
   mockModule(path.join(root, 'logger.js'), { debug() {}, info() {}, error() {} });
   mockModule('discord.js', discordStub());
 
@@ -47,12 +44,9 @@ test('createCategoryEmbed shows items for category', async () => {
 test('createCategoryEmbed handles misc category', async () => {
   delete require.cache[require.resolve(shopPath)];
 
-  const dataGettersStub = { getCharFromNumericID: async (id) => id };
-
   mockModule(path.join(root, 'pg-client.js'), { query: async () => ({ rows: [{ character_id:'Player#0001', item_id:'Mystery', quantity:1, name:'Mystery', category:'Misc' }] }) });
   mockModule(path.join(root, 'db/inventory.js'), { getCount: async () => 0 });
   mockModule(path.join(root, 'clientManager.js'), { getEmoji: () => ':coin:' });
-  mockModule(path.join(root, 'dataGetters.js'), dataGettersStub);
   mockModule(path.join(root, 'logger.js'), { debug() {}, info() {}, error() {} });
   mockModule('discord.js', discordStub());
 

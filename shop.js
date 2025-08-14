@@ -1,7 +1,6 @@
 const db = require('./pg-client');
 const Discord = require('discord.js');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
-const dataGetters = require('./dataGetters');
 const logger = require('./logger');
 const items = require('./db/items');
 const inventoryModule = require('./db/inventory');
@@ -108,7 +107,6 @@ class shop {
   }
 
   static async createCategoryEmbed(charID, category, page = 1, idPrefix = 'panel_cat_page') {
-    charID = await dataGetters.getCharFromNumericID(charID);
     page = Number(page);
     const itemsPerPage = 25;
 
@@ -175,7 +173,6 @@ class shop {
   }
 
   static async createInventoryEmbed(charID, page = 1) {
-    charID = await dataGetters.getCharFromNumericID(charID);
     page = Number(page);
     const itemsPerPage = 25;
 

@@ -145,25 +145,6 @@ class char {
   }
 
   //New commands using saveFile, saveCollection, loadFile and loadCollection
-  static async balance(userID) {
-    let collectionName = 'characters';
-    let charData = await dbm.loadFile(collectionName, userID);
-    if (charData) {
-      const balance = await dbm.getBalance(userID);
-      const charEmbed = {
-        color: 0x36393e,
-        author: {
-          name: charData.name,
-          icon_url: charData.icon ? charData.icon : 'https://cdn.discordapp.com/attachments/890351376004157440/1332678517888126986/NEW_LOGO_CLEAN_smallish.png?ex=6798c416&is=67977296&hm=ada5afdd0bcb677d3a0a1ca6aabe55f554810e3044048ac4e5cd85d0d73e7f0d&',
-        },
-        description: clientManager.getEmoji("Gold") + " **" + balance + "**",
-      };
-      return charEmbed;
-    } else {
-      return "You haven't made a character! Use /newchar first";
-    }
-  }
-
   static async getShips(userID) {
     let collectionName = 'characters';
     let charData = await dbm.loadFile(collectionName, userID);
@@ -1626,72 +1607,6 @@ class char {
       } else {
         return "You don't have enough of that item!";
       }
-    }
-  }
-
-  static async deposit(player, gold) {
-    let collectionName = 'characters';
-    let charData;
-    [player, charData] = await this.findPlayerData(player);
-    if (!player) {
-      return "Error: Player not found";
-    }
-    if (!charData.bank) {
-      charData.bank = 0;
-    }
-    if (charData) {
-      const bal = await dbm.getBalance(player);
-      if (bal >= gold) {
-        await this.changeBalance(player, -gold);
-        charData.bank += gold;
-        await dbm.saveFile(collectionName, player, charData);
-        return true;
-      } else {
-        return "You don't have enough gold!";
-      }
-    }
-  }
-
-  static async withdraw(player, gold) {
-    let collectionName = 'characters';
-    let charData;
-    [player, charData] = await this.findPlayerData(player);
-    if (!player) {
-      return "Error: Player not found";
-    }
-    if (!charData.bank) {
-      charData.bank = 0;
-    }
-    if (charData) {
-      if (charData.bank >= gold) {
-        await this.changeBalance(player, gold);
-        charData.bank -= gold;
-        await dbm.saveFile(collectionName, player, charData);
-        return true;
-      } else {
-        return "You don't have enough gold!";
-      }
-    }
-  }
-
-  static async bank(userID) {
-    let collectionName = 'characters';
-    let charData = await dbm.loadFile(collectionName, userID);
-    if (charData) {
-      if (!charData.bank) {
-        charData.bank = 0;
-      }
-      const charEmbed = {
-        color: 0x36393e,
-        author: {
-          name: charData.name,
-          icon_url: charData.icon ? charData.icon : 'https://cdn.discordapp.com/attachments/890351376004157440/1332678517888126986/NEW_LOGO_CLEAN_smallish.png?ex=6798c416&is=67977296&hm=ada5afdd0bcb677d3a0a1ca6aabe55f554810e3044048ac4e5cd85d0d73e7f0d&',
-        },
-        description: clientManager.getEmoji("Gold") + " **" + charData.bank + "**",
-      };
-      return charEmbed;
-    } else {
-      return "You haven't made a character! Use /newchar first";
     }
   }
 

@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { pool } = require('../../pg-client');
+const characters = require('../../db/characters');
 
 async function findShopItem(term) {
   const { rows } = await pool.query(`
@@ -83,7 +84,7 @@ module.exports = {
   async execute(interaction) {
     const itemTerm = interaction.options.getString('item', true);
     const qty = interaction.options.getInteger('qty') ?? 1;
-    const playerId = interaction.user.id;
+    const playerId = await characters.ensureAndGetId(interaction.user);
     try {
       const result = await buy(playerId, itemTerm, qty);
       await interaction.reply(`Bought ${qty} × ${result.item.name} for ${result.priceTotal} gold.`);
