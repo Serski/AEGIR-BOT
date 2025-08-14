@@ -4,20 +4,7 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('
 const dataGetters = require('./dataGetters');
 const logger = require('./logger');
 const items = require('./db/items');
-
-let inventoryModule;
-try {
-  inventoryModule = require('./db/inventory');
-} catch (err) {
-  inventoryModule = null;
-}
-
-let dbm;
-try {
-  dbm = require('./database-manager');
-} catch (err) {
-  dbm = null;
-}
+const inventoryModule = require('./db/inventory');
 
 async function fetchShopItems() {
   const { rows } = await db.query(
@@ -363,16 +350,11 @@ class shop {
       return 'Not a valid item to purchase!';
     }
 
-    let currentBalance;
-    if (dbm && dbm.getBalance) {
-      currentBalance = await dbm.getBalance(charID);
-    } else {
-      const { rows: balRows } = await db.query(
-        'SELECT amount FROM balances WHERE id=$1',
-        [charID]
-      );
-      currentBalance = balRows[0]?.amount || 0;
-    }
+    const { rows: balRows } = await db.query(
+      'SELECT amount FROM balances WHERE id=$1',
+      [charID]
+    );
+    const currentBalance = balRows[0]?.amount || 0;
     const totalCost = price * numToBuy;
     if (currentBalance < totalCost) {
       return 'You do not have enough gold!';
@@ -380,11 +362,7 @@ class shop {
 
     const itemCode = meta.item_code;
     try {
-      if (inventoryModule) {
-        await inventoryModule.getCount(charID, itemCode);
-      } else {
-        await db.query('SELECT COUNT(*) FROM inventory_items WHERE owner_id=$1 AND item_id=$2', [charID, itemCode]);
-      }
+      await inventoryModule.getCount(charID, itemCode);
     } catch (err) {
       logger.error(err);
     }

@@ -46,7 +46,7 @@ test('createShopEmbed shows only items with numeric prices', async () => {
   const shopModule = await mockImport(shopPath, {
     './pg-client': dbStub,
     'discord.js': discordStub,
-    './database-manager': {},
+    './db/inventory': { getCount: async () => 0 },
     './clientManager': {},
     './dataGetters': {},
     './db/items': { getItemMetaByCode: async code => ({ item_code: code, name: code }) },

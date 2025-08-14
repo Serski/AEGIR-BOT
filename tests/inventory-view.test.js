@@ -64,12 +64,7 @@ const { newDb, DataType } = require('pg-mem');
 
   await pool.query('INSERT INTO items (id, category, data) VALUES ($1, $2, $3)', [itemName, category, {}]);
   await pool.query('INSERT INTO shop (id, name, item_id, price, data) VALUES ($1, $2, $3, $4, $5)', [itemName, itemName, itemName, 10, { channels: '', need_role: '', give_role: '' }]);
-
-  const dbmStub = {
-    loadFile: async () => ({ numericID: 'usernum' }),
-    getBalance: async () => 100,
-    saveFile: async () => {}
-  };
+  await pool.query('INSERT INTO balances (id, amount) VALUES ($1, $2)', ['Player#0001', 100]);
 
   const dbStub = {
     query: (text, params) => pool.query(text, params),
@@ -91,8 +86,8 @@ const { newDb, DataType } = require('pg-mem');
   };
 
   const shopModule = await mockImport(shopPath, {
-    './database-manager': dbmStub,
     './pg-client': dbStub,
+    './db/inventory': { getCount: async () => 0 },
     './db/items': { getItemMetaByCode: async code => ({ item_code: code, name: code }) },
     './clientManager': { getUser: async () => ({ roles: { cache: { some: () => false }, add: () => {} } }) },
     './logger': { debug() {}, info() {}, error() {} },

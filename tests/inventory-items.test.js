@@ -26,20 +26,10 @@ function mockModule(modulePath, mock) {
 }
 
 test('inventory embed shows non-stackable items', async () => {
-  const charData = {
-    'Player#0001': { numericID: 'player1' }
-  };
-  const shopData = {
-    Sword: { data: { category: 'Weapons', icon: ':sword:' } }
-  };
-  const dbmStub = {
-    loadCollection: async (col) => (col === 'characters' ? charData : shopData),
-    saveCollection: async () => {},
-  };
   const dataGettersStub = { getCharFromNumericID: async (id) => id };
 
-  mockModule(path.join(root, 'database-manager.js'), dbmStub);
   mockModule(path.join(root, 'pg-client.js'), { query: async () => ({ rows: [{ character_id:'Player#0001', item_id:'Sword', quantity:1, name:'Sword', category:'Weapons' }] }) });
+  mockModule(path.join(root, 'db/inventory.js'), { getCount: async () => 0 });
   mockModule(path.join(root, 'clientManager.js'), { getEmoji: () => ':coin:' });
   mockModule(path.join(root, 'dataGetters.js'), dataGettersStub);
   mockModule(path.join(root, 'logger.js'), { debug() {}, info() {}, error() {} });
@@ -51,20 +41,10 @@ test('inventory embed shows non-stackable items', async () => {
 });
 
 test('inventory embed includes legacy inline inventory', async () => {
-  const charData = {
-    'Player#0001': { numericID: 'player1' }
-  };
-  const shopData = {
-    Apple: { data: { category: 'Food', icon: ':apple:' } }
-  };
-  const dbmStub = {
-    loadCollection: async (col) => (col === 'characters' ? charData : shopData),
-    saveCollection: async () => {},
-  };
   const dataGettersStub = { getCharFromNumericID: async (id) => id };
 
-  mockModule(path.join(root, 'database-manager.js'), dbmStub);
   mockModule(path.join(root, 'pg-client.js'), { query: async () => ({ rows: [{ character_id:'Player#0001', item_id:'Apple', quantity:2, name:'Apple', category:'Food' }] }) });
+  mockModule(path.join(root, 'db/inventory.js'), { getCount: async () => 0 });
   mockModule(path.join(root, 'clientManager.js'), { getEmoji: () => ':coin:' });
   mockModule(path.join(root, 'dataGetters.js'), dataGettersStub);
   mockModule(path.join(root, 'logger.js'), { debug() {}, info() {}, error() {} });

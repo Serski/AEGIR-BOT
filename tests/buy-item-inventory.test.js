@@ -34,22 +34,14 @@ const shopPath = path.join(root, 'shop.js');
 
 test('buyItem stores stacks in inventory_items via transaction', async () => {
   let balance = 100;
-  let charData = { numericID: 'usernum' };
-
-  let saveCalled = false;
-  const dbmStub = {
-    loadFile: async () => charData,
-    getBalance: async () => balance,
-    saveFile: async () => { saveCalled = true; }
-  };
-
   const executed = [];
   const dbStub = {
-    query: async (text) => {
+    query: async (text, params) => {
       if (/FROM\s+shop_v/i.test(text)) {
-        const result = { rows: [{ id: 1, name: 'Apple', item_code: 'Apple', price: 10, category: 'Food' }] };
-        console.log('[test] shop_v rows', result.rows);
-        return result;
+        return { rows: [{ id: 1, name: 'Apple', item_code: 'Apple', price: 10, category: 'Food' }] };
+      }
+      if (/FROM\s+balances/i.test(text)) {
+        return { rows: [{ amount: balance }] };
       }
       return { rows: [] };
     },
@@ -57,16 +49,18 @@ test('buyItem stores stacks in inventory_items via transaction', async () => {
       const t = {
         query: async (text, params) => {
           executed.push(text);
+          if (/UPDATE balances/i.test(text)) {
+            balance -= params[0];
+          }
           return { rows: [] };
-        }
+        },
       };
       return cb(t);
-    }
+    },
   };
-
   const shopModule = await mockImport(shopPath, {
-    './database-manager': dbmStub,
     './pg-client': dbStub,
+    './db/inventory': { getCount: async () => 0 },
     './db/items': { getItemMetaByCode: async code => ({ item_code: code, name: code }) },
     './clientManager': { getUser: async () => ({ roles: { cache: { some: () => false }, add: () => {} } }) },
     './logger': { debug() {}, info() {}, error() {} },
@@ -77,7 +71,5 @@ test('buyItem stores stacks in inventory_items via transaction', async () => {
   assert.equal(reply, 'Succesfully bought 2 Apple');
   assert.ok(!executed.some(q => /INSERT INTO inventories/i.test(q)));
   assert.ok(executed.some(q => /INSERT INTO inventory_items/i.test(q)));
-  assert.ok(!saveCalled);
-  assert.strictEqual(charData.inventory, undefined);
 });
 
