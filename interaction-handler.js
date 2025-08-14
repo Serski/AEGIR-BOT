@@ -1,12 +1,10 @@
 const shop = require('./shop');
-const char = require('./char');
 const { createSalesEmbed } = require('./marketplace');
 const admin = require('./admin');
 const panel = require('./panel');
 const logger = require('./logger');
-const dbm = require('./database-manager');
 const db = require('./pg-client');
-const { ensureItem } = require('./inventory-grants');
+const { ensureItem, grantItemToPlayer } = require('./inventory-grants');
 const { randomUUID } = require('crypto');
 const characters = require('./db/characters');
 
@@ -121,47 +119,42 @@ const addItem = async (interaction) => {
 // }
 
 const newChar = async (interaction) => {
-  // Get the data entered by the user
-  const userID = interaction.user.tag;
-  const numericID = interaction.user.id;
+  const user = interaction.user;
   const charName = interaction.fields.getTextInputValue('charname');
   const charBio = interaction.fields.getTextInputValue('charbio');
 
-  // const eastAngliaRole = interaction.guild.roles.cache.find(role => role.name === "East Anglia");
-  // const eastAngliaID = eastAngliaRole.id;
-  // const gwyneddRole = interaction.guild.roles.cache.find(role => role.name === "Gwynedd");
-  // const gwyneddID = gwyneddRole.id;
-  // const wessexRole = interaction.guild.roles.cache.find(role => role.name === "Wessex");
-  // const wessexID = wessexRole.id;
-
-  //var userKingdom = "Error";
-
-  // Check the user's roles
-  // const userRoles = interaction.member.roles.cache;
-  // if (userRoles.has(eastAngliaID)) {
-  //   userKingdom = "East Anglia";
-  // }
-  // if (userRoles.has(gwyneddID)) {
-  //   if (userKingdom != "Error") {
-  //     userKingdom = "WHY DO YOU HAVE TWO KINGDOMS? SERSKI THIS IS A PROBLEM WE DO NOT ALLOW DUAL CITIZENS HERE";
-  //   } else {
-  //     userKingdom = "Gwynedd";
-  //   }
-  // } else if (userRoles.has(wessexID)) {
-  //   if (userKingdom != "Error") {
-  //     userKingdom = "WHY DO YOU HAVE TWO KINGDOMS? SERSKI THIS IS A PROBLEM WE DO NOT ALLOW DUAL CITIZENS HERE";
-  //   } else {
-  //     userKingdom = "Wessex";
-  //   }
-  // }
-
-  // Call the newChar function from the char class with the info
   if (charName && charBio) {
-    await char.newChar(userID, charName, charBio, numericID);
+    const charId = await characters.ensureAndGetId(user);
+    const data = {
+      name: charName,
+      bio: charBio,
+      ships: {},
+      incomeList: {},
+      incomeAvailable: true,
+      stats: {
+        Martial: 0,
+        Intrigue: 0,
+        Prestige: 0,
+        Devotion: 0,
+        Legitimacy: 0,
+      },
+      shireID: 0,
+      numeric_id: user.id,
+    };
+    await db.query(
+      `UPDATE characters SET data = $2 WHERE id = $1`,
+      [charId, data]
+    );
+    await db.query(
+      `INSERT INTO balances (id, amount) VALUES ($1, 200)
+       ON CONFLICT (id) DO NOTHING`,
+      [charId]
+    );
+    const tokenId = await ensureItem(db, 'Adventure Token', 'Misc');
+    await grantItemToPlayer(db, charId, tokenId, 1);
     await interaction.reply(`Character '${charName}' has been created.`);
   } else {
-    // Handle missing information
-    await interaction.reply({content: 'Character creation failed. Please provide a name and bio.', ephemeral: true});
+    await interaction.reply({ content: 'Character creation failed. Please provide a name and bio.', ephemeral: true });
   }
 };
 

@@ -1,3 +1,4 @@
+// DEPRECATED: legacy character helper. Use modules in ./db instead.
 const dbm = require('./database-manager'); // Importing the database manager
 const shop = require('./shop');
 const clientManager = require('./clientManager');
@@ -10,6 +11,7 @@ const itemsDB = require('./db/items');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, createWebhook } = require('discord.js');
 // No configuration fields are required from config.js in this module.
 
+/** @deprecated legacy character API */
 class char {
   static async warn(playerID) {
     let collectionName = 'characters';
