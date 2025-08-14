@@ -3,6 +3,7 @@ const Discord = require('discord.js');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const dataGetters = require('./dataGetters');
 const logger = require('./logger');
+const items = require('./db/items');
 
 let inventoryModule;
 try {
@@ -345,9 +346,13 @@ class shop {
   }
 
   static async buyItem(shopKey, charID, numToBuy, channelId) {
+    const meta = await items.getItemMetaByCode(shopKey);
+    if (!meta) {
+      return 'Item not found!';
+    }
     const { rows } = await db.query(
-      'SELECT id, name, item_code, price, category FROM shop_v WHERE LOWER(name)=LOWER($1) OR LOWER(item_code)=LOWER($1) ORDER BY name',
-      [shopKey]
+      'SELECT id, name, item_code, price, category FROM shop_v WHERE item_code = $1',
+      [meta.item_code]
     );
     if (!rows[0]) {
       return 'Item not found!';
@@ -373,7 +378,7 @@ class shop {
       return 'You do not have enough gold!';
     }
 
-    const itemCode = row.item_code;
+    const itemCode = meta.item_code;
     try {
       if (inventoryModule) {
         await inventoryModule.getCount(charID, itemCode);
@@ -404,7 +409,7 @@ class shop {
       }
     });
 
-    const itemName = row.name;
+    const itemName = meta.name || row.name;
     return 'Succesfully bought ' + numToBuy + ' ' + itemName;
   }
 }

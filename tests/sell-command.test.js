@@ -12,8 +12,8 @@ function mockModule(modulePath, mock) {
 
 test('/sell requires existing character', async (t) => {
   let postCalled = false;
-  mockModule(path.join(root, 'database-manager.js'), {
-    loadFile: async () => undefined,
+  mockModule(path.join(root, 'pg-client.js'), {
+    query: async () => ({ rows: [], rowCount: 0 })
   });
   mockModule(path.join(root, 'marketplace.js'), {
     postSale: async () => { postCalled = true; },
@@ -57,10 +57,10 @@ test('/sell requires existing character', async (t) => {
   });
 
   t.after(() => {
-    delete require.cache[require.resolve(path.join(root, 'database-manager.js'))];
     delete require.cache[require.resolve(path.join(root, 'marketplace.js'))];
     delete require.cache[require.resolve(path.join(root, 'db', 'items.js'))];
     delete require.cache[require.resolve(path.join(root, 'clientManager.js'))];
+    delete require.cache[require.resolve(path.join(root, 'pg-client.js'))];
     delete require.cache[require.resolve('discord.js')];
     delete require.cache[commandPath];
   });

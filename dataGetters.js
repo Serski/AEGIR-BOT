@@ -1,18 +1,17 @@
-const dbm = require('./database-manager');
+const db = require('./pg-client');
 
 class dataGetters {
   static async getCharFromNumericID(numericID) {
-    const chars = await dbm.loadCollection('characters');
-
-    // If caller already passed a character key (e.g., "serski"), accept it.
-    if (chars[numericID]) return numericID;
-
     const idStr = String(numericID);
-    for (const [charKey, data] of Object.entries(chars)) {
-      const stored = String(data?.numericID || data?.user_id || '');
-      if (stored === idStr) return charKey;
-    }
-    return 'ERROR';
+
+    const direct = await db.query('SELECT id FROM characters WHERE id = $1', [idStr]);
+    if (direct.rows[0]) return idStr;
+
+    const res = await db.query(
+      "SELECT id FROM characters WHERE data->>'numericID' = $1",
+      [idStr]
+    );
+    return res.rows[0]?.id || 'ERROR';
   }
 }
 

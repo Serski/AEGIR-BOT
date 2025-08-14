@@ -49,6 +49,7 @@ test('createShopEmbed shows only items with numeric prices', async () => {
     './database-manager': {},
     './clientManager': {},
     './dataGetters': {},
+    './db/items': { getItemMetaByCode: async code => ({ item_code: code, name: code }) },
     './logger': { debug() {}, info() {}, error() {} }
   });
 
