@@ -33,6 +33,7 @@ let pool;
 })();
 
 const dataGetters = require(dataGettersPath);
+const { insertCharacters, cleanupCharacters } = require('../test-helpers.cjs');
 
 after(() => {
   delete require.cache[dataGettersPath];
@@ -41,9 +42,13 @@ after(() => {
   if (pool) pool.end();
 });
 
-test('getCharFromNumericID retrieves matching character', async () => {
-  await pool.query('INSERT INTO characters (id, data) VALUES ($1, $2)', ['UserOne#0001', { numericID: 101 }]);
-  await pool.query('INSERT INTO characters (id, data) VALUES ($1, $2)', ['UserTwo#0002', { numericID: 202 }]);
+test('getCharFromNumericID retrieves matching character', async (t) => {
+  const ids = await insertCharacters(pool, [
+    { id: 'UserOne#0001', data: { numericID: 101 } },
+    { id: 'UserTwo#0002', data: { numericID: 202 } }
+  ]);
+
+  t.after(() => cleanupCharacters(pool, ids));
 
   assert.equal(await dataGetters.getCharFromNumericID(202), 'UserTwo#0002');
   assert.equal(await dataGetters.getCharFromNumericID(999), 'ERROR');
