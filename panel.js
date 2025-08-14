@@ -7,7 +7,6 @@ const {
   StringSelectMenuOptionBuilder,
 } = require('discord.js');
 const shop = require('./shop');
-const dbm = require('./database-manager');
 const dataGetters = require('./dataGetters');
 const clientManager = require('./clientManager');
 const db = require('./pg-client');
@@ -41,14 +40,25 @@ function selectRow() {
 module.exports = {
   mainEmbed: async function (charID) {
     charID = await dataGetters.getCharFromNumericID(charID);
-    const charData = await dbm.loadCollection('characters');
-    if (charID === 'ERROR' || !charData[charID]) {
+    let charExists = false;
+    if (charID !== 'ERROR') {
+      const { rows } = await db.query(
+        'SELECT 1 FROM characters WHERE id = $1',
+        [charID]
+      );
+      charExists = rows.length > 0;
+    }
+    if (charID === 'ERROR' || !charExists) {
       const embed = new EmbedBuilder()
         .setColor(0x36393e)
         .setDescription('Character not found.');
       return [embed, []];
     }
-    const balance = await dbm.getBalance(charID);
+    const { rows: balRows } = await db.query(
+      'SELECT amount FROM balances WHERE id = $1',
+      [charID]
+    );
+    const balance = balRows[0] ? Number(balRows[0].amount || 0) : 0;
     const embed = new EmbedBuilder()
       .setColor(0x36393e)
       .setDescription(`Classification accepted.\nBalance: ${clientManager.getEmoji('Gold')} **${balance}**\nAEGIR PANEL SYSTEM`);
@@ -59,8 +69,15 @@ module.exports = {
     charID = await dataGetters.getCharFromNumericID(charID);
     page = Number(page);
     const itemsPerPage = 25;
-    const charData = await dbm.loadCollection('characters');
-    if (charID === 'ERROR' || !charData[charID]) {
+    let charExists = false;
+    if (charID !== 'ERROR') {
+      const { rows } = await db.query(
+        'SELECT 1 FROM characters WHERE id = $1',
+        [charID]
+      );
+      charExists = rows.length > 0;
+    }
+    if (charID === 'ERROR' || !charExists) {
       const embed = new EmbedBuilder()
         .setColor(0x36393e)
         .setDescription('Character not found.');
@@ -180,8 +197,15 @@ module.exports = {
     charID = await dataGetters.getCharFromNumericID(charID);
     page = Number(page);
     const itemsPerPage = 25;
-    const charData = await dbm.loadCollection('characters');
-    if (charID === 'ERROR' || !charData[charID]) {
+    let charExists = false;
+    if (charID !== 'ERROR') {
+      const { rows } = await db.query(
+        'SELECT 1 FROM characters WHERE id = $1',
+        [charID]
+      );
+      charExists = rows.length > 0;
+    }
+    if (charID === 'ERROR' || !charExists) {
       const embed = new EmbedBuilder()
         .setColor(0x36393e)
         .setDescription('Character not found.');
