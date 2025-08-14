@@ -1,17 +1,20 @@
 const { SlashCommandBuilder } = require('discord.js');
-const char = require('../../char'); // Importing the database manager
+const characters = require('../../db/characters');
+const db = require('../../pg-client');
+const clientManager = require('../../clientManager');
 
 module.exports = {
-	data: new SlashCommandBuilder()
-		.setName('balance')
-		.setDescription('Show balance'),
-	async execute(interaction) {
-		const charID = interaction.user.tag;
-            let replyEmbed = await char.balance(charID);
-            if (typeof(replyEmbed) == 'string') {
-                await interaction.reply({ content: replyEmbed, ephemeral: true });
-            } else {
-                await interaction.reply({ embeds: [replyEmbed], ephemeral: true });
-            }
-	},
+    data: new SlashCommandBuilder()
+        .setName('balance')
+        .setDescription('Show balance'),
+    async execute(interaction) {
+        const charID = await characters.ensureAndGetId(interaction.user);
+        const { rows } = await db.query('SELECT amount FROM balances WHERE id=$1', [charID]);
+        const amount = rows[0]?.amount || 0;
+        const embed = {
+            color: 0x36393e,
+            description: `${clientManager.getEmoji('Gold')} **${amount}**`,
+        };
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+    },
 };
