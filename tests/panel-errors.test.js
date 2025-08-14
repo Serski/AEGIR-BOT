@@ -77,12 +77,13 @@ test('mainEmbed returns error when character data missing', async (t) => {
 });
 
 test('shipsEmbed returns error when character lookup fails', async (t) => {
+  let called = false;
   const { panel, cleanup } = loadPanelWithMocks({
-    './dataGetters.js': {},
+    './dataGetters.js': { getCharFromNumericID: async () => 'ERROR' },
     './database-manager.js': {},
     './clientManager.js': { getEmoji: () => ':coin:' },
     './shop.js': {
-      createCategoryEmbed: async () => [{ description: 'Character not found.' }, []],
+      createCategoryEmbed: async () => { called = true; return [{}, []]; },
     },
     './pg-client.js': { query: async () => ({ rows: [] }) },
     'discord.js': discordStub(),
@@ -90,5 +91,47 @@ test('shipsEmbed returns error when character lookup fails', async (t) => {
   t.after(cleanup);
   const [embed, rows] = await panel.shipsEmbed('123', 1);
   assert.equal(embed.description, 'Character not found.');
+  assert.deepEqual(rows, []);
+  assert.equal(called, false);
+});
+
+test('shipsEmbed passes resolved ID to createCategoryEmbed', async (t) => {
+  let receivedId;
+  const { panel, cleanup } = loadPanelWithMocks({
+    './dataGetters.js': { getCharFromNumericID: async () => 'User#0001' },
+    './database-manager.js': {},
+    './clientManager.js': { getEmoji: () => ':coin:' },
+    './shop.js': {
+      createCategoryEmbed: async (id) => {
+        receivedId = id;
+        return [{ description: 'ok' }, []];
+      },
+    },
+    './pg-client.js': { query: async () => ({ rows: [{}] }) },
+    'discord.js': discordStub(),
+  });
+  t.after(cleanup);
+  const [embed, rows] = await panel.shipsEmbed('123', 1);
+  assert.equal(receivedId, 'User#0001');
+  assert.equal(embed.description, 'ok');
   assert.equal(rows.length, 1);
+});
+
+test('shipsEmbed returns error when character missing in database', async (t) => {
+  let called = false;
+  const { panel, cleanup } = loadPanelWithMocks({
+    './dataGetters.js': { getCharFromNumericID: async () => 'User#0001' },
+    './database-manager.js': {},
+    './clientManager.js': { getEmoji: () => ':coin:' },
+    './shop.js': {
+      createCategoryEmbed: async () => { called = true; return [{}, []]; },
+    },
+    './pg-client.js': { query: async () => ({ rows: [] }) },
+    'discord.js': discordStub(),
+  });
+  t.after(cleanup);
+  const [embed, rows] = await panel.shipsEmbed('123', 1);
+  assert.equal(embed.description, 'Character not found.');
+  assert.deepEqual(rows, []);
+  assert.equal(called, false);
 });
