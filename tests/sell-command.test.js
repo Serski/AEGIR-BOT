@@ -10,13 +10,20 @@ function mockModule(modulePath, mock) {
   require.cache[resolved] = { id: resolved, filename: resolved, loaded: true, exports: mock };
 }
 
-test('/sell requires existing character', async (t) => {
-  let postCalled = false;
-  mockModule(path.join(root, 'pg-client.js'), {
-    query: async () => ({ rows: [], rowCount: 0 })
+test('/sell lists item and ensures character', async (t) => {
+  let ensureCalled = false;
+  let postArgs;
+  mockModule(path.join(root, 'db', 'characters.js'), {
+    ensureAndGetId: async (user) => {
+      ensureCalled = true;
+      return 'charX';
+    },
   });
   mockModule(path.join(root, 'marketplace.js'), {
-    postSale: async () => { postCalled = true; },
+    postSale: async (args) => {
+      postArgs = args;
+      return { ok: true, itemCode: args.rawItem, price: args.price, quantity: args.quantity };
+    },
   });
   mockModule(path.join(root, 'db', 'items.js'), {
     resolveItemCode: async () => 'sword',
@@ -45,22 +52,24 @@ test('/sell requires existing character', async (t) => {
   let replyPayload;
   const interaction = {
     user: { id: 'userX' },
+    options: {
+      getString: () => 'sword',
+      getInteger: () => null,
+    },
     reply: async (payload) => { replyPayload = payload; }
   };
 
   await command.execute(interaction);
 
-  assert.equal(postCalled, false);
-  assert.deepEqual(replyPayload, {
-    content: "You haven't made a character! Use /newchar first",
-    ephemeral: true,
-  });
+  assert.equal(ensureCalled, true);
+  assert.deepEqual(postArgs, { userId: 'charX', rawItem: 'sword', price: 0, quantity: 1 });
+  assert.equal(replyPayload, 'Listed 1 × sword for 0 each on the marketplace.');
 
   t.after(() => {
     delete require.cache[require.resolve(path.join(root, 'marketplace.js'))];
     delete require.cache[require.resolve(path.join(root, 'db', 'items.js'))];
     delete require.cache[require.resolve(path.join(root, 'clientManager.js'))];
-    delete require.cache[require.resolve(path.join(root, 'pg-client.js'))];
+    delete require.cache[require.resolve(path.join(root, 'db', 'characters.js'))];
     delete require.cache[require.resolve('discord.js')];
     delete require.cache[commandPath];
   });
