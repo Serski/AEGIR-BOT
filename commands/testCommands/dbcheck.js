@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const db = require('../../pg-client');
-const dataGetters = require('../../dataGetters');
+const characters = require('../../db/characters');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -15,7 +15,7 @@ module.exports = {
     await interaction.deferReply({ ephemeral: true });
 
     const provided = interaction.options.getString('character_id') ?? undefined;
-    const resolved = provided ?? await dataGetters.getCharFromNumericID(interaction.user.tag);
+    const resolved = provided ?? await characters.ensureAndGetId(interaction.user);
     const characterId = resolved === 'ERROR' ? undefined : resolved;
 
     if (!characterId) {

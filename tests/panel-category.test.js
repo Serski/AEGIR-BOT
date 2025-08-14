@@ -29,8 +29,6 @@ function mockModule(modulePath, mock) {
 }
 
 test('resources and ships appear only in their submenus', async () => {
-  const dataGettersStub = { getCharFromNumericID: async (id) => id };
-
   mockModule(path.join(root, 'pg-client.js'), {
     query: async (text, params = []) => {
       if (text.includes("category = 'Resources'")) {
@@ -50,7 +48,6 @@ test('resources and ships appear only in their submenus', async () => {
     },
   });
   mockModule(path.join(root, 'clientManager.js'), { getEmoji: () => ':coin:' });
-  mockModule(path.join(root, 'dataGetters.js'), dataGettersStub);
   mockModule(path.join(root, 'logger.js'), { debug() {}, info() {}, error() {} });
   mockModule('discord.js', discordStub());
 

@@ -7,7 +7,6 @@ const {
   StringSelectMenuOptionBuilder,
 } = require('discord.js');
 const shop = require('./shop');
-const dataGetters = require('./dataGetters');
 const clientManager = require('./clientManager');
 const db = require('./pg-client');
 const inventory = require('./db/inventory');
@@ -186,7 +185,6 @@ module.exports = {
   },
 
   storageEmbed: async function (charID, page = 1) {
-    charID = await dataGetters.getCharFromNumericID(charID);
     page = Number(page);
     const itemsPerPage = 25;
     let charExists = false;
@@ -273,7 +271,6 @@ module.exports = {
   },
 
   shipsEmbed: async function (charID, page = 1) {
-    charID = await dataGetters.getCharFromNumericID(charID);
     page = Number(page);
     let charExists = false;
     if (charID !== 'ERROR') {

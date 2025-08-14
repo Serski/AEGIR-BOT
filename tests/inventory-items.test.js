@@ -26,12 +26,9 @@ function mockModule(modulePath, mock) {
 }
 
 test('inventory embed shows non-stackable items', async () => {
-  const dataGettersStub = { getCharFromNumericID: async (id) => id };
-
   mockModule(path.join(root, 'pg-client.js'), { query: async () => ({ rows: [{ character_id:'Player#0001', item_id:'Sword', quantity:1, name:'Sword', category:'Weapons' }] }) });
   mockModule(path.join(root, 'db/inventory.js'), { getCount: async () => 0 });
   mockModule(path.join(root, 'clientManager.js'), { getEmoji: () => ':coin:' });
-  mockModule(path.join(root, 'dataGetters.js'), dataGettersStub);
   mockModule(path.join(root, 'logger.js'), { debug() {}, info() {}, error() {} });
   mockModule('discord.js', discordStub());
 
@@ -41,12 +38,9 @@ test('inventory embed shows non-stackable items', async () => {
 });
 
 test('inventory embed includes legacy inline inventory', async () => {
-  const dataGettersStub = { getCharFromNumericID: async (id) => id };
-
   mockModule(path.join(root, 'pg-client.js'), { query: async () => ({ rows: [{ character_id:'Player#0001', item_id:'Apple', quantity:2, name:'Apple', category:'Food' }] }) });
   mockModule(path.join(root, 'db/inventory.js'), { getCount: async () => 0 });
   mockModule(path.join(root, 'clientManager.js'), { getEmoji: () => ':coin:' });
-  mockModule(path.join(root, 'dataGetters.js'), dataGettersStub);
   mockModule(path.join(root, 'logger.js'), { debug() {}, info() {}, error() {} });
   mockModule('discord.js', discordStub());
 

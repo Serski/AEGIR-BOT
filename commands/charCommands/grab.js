@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 const char = require('../../char'); // Importing the database manager
+const characters = require('../../db/characters');
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -13,8 +14,8 @@ module.exports = {
             option.setName('quantity')
                 .setDescription('Quantity to grab')
                 .setRequired(true)),
-	async execute(interaction) {
-		const charID = interaction.user.tag;
+        async execute(interaction) {
+                const charID = await characters.ensureAndGetId(interaction.user);
         const item = interaction.options.getString('item');
         const quantity = interaction.options.getInteger('quantity');
             let replyEmbed = await char.grab(charID, item, quantity);
@@ -23,5 +24,5 @@ module.exports = {
             } else {
                 await interaction.reply("Grabbed " + quantity + " " + item + " from storage");
             }
-	},
+        },
 };
