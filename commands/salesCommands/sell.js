@@ -3,7 +3,6 @@ const { postSale } = require('../../marketplace');
 const items = require('../../db/items');
 const clientManager = require('../../clientManager');
 const characters = require('../../db/characters');
-const db = require('../../pg-client');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -24,15 +23,7 @@ module.exports = {
         ),
     async execute(interaction) {
         const user = interaction.user;
-        const exists = await db.query(
-            'SELECT 1 FROM characters WHERE id = $1 OR data->>\'numeric_id\' = $2 LIMIT 1',
-            [user.id, user.id]
-        );
-        if (!exists.rows.length) {
-            await interaction.reply({ content: "You haven't made a character! Use /newchar first", ephemeral: true });
-            return;
-        }
-        const userId = await characters.ensureAndGetId(user);
+        const charId = await characters.ensureAndGetId(user);
 
         const rawItem = interaction.options.getString('item');
         const price = interaction.options.getInteger('price') ?? 0;
@@ -46,7 +37,7 @@ module.exports = {
             return;
         }
 
-        const res = await postSale({ userId, rawItem: itemCode, price, quantity: qty });
+        const res = await postSale({ userId: charId, rawItem: itemCode, price, quantity: qty });
 
         if (!res.ok) {
             if (res.reason === 'not_enough') {
