@@ -52,10 +52,10 @@ if (!token || !clientId || !guildId) {
 // other module imports
 const Discord           = require('discord.js');
 const interactionHandler = require('./interaction-handler');
-const char               = require('./char');
 const db                 = require('./pg-client');
-const dbm                = require('./database-manager');
 const admin              = require('./admin');
+const characters         = require('./db/characters');
+const { ensureItem, grantItemToPlayer } = require('./inventory-grants');
 
 // create and configure the client
 const client = new Client({
@@ -117,12 +117,35 @@ client.on(Events.InteractionCreate, async interaction => {
 
 // ───── Guild member events, midnight loop, etc. ────────────────
 client.on('guildMemberAdd', async member => {
-  await char.newChar(
-    member.user.tag,
-    member.user.tag,
-    'A new member of Britannia!',
-    member.id
+  const user = member.user;
+  const charId = await characters.ensureAndGetId(user);
+  const data = {
+    name: user.tag,
+    bio: 'A new member of Britannia!',
+    ships: {},
+    incomeList: {},
+    incomeAvailable: true,
+    stats: {
+      Martial: 0,
+      Intrigue: 0,
+      Prestige: 0,
+      Devotion: 0,
+      Legitimacy: 0,
+    },
+    shireID: 0,
+    numeric_id: user.id,
+  };
+  await db.query(
+    `UPDATE characters SET data = $2 WHERE id = $1`,
+    [charId, data]
   );
+  await db.query(
+    `INSERT INTO balances (id, amount) VALUES ($1, 200)
+     ON CONFLICT (id) DO NOTHING`,
+    [charId]
+  );
+  const tokenId = await ensureItem(db, 'Adventure Token', 'Misc');
+  await grantItemToPlayer(db, charId, tokenId, 1);
 });
 
 client.on('guildMemberRemove', member => {
@@ -146,8 +169,11 @@ function botMidnightLoop() {
 
   setTimeout(async () => {
     try {
-      await char.resetIncomeCD();
-      await dbm.logData();
+      await db.query(
+        `UPDATE characters
+            SET data = jsonb_set(COALESCE(data, '{}'::jsonb), '{incomeAvailable}', 'true', true)`
+      );
+      logger.debug('legacy logData skipped');
     } catch (err) {
       logger.error('Midnight loop error:', err);
     } finally {

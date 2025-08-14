@@ -1,3 +1,6 @@
+/**
+ * @deprecated Legacy database helper. Prefer direct pg-client queries and modules under ./db.
+ */
 const db = require('./pg-client');
 const logger = require('./logger');
 const fs = require('fs');
