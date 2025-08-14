@@ -52,27 +52,24 @@ test.skip('buying a ship stores it separately from inventory', async () => {
       if (/FROM items/i.test(text)) {
         return { rows: [{ category: 'Ships' }] };
       }
+      if (/FROM\s+balances/i.test(text)) {
+        return { rows: [{ amount: balance }] };
+      }
       return { rows: [] };
     },
     tx: async cb => cb({
       query: async (text, params) => {
-        if (/INSERT INTO balances/i.test(text)) {
-          balance = params[1];
+        if (/UPDATE balances/i.test(text)) {
+          balance -= params[0];
         }
         return { rows: [] };
       }
     })
   };
 
-  const dbmStub = {
-    loadFile: async () => charData,
-    saveFile: async (col, id, data) => { charData = data; },
-    getBalance: async () => balance
-  };
-
   const shopModule = await mockImport(shopPath, {
-    './database-manager': dbmStub,
     './pg-client': dbStub,
+    './db/inventory': { getCount: async () => 0 },
     './clientManager': { getUser: async () => ({ roles: { cache: { some: () => false }, add: () => {} } }) },
     './logger': { debug() {}, info() {}, error() {} },
     './char': { addShip: (data, name) => { if (!data.ships) data.ships = {}; data.ships[name] = {}; } }
@@ -115,8 +112,8 @@ test.skip('buying ship items with varied category casing routes to ships list', 
         getBalance: async () => balance
       };
       const shopModule = await mockImport(shopPath, {
-        './database-manager': dbmStub,
         './pg-client': dbStub,
+        './db/inventory': { getCount: async () => 0 },
         './clientManager': { getUser: async () => ({ roles: { cache: { some: () => false }, add: () => {} } }) },
         './logger': { debug() {}, info() {}, error() {} },
         './char': { addShip: (data, name) => { if (!data.ships) data.ships = {}; data.ships[name] = {}; } }

@@ -29,19 +29,8 @@ function mockModule(modulePath, mock) {
 }
 
 test('resources and ships appear only in their submenus', async () => {
-  const charData = {
-    'Player#0001': {
-      balance: 0,
-      numericID: 'player1'
-    }
-  };
-  const dbmStub = {
-    loadCollection: async (col) => (col === 'characters' ? charData : {}),
-    saveCollection: async () => {},
-  };
   const dataGettersStub = { getCharFromNumericID: async (id) => id };
 
-  mockModule(path.join(root, 'database-manager.js'), dbmStub);
   mockModule(path.join(root, 'pg-client.js'), {
     query: async (text, params = []) => {
       if (text.includes("category = 'Resources'")) {

@@ -28,22 +28,10 @@ function mockModule(modulePath, mock) {
 }
 
 test('storage uses normalized inventory when legacy storage empty', async () => {
-  const charData = {
-    'Player#0001': {
-      numericID: 'player1'
-    }
-  };
-  const shopData = {
-    Wood: { data: { category: 'Resources', icon: ':wood:' } }
-  };
-  const dbmStub = {
-    loadCollection: async (col) => (col === 'characters' ? charData : shopData),
-    saveCollection: async () => {},
-  };
   const dataGettersStub = { getCharFromNumericID: async (id) => id };
 
-  mockModule(path.join(root, 'database-manager.js'), dbmStub);
   mockModule(path.join(root, 'pg-client.js'), { query: async () => ({ rows: [{ character_id:'Player#0001', item_id:'Wood', quantity:10, name:'Wood', category:'Resources' }] }) });
+  mockModule(path.join(root, 'db/inventory.js'), { getCount: async () => 0 });
   mockModule(path.join(root, 'clientManager.js'), { getEmoji: () => ':coin:' });
   mockModule(path.join(root, 'dataGetters.js'), dataGettersStub);
   mockModule(path.join(root, 'logger.js'), { debug() {}, info() {}, error() {} });
