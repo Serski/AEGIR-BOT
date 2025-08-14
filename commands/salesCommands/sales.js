@@ -31,8 +31,8 @@ module.exports = {
         }
 
         const description = sales
-            .map(({ name, item_code, price, category }) =>
-                `• ${name} (${item_code}) — Category: ${category} — ${price ?? 'N/A'} gold`
+            .map(({ name, item_id, price, quantity, seller }) =>
+                `• ${quantity}× ${name} (${item_id}) — ${price ?? 'N/A'} gold — Seller: <@${seller}>`
             )
             .join('\n');
 
