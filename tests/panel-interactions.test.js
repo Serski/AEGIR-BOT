@@ -28,7 +28,6 @@ function setupHandler(panelImpl) {
   fs.writeFileSync(configPath, 'module.exports = { guildId: "test" };');
   delete require.cache[configPath];
   stubModule('shop.js', {});
-  stubModule('char.js', {});
   stubModule('marketplace.js', {});
   stubModule('admin.js', {});
   stubModule('logger.js', { debug: () => {} });

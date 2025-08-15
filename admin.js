@@ -1,4 +1,3 @@
-const dbm = require('./database-manager'); // Importing the database manager
 const keys = require('./db/keys');
 const axios = require('axios');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, createWebhook, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
@@ -7,6 +6,8 @@ const clientManager = require('./clientManager');
 const logger = require('./logger');
 const incomes = require('./db/incomes');
 const items = require('./db/items');
+const characters = require('./db/characters');
+const editing = require('./db/editing-fields');
 
 const mapOptions = ["Name", "About", "Channels", "Image", "Emoji"]
 
@@ -345,13 +346,13 @@ When selected grants the:
   
     mapData = mapData[mapName];
   
-    let editingFields = await dbm.getEditingFields(tag);
+    let editingFields = await editing.get(tag);
     if (!editingFields) {
       editingFields = {};
     }
     editingFields["Map Edited"] = mapName;
     editingFields["Map Type Edited"] = mapType;
-    await dbm.setEditingFields(tag, editingFields);
+    await editing.set(tag, editingFields);
   
     // Construct the edit menu embed
     const embed = new EmbedBuilder()
@@ -416,7 +417,7 @@ When selected grants the:
   
   static async editMapField(charTag, field, value) {
     // Load the maps collection
-    let editingFields = await dbm.getEditingFields(charTag);
+    let editingFields = await editing.get(charTag);
     if (!editingFields || !editingFields["Map Edited"] || !editingFields["Map Type Edited"]) {
       return "You must use /editmapmenu first to select a map to edit";
     }
@@ -577,7 +578,7 @@ When selected grants the:
     let user = await guild.members.fetch(interaction.user.id);
 
     let userTag = interaction.user.tag;
-    let char = await dbm.loadFile("characters", userTag);
+    let char = await characters.load(userTag);
     //add all shires from all kingdoms to a new tempShires object
     let tempShires = {};
     for (const kingdom in kingdoms) {
@@ -635,7 +636,7 @@ When selected grants the:
 
     await user.roles.add(role);
     await user.roles.add(kingdomRole);
-    await dbm.saveFile("characters", userTag, char);
+    await characters.save(userTag, char);
 
 
     await interaction.reply({ 
@@ -653,7 +654,7 @@ When selected grants the:
     let user = await guild.members.fetch(interaction.user.id);
 
     let userTag = interaction.user.tag;
-    let char = await dbm.loadFile("characters", userTag);
+    let char = await characters.load(userTag);
     for (const role of user.roles.cache) {
       if (Object.values(tradeNodes).some(tradeNode => tradeNode.roleCode == role[1].id)) {
         await interaction.reply({ content: "You are already a member of a trade node! You cannot switch trade nodes", ephemeral: true });
@@ -676,7 +677,7 @@ When selected grants the:
 
     await user.roles.add(role);
     char.tradeNodeID = selectedTradeNode;
-    await dbm.saveFile("characters", userTag, char);
+    await characters.save(userTag, char);
 
     await interaction.reply({ 
       content: "You have selected " + tradeNode.name + " as your trade node", 
@@ -693,7 +694,7 @@ When selected grants the:
     let user = await guild.members.fetch(interaction.user.id);
 
     let userTag = interaction.user.tag;
-    let char = await dbm.loadFile("characters", userTag);
+    let char = await characters.load(userTag);
     for (const role of user.roles.cache) {
       if (Object.values(resources).some(resource => resource.roleCode == role[1].id)) {
         await interaction.reply({ content: "You are already a producer of a resource! You cannot switch resources", ephemeral: true });
@@ -716,7 +717,7 @@ When selected grants the:
 
     await user.roles.add(role);
     char.resourceID = selectedResource;
-    await dbm.saveFile("characters", userTag, char);
+    await characters.save(userTag, char);
 
     await interaction.reply({ 
       content: "You have selected " + resource.emoji + resource.name, 
@@ -740,7 +741,7 @@ When selected grants the:
     }
 
     let userTag = interaction.user.tag;
-    let char = await dbm.loadFile("characters", userTag);
+    let char = await characters.load(userTag);
     for (const role of user.roles.cache) {
       if (role[1].name == "Trader" || role[1].name == "Farmer") {
         await interaction.reply({ content: "You are already a member of a class! You cannot switch classes", ephemeral: true });
@@ -784,7 +785,7 @@ When selected grants the:
     let user = await guild.members.fetch(interaction.user.id);
 
     let userTag = interaction.user.tag;
-    let char = await dbm.loadFile("characters", userTag);
+    let char = await characters.load(userTag);
     for (const role of user.roles.cache) {
       if (Object.values(parties).some(party => party.name.toLowerCase() == role[1].name.toLowerCase())) {
         await interaction.reply({ content: "You are already a member of a party! You cannot switch parties", ephemeral: true });
@@ -799,7 +800,7 @@ When selected grants the:
 
     await user.roles.add(role);
     char.partyID = selectedParty;
-    await dbm.saveFile("characters", userTag, char);
+    await characters.save(userTag, char);
 
     await interaction.reply({ 
       content: "You have selected " + party.emoji + party.name + "\n\n" + party.motto, 
@@ -1133,18 +1134,18 @@ When selected grants the:
         '\n`[7] Income Delay: ` ' + delayString
       );
 
-    let editingFields = await dbm.getEditingFields(charTag);
+    let editingFields = await editing.get(charTag);
     if (!editingFields) {
       editingFields = {};
     }
     editingFields['Income Edited'] = income;
-    await dbm.setEditingFields(charTag, editingFields);
+    await editing.set(charTag, editingFields);
 
     return returnEmbed;
   }
 
   static async editIncomeField(fieldNumber, charTag, newValue) {
-    const editingFields = await dbm.getEditingFields(charTag);
+    const editingFields = await editing.get(charTag);
     let income = editingFields ? editingFields['Income Edited'] : undefined;
     const rows = await incomes.getAll();
     const incomeValue = rows.find(r => r.name === income);
@@ -1160,7 +1161,7 @@ When selected grants the:
         await incomes.update(income, { name: newValue });
         if (editingFields) {
           editingFields['Income Edited'] = newValue;
-          await dbm.setEditingFields(charTag, editingFields);
+          await editing.set(charTag, editingFields);
         }
         return 'Field 1 changed to ' + newValue;
       case 2:

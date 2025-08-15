@@ -34,7 +34,6 @@ global.setTimeout = () => ({ ref() {}, unref() {} });
     require.cache[filePath] = { id: filePath, filename: filePath, loaded: true, exports };
   };
     stubModule('interaction-handler.js', { handle: async () => {} });
-    stubModule('char.js', { newChar: () => {}, resetIncomeCD: () => {} });
     const { newDb } = require('pg-mem');
     const mem = newDb();
     const pgMem = mem.adapters.createPg();

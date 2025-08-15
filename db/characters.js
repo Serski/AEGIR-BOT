@@ -30,3 +30,16 @@ exports.ensureAndGetId = async (user) => {
   );
   return uname;
 };
+
+exports.load = async (id) => {
+  const { rows } = await pool.query('SELECT data FROM characters WHERE id=$1', [id]);
+  return rows[0] ? rows[0].data : undefined;
+};
+
+exports.save = async (id, data) => {
+  await pool.query(
+    `INSERT INTO characters (id, data) VALUES ($1, $2)
+     ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data`,
+    [id, data]
+  );
+};

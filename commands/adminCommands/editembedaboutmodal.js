@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const admin = require('../../admin'); // Importing the database manager
+const admin = require('../../admin');
 const keys = require('../../db/keys');
-const dbm = require ('../../database-manager');
+const editing = require('../../db/editing-fields');
 const logger = require('../../logger');
 
 ///editfield <field number> <new value>
@@ -12,7 +12,7 @@ module.exports = {
         .setDefaultMemberPermissions(0),
     async execute(interaction) {
         try {
-            let editingFields = await dbm.getEditingFields(interaction.user.tag);
+            let editingFields = await editing.get(interaction.user.tag);
             let mapName = editingFields["Map Edited"];
             let mapTypeEdited = editingFields["Map Type Edited"];
 
