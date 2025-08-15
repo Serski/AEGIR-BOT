@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const shop = require('../../shop'); // Importing the database manager
+const shop = require('../../shop');
 
 ///editfield <field number> <new value>
 module.exports = {
