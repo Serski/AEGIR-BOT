@@ -21,6 +21,58 @@ class shop {
     return res.rows[0] ? res.rows[0].name : 'ERROR';
   }
 
+  static async inspect(itemName) {
+    let itemCode;
+    try {
+      itemCode = await items.resolveItemCode(itemName);
+    } catch (err) {
+      return err.message;
+    }
+
+    const { rows } = await db.query(
+      `SELECT name, item_code, price, category, description, icon
+         FROM shop_v
+        WHERE item_code = $1`,
+      [itemCode]
+    );
+
+    let info = rows[0];
+    if (!info) {
+      const { rows: itemRows } = await db.query(
+        `SELECT id AS item_code,
+                data->>'name' AS name,
+                NULL::numeric AS price,
+                data->>'category' AS category,
+                data->>'description' AS description,
+                COALESCE(data->>'icon', data->'infoOptions'->>'Icon') AS icon
+           FROM items
+          WHERE id = $1`,
+        [itemCode]
+      );
+      info = itemRows[0];
+    }
+
+    if (!info) return 'Item not found';
+
+    const embed = new EmbedBuilder()
+      .setTitle(info.name)
+      .setColor(0x36393e);
+
+    if (info.description) embed.setDescription(info.description);
+    if (info.icon) embed.setThumbnail(info.icon);
+
+    embed.addFields(
+      { name: 'Item Code', value: info.item_code, inline: true },
+      { name: 'Category', value: info.category || 'Unknown', inline: true }
+    );
+
+    if (info.price !== null && info.price !== undefined) {
+      embed.addFields({ name: 'Price', value: String(info.price), inline: true });
+    }
+
+    return embed;
+  }
+
   static async createShopEmbed() {
     const embed = new EmbedBuilder()
       .setTitle('**Galactic Bazaar**')
