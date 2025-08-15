@@ -5,7 +5,7 @@ const shop = require('../shop'); // Importing shop
 
 // static async editUseCasePlaceholders(itemName) {
 //     itemName = await this.findItemName(itemName);
-//     let data = dbm.load('shop.json');
+//     let data = load('shop.json');
 //     if (!data[itemName].usageCase) {
 //       return "ERROR! DOES NOT ALREADY HAVE A USE CASE. USE /addusecase FIRST"
 //     }

@@ -39,14 +39,6 @@ async function loadCommands() {
 		}
 	}
 
-	// dbm.saveFile('keys', 'commandList', commandList, (err, result) => {
-	//     if (err) {
-	//	   console.error('Failed to save command list:', err);
-	//     } else {
-	//	   console.log('Command list saved successfully:', result);
-	//     }
-	// });
-
 	//Also save commandList to a local json
 	// fs.writeFileSync('commandList.json', JSON.stringify(commandList, null, 2));
 

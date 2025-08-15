@@ -46,10 +46,8 @@ function discordStub() {
 
 test('mainEmbed returns error when character lookup fails', async (t) => {
   const { panel, cleanup } = loadPanelWithMocks({
-    './database-manager.js': { loadCollection: async () => ({}) },
     './clientManager.js': { getEmoji: () => ':coin:' },
     './shop.js': {},
-    './char.js': {},
     './pg-client.js': { query: async () => ({ rows: [] }) },
     'discord.js': discordStub(),
   });
@@ -61,10 +59,8 @@ test('mainEmbed returns error when character lookup fails', async (t) => {
 
 test('mainEmbed returns error when character data missing', async (t) => {
   const { panel, cleanup } = loadPanelWithMocks({
-    './database-manager.js': { loadCollection: async () => ({}) },
     './clientManager.js': { getEmoji: () => ':coin:' },
     './shop.js': {},
-    './char.js': {},
     './pg-client.js': { query: async () => ({ rows: [] }) },
     'discord.js': discordStub(),
   });
@@ -77,7 +73,6 @@ test('mainEmbed returns error when character data missing', async (t) => {
 test('shipsEmbed returns error when character lookup fails', async (t) => {
   let called = false;
   const { panel, cleanup } = loadPanelWithMocks({
-    './database-manager.js': {},
     './clientManager.js': { getEmoji: () => ':coin:' },
     './shop.js': {
       createCategoryEmbed: async () => { called = true; return [{}, []]; },
@@ -95,7 +90,6 @@ test('shipsEmbed returns error when character lookup fails', async (t) => {
 test('shipsEmbed passes ID to createCategoryEmbed', async (t) => {
   let receivedId;
   const { panel, cleanup } = loadPanelWithMocks({
-    './database-manager.js': {},
     './clientManager.js': { getEmoji: () => ':coin:' },
     './shop.js': {
       createCategoryEmbed: async (id) => {
@@ -116,7 +110,6 @@ test('shipsEmbed passes ID to createCategoryEmbed', async (t) => {
 test('shipsEmbed returns error when character missing in database', async (t) => {
   let called = false;
   const { panel, cleanup } = loadPanelWithMocks({
-    './database-manager.js': {},
     './clientManager.js': { getEmoji: () => ':coin:' },
     './shop.js': {
       createCategoryEmbed: async () => { called = true; return [{}, []]; },
