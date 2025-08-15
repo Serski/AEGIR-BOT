@@ -173,8 +173,13 @@ const shopSwitch = async (interaction) => {
 };
 const incomeSwitch = async (interaction) => {
   await interaction.deferUpdate();
-  let [edittedEmbed, rows] = await admin.allIncomes(interaction.customId.slice(11));
-  await interaction.editReply({ embeds: [edittedEmbed], components: rows});
+  const reply = await admin.allIncomes(interaction.customId.slice(11));
+  if (typeof reply === 'string') {
+    await interaction.editReply({ content: reply, embeds: [], components: [] });
+  } else {
+    const [edittedEmbed, rows] = reply;
+    await interaction.editReply({ embeds: [edittedEmbed], components: rows });
+  }
 };
 const salesSwitch = async (interaction) => {
   let [edittedEmbed, rows] = await createSalesEmbed(interaction.customId.slice(11));
