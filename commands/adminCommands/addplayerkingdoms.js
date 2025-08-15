@@ -14,8 +14,8 @@ module.exports = {
 	async execute(interaction) {
 		try {
             const kingdom = interaction.options.getRole('kingdom');
-            await admin.addKingdom(kingdom);
-            await interaction.reply({ content: `Added the kingdom ${kingdom} to the list of player kingdoms.`, ephemeral: true });
+            const reply = await admin.addKingdom(kingdom);
+            await interaction.reply({ content: reply, ephemeral: true });
         } catch (error) {
             logger.error("Failed to add map menu:", error);
             await interaction.reply({ content: "Failed to add the kingdom. Please try again.", ephemeral: true });
