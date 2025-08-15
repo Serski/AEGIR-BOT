@@ -55,7 +55,8 @@ const interactionHandler = require('./interaction-handler');
 const db                 = require('./pg-client');
 const admin              = require('./admin');
 const characters         = require('./db/characters');
-const { ensureItem, grantItemToPlayer } = require('./inventory-grants');
+const items             = require('./db/items');
+const inventory         = require('./db/inventory');
 
 // create and configure the client
 const client = new Client({
@@ -144,8 +145,8 @@ client.on('guildMemberAdd', async member => {
      ON CONFLICT (id) DO NOTHING`,
     [charId]
   );
-  const tokenId = await ensureItem(db, 'Adventure Token', 'Misc');
-  await grantItemToPlayer(db, charId, tokenId, 1);
+  const tokenId = await items.resolveItemCode('Adventure Token');
+  await inventory.give(charId, tokenId, 1);
 });
 
 client.on('guildMemberRemove', member => {

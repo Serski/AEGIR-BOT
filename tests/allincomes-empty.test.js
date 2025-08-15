@@ -39,7 +39,8 @@ test('incomeSwitch handles empty incomes', async () => {
   stubModule('panel.js', {});
   stubModule('logger.js', { debug() {}, info() {}, error() {} });
   stubModule('pg-client.js', {});
-  stubModule('inventory-grants.js', { ensureItem: async () => {}, grantItemToPlayer: async () => {} });
+  stubModule('db/items.js', {});
+  stubModule('db/inventory.js', {});
   stubModule('db/characters.js', {});
   stubModule('admin.js', { allIncomes: async () => 'No incomes found' });
 
