@@ -1,4 +1,5 @@
 const dbm = require('./database-manager');
+const keys = require('./db/keys');
 const clientManager = require('./clientManager');
 const logger = require('./logger');
 const db = require('./pg-client');
@@ -20,7 +21,7 @@ async function addNeedNoneOfRolesToShop() {
 }
 
 async function getResourceEmojis() {
-    const resources = await dbm.loadFile('keys', 'resources');
+    const resources = await keys.get('resources');
     
     for (let resource in resources) {
         let emoji = clientManager.getEmoji(resource);
@@ -31,7 +32,7 @@ async function getResourceEmojis() {
         resources[resource].emoji = emoji;
     }
 
-    await dbm.saveFile('keys', 'resources', resources);
+    await keys.set('resources', resources);
 }
 
 async function healthToLegitimacy() {
@@ -50,7 +51,7 @@ async function healthToLegitimacy() {
 //export getResourceEmojis;
 
 async function addShireToShireNames() {
-    const kingdoms = await dbm.loadFile('keys', 'kingdoms');
+    const kingdoms = await keys.get('kingdoms');
 
     //Each kingdom has a shires field, which is a map of shire names to shire objects. Shire objects have a name field that should add "shire" to the shire name
     for (let kingdom in kingdoms) {
@@ -63,7 +64,7 @@ async function addShireToShireNames() {
 
     logger.debug(kingdoms.Jorvik.shires);
 
-    await dbm.saveFile('keys', 'kingdoms', kingdoms);
+    await keys.set('kingdoms', kingdoms);
 }
 
 async function addTo10RecipeIngredients() {
