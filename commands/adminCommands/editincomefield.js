@@ -18,18 +18,23 @@ module.exports = {
                 .setRequired(false)
         ),
     async execute(interaction) {
-        const fieldNumber = interaction.options.getInteger('fieldnumber');
-        let newValue;
-        if (interaction.options.getString('newvalue') == null) {
-            return await interaction.reply('If you want to remove a field, please make the new value "DELETE" in all caps');
-        } else {
-            newValue = interaction.options.getString('newvalue');
-        }
-        if (newValue == 'DELETE') {
-            newValue = "DELETEFIELD";
-        }
+        try {
+            const fieldNumber = interaction.options.getInteger('fieldnumber');
+            let newValue;
+            if (interaction.options.getString('newvalue') == null) {
+                return await interaction.reply('If you want to remove a field, please make the new value "DELETE" in all caps');
+            } else {
+                newValue = interaction.options.getString('newvalue');
+            }
+            if (newValue == 'DELETE') {
+                newValue = "DELETEFIELD";
+            }
 
-        const reply = await admin.editIncomeField(fieldNumber, interaction.user.tag, newValue);
-        await interaction.reply(reply);
+            const reply = await admin.editIncomeField(fieldNumber, interaction.user.tag, newValue);
+            await interaction.reply(reply);
+        } catch (err) {
+            console.error(err.stack);
+            await interaction.reply({ content: 'Failed to process your request.', ephemeral: true });
+        }
     }
 };
