@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../../pg-client');
+const logger = require('../../logger');
 
 const PAGE_SIZE = 25;
 
@@ -37,8 +38,14 @@ module.exports = {
                 .setDescription('Show balance of all players')
                 .setDefaultMemberPermissions(0),
         async execute(interaction) {
-                const [embed, rows] = await balanceAll(1);
-                await interaction.reply({ embeds: [embed], components: rows });
+                try {
+                        const [embed, rows] = await balanceAll(1);
+                        await interaction.reply({ embeds: [embed], components: rows });
+                }
+                catch (err) {
+                        logger.error(err.stack);
+                        return interaction.reply({ content: 'Failed to process your request.', ephemeral: true });
+                }
         },
         balanceAll,
 };
