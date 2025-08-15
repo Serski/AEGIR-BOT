@@ -1,4 +1,5 @@
 const keys = require('./db/keys');
+const kingdoms = require('./db/kingdoms');
 const axios = require('axios');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, createWebhook, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
 const shop = require('./shop');
@@ -593,8 +594,7 @@ When selected grants the:
       }
     }
 
-    let playerKingdoms = await keys.get("playerKingdoms");
-    playerKingdoms = playerKingdoms.list;
+    const playerKingdoms = await kingdoms.list();
 
     logger.debug(playerKingdoms);
 
@@ -815,30 +815,21 @@ When selected grants the:
   }
 
   static async addKingdom(kingdomRole) {
-    //Add role ID to the kingdom list in keys/playerKingdoms . list
-    let kingdoms = await keys.get("playerKingdoms");
-    let roleID = kingdomRole.id;
-    
-    let list = kingdoms.list;
-    if (list.includes(roleID)) {
+    const roleID = kingdomRole.id;
+    const existing = await kingdoms.fetch(roleID);
+    if (existing) {
       return "Player kingdom already exists";
-    } else {
-      list.push(roleID);
-      kingdoms.list = list;
-      await keys.set("playerKingdoms", kingdoms);
-      return "Player kingdom " + kingdomRole.name + " added";
     }
+    await kingdoms.insert(roleID);
+    return "Player kingdom " + kingdomRole.name + " added";
   }
 
   static async listKingdoms() {
-    //List all kingdoms in keys/playerKingdoms . list. Arrange them as proper roles, using discord formatting so they show properly
-    let kingdoms = await keys.get("playerKingdoms");
-    let list = kingdoms.list;
-    let kingdomNames = "";
-    for (const roleID of list) {
-      kingdomNames += "<@&" + roleID + ">\n";
+    const list = await kingdoms.list();
+    if (!list.length) {
+      return "No player kingdoms found";
     }
-    //Set up an embed to return
+    let kingdomNames = list.map(roleID => "<@&" + roleID + ">").join("\n");
     let embed = new EmbedBuilder()
       .setTitle("Player Kingdoms")
       .setDescription(kingdomNames);
