@@ -1,43 +1,46 @@
-const { REST, Routes, SlashCommandBuilder } = require('discord.js');
+const { REST, Routes } = require('discord.js');
 // Load credentials from config.js (env vars take priority over config.json)
 const { clientId, guildId, token } = require('./config.js');
 const fs = require('node:fs');
 const path = require('node:path');
-const { map } = require('./admin');
 const logger = require('./logger');
+const keys = require('./db/keys');
 
 
 async function loadCommands() {
-	const commands = [];
-	// Grab all the command folders from the commands directory you created earlier
-	const foldersPath = path.join(__dirname, 'commands');
-	const commandFolders = fs.readdirSync(foldersPath);
+        const commands = [];
+        // Grab all the command folders from the commands directory
+        const foldersPath = path.join(__dirname, 'commands');
+        const commandFolders = fs.readdirSync(foldersPath);
 
-	let commandList = {};
+        const commandList = {};
 
+        for (const folder of commandFolders) {
+                // Grab all the command files from the commands directory
+                const commandsPath = path.join(foldersPath, folder);
+                const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
-	for (const folder of commandFolders) {
-		// Grab all the command files from the commands directory you created earlier
-		const commandsPath = path.join(foldersPath, folder);
-		const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+                // Grab the SlashCommandBuilder#toJSON() output of each command's data for deployment
+                for (const file of commandFiles) {
+                        const filePath = path.join(commandsPath, file);
+                        const command = require(filePath);
+                        if ('data' in command && 'execute' in command) {
+                                const json = command.data.toJSON();
+                                commands.push(json);
+                                commandList[json.name] = {
+                                        name: json.name,
+                                        description: json.description,
+                                        options: json.options || [],
+                                        default_member_permissions: json.default_member_permissions,
+                                        category: folder,
+                                };
+                        } else {
+                                logger.warn(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
+                        }
+                }
+        }
 
-		//Count command files, print, and than break
-		let count = 0;
-		for (const file of commandFiles) {
-			count++;
-		}
-		// Grab the SlashCommandBuilder#toJSON() output of each command's data for deployment
-		for (const file of commandFiles) {
-			//Add this command to the list of commands with fields "name", "description" and "help"
-			const filePath = path.join(commandsPath, file);
-			const command = require(filePath);
-			if ('data' in command && 'execute' in command) {
-				commands.push(command.data.toJSON());
-			} else {
-				logger.warn(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
-			}
-		}
-	}
+        await keys.set('commandList', commandList);
 
 	//Also save commandList to a local json
 	// fs.writeFileSync('commandList.json', JSON.stringify(commandList, null, 2));
