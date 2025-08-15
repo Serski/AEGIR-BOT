@@ -4,6 +4,8 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, createWebhoo
 const shop = require('./shop');
 const clientManager = require('./clientManager');
 const logger = require('./logger');
+const incomes = require('./db/incomes');
+const items = require('./db/items');
 
 const mapOptions = ["Name", "About", "Channels", "Image", "Emoji"]
 
@@ -962,126 +964,109 @@ When selected grants the:
   }
 
   static async addIncome(role, incomeString) {
-    let roleID = role.id;
-    let roleName = role.name;
+    const roleID = role.id;
+    const roleName = role.name;
 
-    //Add an income to keys/incomeList
-    let incomeList = await dbm.loadFile("keys", "incomeList");
-    let shopData = await dbm.loadCollection("shop");
-    //income string is either a number, or a phrase such as 10 Wood or 10 Package Horse.
-    //Must be used to create a field with a name, usually based on the role name, and than a map of various values, including goldGiven, itemGiven and itemAmount. Will also have a list of roles that have this income under "Roles"
-    let income = {
-      delay: "1D",
-      goldGiven: 0,
-      itemGiven: "",
-      itemAmount: 0,
-      emoji: clientManager.getEmoji("Gold"),
-      roles: []
+    const fields = {
+      delay: '1D',
+      gold_given: 0,
+      item_code: null,
+      item_amount: 0,
+      emoji: clientManager.getEmoji('Gold'),
+      roles: [roleID],
     };
-    let incomeSplit = incomeString.split(" ");
-    if (incomeSplit.length == 1) {
-      income.goldGiven = parseInt(incomeSplit[0]);
-    } else {
-      if (await shop.findItemName(income.itemGiven, shopData) == "ERROR") {
-        return "Item not found";
-      } else {
-        income.itemGiven = await shop.findItemName(income.itemGiven, shopData);
+
+    const parts = incomeString.trim().split(/\s+/);
+    if (parts.length === 1) {
+      const gold = parseInt(parts[0]);
+      if (isNaN(gold)) {
+        return 'Income must be a number or "[amount] [item]"';
       }
-      income.itemGiven = await shop.findItemName(incomeSplit[1], shopData);
+      fields.gold_given = gold;
+    } else {
+      const amount = parseInt(parts.shift());
+      if (isNaN(amount)) {
+        return 'Item amount must be a number';
+      }
+      const itemTerm = parts.join(' ');
+      let itemCode;
+      try {
+        itemCode = await items.resolveItemCode(itemTerm);
+      } catch {
+        return 'Item not found';
+      }
+      fields.item_code = itemCode;
+      fields.item_amount = amount;
     }
-    income.roles.push(roleID);
-    incomeList[roleName] = income;
 
-    await dbm.saveFile("keys", "incomeList", incomeList);
+    await incomes.add(roleName, fields);
 
-    return "Income added: " + incomeString + " income under name " + roleName + " <@&" + roleID + ">";
+    return 'Income added: ' + incomeString + ' income under name ' + roleName + ' <@&' + roleID + '>';
   }
 
   static async allIncomes(page = 1) {
-    let maxLength = 10;
-    let incomeList = await dbm.loadFile("keys", "incomeList");
-    let shopData = await dbm.loadCollection("shop");
-    if (Object.keys(incomeList).length == 0) {
-      return "No incomes found";
+    const maxLength = 10;
+    const incomeRows = await incomes.getAll();
+    if (incomeRows.length === 0) {
+      return 'No incomes found';
     }
 
-    let goldList = [];
-    let itemList = [];
-    let miscList = [];
-    for (const income in incomeList) {
-      let incomeValue = incomeList[income];
-      let gold = incomeValue.goldGiven;
-      let item = incomeValue.itemGiven;
-      let amount = incomeValue.itemAmount;
-      if (gold > 0 && item == "" && amount == 0) {
-        goldList.push(income);
-      } else if (gold == 0 && item != "" && amount > 0) {
-        itemList.push(income);
+    const goldList = [];
+    const itemList = [];
+    const miscList = [];
+    for (const row of incomeRows) {
+      const gold = row.gold_given || 0;
+      const item = row.item_code || '';
+      const amount = row.item_amount || 0;
+      if (gold > 0 && item === '' && amount === 0) {
+        goldList.push(row);
+      } else if (gold === 0 && item !== '' && amount > 0) {
+        itemList.push(row);
       } else {
-        miscList.push(income);
+        miscList.push(row);
       }
     }
-    //Sort goldList by gold given
-    goldList.sort((a, b) => incomeList[a].goldGiven - incomeList[b].goldGiven);
 
-    //Sort itemList by item given alphabetically, then by amount given, so that all items are grouped together but still sorted
-    itemList.sort((a, b) => incomeList[a].itemGiven.localeCompare(incomeList[b].itemGiven) || incomeList[a].itemAmount - incomeList[b].itemAmount);  
+    goldList.sort((a, b) => a.gold_given - b.gold_given);
+    itemList.sort((a, b) => a.item_code.localeCompare(b.item_code) || a.item_amount - b.item_amount);
 
-    let incomes = [];
-    let sortedIncomes = goldList.concat(itemList).concat(miscList);
-    //Combine all lists into one list
-    for (const income of sortedIncomes) {
-      let incomeValue = incomeList[income];
-      let emoji = incomeValue.emoji;
-      let delay = incomeValue.delay;
-      if (delay == undefined || delay == "") {
-        delay = "1D";
+    const sorted = goldList.concat(itemList).concat(miscList);
+    const incomeEntries = [];
+    for (const row of sorted) {
+      const emoji = row.emoji;
+      const delay = row.delay && row.delay !== '' ? row.delay : '1D';
+      const roles = row.roles || [];
+      const rolesString = roles.length > 0 ? '<@&' + roles.join('>, <@&') + '>' : '';
+      let givenString = '';
+      if (row.gold_given > 0) {
+        givenString += clientManager.getEmoji('Gold') + ' ' + row.gold_given + ' ';
       }
-      let roles = incomeValue.roles;
-      let rolesString = "";
-
-      let justGold = false;
-      let justItem = false;
-
-      if (roles.length > 0) {
-        rolesString = "<@&" + roles.join(">, <@&") + ">";
+      if (row.item_code && row.item_amount) {
+        const icon = await shop.getItemIcon(row.item_code);
+        const meta = await items.getItemMetaByCode(row.item_code);
+        const itemName = meta ? meta.name : row.item_code;
+        givenString += icon + ' ' + row.item_amount + ' ' + itemName;
       }
-      let givenString = "";
-      if (incomeValue.goldGiven > 0) {
-        givenString += clientManager.getEmoji("Gold");
-        givenString += " " + incomeValue.goldGiven;
-        givenString += " ";
-      }
-      if (incomeValue.itemGiven != "" && incomeValue.itemAmount != 0) {
-        givenString += await shop.getItemIcon(incomeValue.itemGiven, shopData);
-        givenString += " " + incomeValue.itemAmount + " " + incomeValue.itemGiven;
-        if (!justGold) {
-          justItem = true;
-        }
-        justGold = false;
-      }
-
-      let incomeEntry = emoji + " `" + delay + "` " + "**" + income + "**: " + rolesString + " " + givenString + "\n";
-      incomes.push(incomeEntry);
+      const entry = emoji + ' `' + delay + '` ' + '**' + row.name + '**: ' + rolesString + ' ' + givenString + '\n';
+      incomeEntries.push(entry);
     }
 
-    // Calculate pagination
-    let totalPages = Math.ceil(incomes.length / maxLength);
+    const totalPages = Math.ceil(incomeEntries.length / maxLength);
     page = Math.max(1, Math.min(page, totalPages));
-    let start = (page - 1) * maxLength;
-    let end = start + maxLength;
+    const start = (page - 1) * maxLength;
+    const end = start + maxLength;
 
-    let paginatedIncomes = incomes.slice(start, end).join('');
-    let returnEmbed = new EmbedBuilder().setTitle("Incomes")
-                                        .setDescription(paginatedIncomes)
-                                        .setFooter({text: `Page ${page} of ${totalPages}`});
+    const paginatedIncomes = incomeEntries.slice(start, end).join('');
+    const returnEmbed = new EmbedBuilder().setTitle('Incomes')
+      .setDescription(paginatedIncomes)
+      .setFooter({ text: `Page ${page} of ${totalPages}` });
 
-    let actionRow = new ActionRowBuilder();
-    let prevButton = new ButtonBuilder()
+    const actionRow = new ActionRowBuilder();
+    const prevButton = new ButtonBuilder()
       .setCustomId('switch_inco' + (page - 1))
       .setLabel('Previous')
       .setStyle(ButtonStyle.Secondary);
-    let nextButton = new ButtonBuilder()
+    const nextButton = new ButtonBuilder()
       .setCustomId('switch_inco' + (page + 1))
       .setLabel('Next')
       .setStyle(ButtonStyle.Secondary);
@@ -1093,205 +1078,190 @@ When selected grants the:
     }
     actionRow.addComponents(prevButton, nextButton);
 
-    dbm.saveFile("keys", "incomeList", incomeList);
-
     return [returnEmbed, [actionRow]];
   }
 
   static async editIncomeMenu(income, charTag) {
-    let incomeList = await dbm.loadFile("keys", "incomeList");
-    let incomeValue = incomeList[income];
-    if (incomeValue == undefined) {
-      for (const incomeName in incomeList) {
-        if (incomeName.toLowerCase() == income.toLowerCase()) {
-          incomeValue = incomeList[incomeName];
-          income = incomeName;
-        }
-      }
-      if (incomeValue == undefined) {
-        return "Income not found";
-      }
+    const rows = await incomes.getAll();
+    let incomeValue = rows.find(r => r.name.toLowerCase() === income.toLowerCase());
+    if (!incomeValue) {
+      return 'Income not found';
     }
-    let roles = incomeValue.roles;
-    let rolesString = "";
-    if (roles.length > 0) {
-      rolesString = "<@&" + roles.join(">, <@&") + ">";
-    }
-    let delayString = "";
-    if (incomeValue.delay == undefined || incomeValue.delay == "") {
-      incomeValue.delay = "1D";
-      delayString = "1 Day";
-      dbm.saveFile("keys", "incomeList", incomeList);
+    income = incomeValue.name;
+    const roles = incomeValue.roles || [];
+    const rolesString = roles.length > 0 ? '<@&' + roles.join('>, <@&') + '>' : '';
+    let delayString = '';
+    if (!incomeValue.delay || incomeValue.delay === '') {
+      delayString = '1 Day';
+      await incomes.update(income, { delay: '1D' });
+      incomeValue.delay = '1D';
     } else {
-      let delayAmount = incomeValue.delay.match(/\d+/g);
-      let delayUnit = incomeValue.delay.match(/[A-Za-z]+/g);
-      delayString = "" + delayAmount;
+      const delayAmount = incomeValue.delay.match(/\d+/g);
+      const delayUnit = incomeValue.delay.match(/[A-Za-z]+/g);
+      delayString = '' + delayAmount;
       switch (delayUnit[0].toLowerCase()) {
-        case "d":
-          delayString += " Day";
+        case 'd':
+          delayString += ' Day';
           break;
-        case "w":
-          delayString += " Week";
+        case 'w':
+          delayString += ' Week';
           break;
-        case "m":
-          delayString += " Month";
+        case 'm':
+          delayString += ' Month';
           break;
-        case "y":
-          delayString += " Year";
+        case 'y':
+          delayString += ' Year';
           break;
       }
       if (delayAmount > 1) {
-        delayString += "s";
+        delayString += 's';
       }
     }
-    let returnEmbed = new EmbedBuilder()
-      .setTitle("Income: " + income)
-      //Description is name, emoji, roles, gold given, item given. Each should have a number coming before, starting at 0, enclosed as `[1] `. Codewise, this should be formatted on separate lines to be easy to read.
+    let itemName = '';
+    if (incomeValue.item_code) {
+      const meta = await items.getItemMetaByCode(incomeValue.item_code);
+      itemName = meta ? meta.name : incomeValue.item_code;
+    }
+    const returnEmbed = new EmbedBuilder()
+      .setTitle('Income: ' + income)
       .setDescription(
-        "`[1] Name:         ` " + income + 
-        //emoji below
-        "\n`[2] Emoji:        ` " + incomeValue.emoji +
-        "\n`[3] Roles:        ` " + rolesString + 
-        "\n`[4] Gold Given:   ` " + incomeValue.goldGiven + 
-        "\n`[5] Item Given:   ` " + incomeValue.itemGiven + 
-        "\n`[6] Amount Given: ` " + incomeValue.itemAmount +
-        "\n`[7] Income Delay: ` " + delayString
+        '`[1] Name:         ` ' + income +
+        '\n`[2] Emoji:        ` ' + (incomeValue.emoji || '') +
+        '\n`[3] Roles:        ` ' + rolesString +
+        '\n`[4] Gold Given:   ` ' + (incomeValue.gold_given || 0) +
+        '\n`[5] Item Given:   ` ' + itemName +
+        '\n`[6] Amount Given: ` ' + (incomeValue.item_amount || 0) +
+        '\n`[7] Income Delay: ` ' + delayString
       );
 
     let editingFields = await dbm.getEditingFields(charTag);
     if (!editingFields) {
       editingFields = {};
     }
-    editingFields["Income Edited"] = income;
+    editingFields['Income Edited'] = income;
     await dbm.setEditingFields(charTag, editingFields);
 
     return returnEmbed;
   }
 
   static async editIncomeField(fieldNumber, charTag, newValue) {
-    let editingFields = await dbm.getEditingFields(charTag);
-    let income = editingFields ? editingFields["Income Edited"] : undefined;
-    let incomeList = await dbm.loadFile("keys", "incomeList");
-    let incomeValue = incomeList[income];
-    let shopData = await dbm.loadCollection("shop");
-    if (incomeValue == undefined) {
-      return "Income not found";
+    const editingFields = await dbm.getEditingFields(charTag);
+    let income = editingFields ? editingFields['Income Edited'] : undefined;
+    const rows = await incomes.getAll();
+    const incomeValue = rows.find(r => r.name === income);
+    if (!incomeValue) {
+      return 'Income not found';
     }
     switch (fieldNumber) {
       case 1:
-        if (newValue == "DELETEFIELD") {
-          delete incomeList[income];
-          await dbm.saveFile("keys", "incomeList", incomeList);
-          return "Income " + income + " deleted";
+        if (newValue === 'DELETEFIELD') {
+          await incomes.remove(income);
+          return 'Income ' + income + ' deleted';
         }
-        delete incomeList[income];
-        income = newValue;
-        break;
+        await incomes.update(income, { name: newValue });
+        if (editingFields) {
+          editingFields['Income Edited'] = newValue;
+          await dbm.setEditingFields(charTag, editingFields);
+        }
+        return 'Field 1 changed to ' + newValue;
       case 2:
-        if (newValue == "DELETEFIELD") {
-          newValue = clientManager.getEmoji("Gold");
+        if (newValue === 'DELETEFIELD') {
+          newValue = clientManager.getEmoji('Gold');
         }
-        incomeValue.emoji = newValue;
+        await incomes.update(income, { emoji: newValue });
         break;
       case 3:
-        if (newValue == "DELETEFIELD") {
-          incomeValue.roles = [];
+        if (newValue === 'DELETEFIELD') {
+          await incomes.update(income, { roles: [] });
           break;
         }
-        //Find every series of numbers starting with <@& and ending with >, and add them to the roles array
-        let roles = newValue.match(/<@&\d+>/g);
+        const roles = newValue.match(/<@&\d+>/g);
         if (roles == null) {
-          return "No roles found";
+          return 'No roles found';
         }
-        let roleIDs = [];
-
-        for (const role of roles) {
-          roleIDs.push(role.substring(3, role.length - 1));
-        }
-        incomeValue.roles = roleIDs;
+        const roleIDs = roles.map(role => role.substring(3, role.length - 1));
+        await incomes.update(income, { roles: roleIDs });
         break;
       case 4:
-        if (newValue == "DELETEFIELD") {
-          incomeValue.goldGiven = 0;
+        if (newValue === 'DELETEFIELD') {
+          await incomes.update(income, { gold_given: 0 });
           break;
         }
-        incomeValue.goldGiven = parseInt(newValue);
-        if (isNaN(incomeValue.goldGiven)) {
-          return "Gold must be a number";
+        const gold = parseInt(newValue);
+        if (isNaN(gold)) {
+          return 'Gold must be a number';
         }
+        await incomes.update(income, { gold_given: gold });
         break;
       case 5:
-        if (newValue == "DELETEFIELD") {
-          incomeValue.itemGiven = "";
-          incomeValue.itemAmount = 0;
+        if (newValue === 'DELETEFIELD') {
+          await incomes.update(income, { item_code: null, item_amount: 0 });
           break;
         }
-        let newItemName = await shop.findItemName(newValue, shopData);
-        if (newItemName == "ERROR") {
-          return "Item not found";
+        let itemCode;
+        try {
+          itemCode = await items.resolveItemCode(newValue);
+        } catch {
+          return 'Item not found';
         }
-        incomeValue.itemGiven = newItemName;
+        await incomes.update(income, { item_code: itemCode });
         break;
       case 6:
-        if (newValue == "DELETEFIELD") {
-          incomeValue.itemAmount = 0;
+        if (newValue === 'DELETEFIELD') {
+          await incomes.update(income, { item_amount: 0 });
           break;
         }
-        incomeValue.itemAmount = parseInt(newValue);
-        if (isNaN(incomeValue.itemAmount)) {
-          return "Amount must be a number";
+        const amount = parseInt(newValue);
+        if (isNaN(amount)) {
+          return 'Amount must be a number';
         }
+        await incomes.update(income, { item_amount: amount });
         break;
       case 7:
-        if (newValue == "DELETEFIELD") {
-          incomeValue.delay = "1D";
+        if (newValue === 'DELETEFIELD') {
+          await incomes.update(income, { delay: '1D' });
           break;
         }
-        incomeValue.delay = parseInt(newValue);
-        //Options are [Number] [Unit], i.e. 1 d, 1 w, 1 m, 1 y, or 1 day, 1 week, 1 month, 1 year
-        let delaySplit = newValue.split(" ");
-        if (delaySplit.length != 2) {
-          return "Invalid delay format- must be [Number] [Unit], i.e. 1 d, 1 w, 1 m, 1 y, or 1 day, 1 week, 1 month, 1 year";
+        const delaySplit = newValue.split(' ');
+        if (delaySplit.length !== 2) {
+          return 'Invalid delay format- must be [Number] [Unit], i.e. 1 d, 1 w, 1 m, 1 y, or 1 day, 1 week, 1 month, 1 year';
         }
-        let delayAmount = parseInt(delaySplit[0]);
+        const delayAmount = parseInt(delaySplit[0]);
         if (isNaN(delayAmount)) {
           return "Delay amount must be a number, and the number must be first. i.e. '1 Day' or '1 d' is acceptable, but 'daily' or 'd 1' is not.";
         }
-        let delayUnit = delaySplit[1];
-        let adjustedUnit = ""
+        const delayUnit = delaySplit[1];
+        let adjustedUnit = '';
         switch (delayUnit.toLowerCase()) {
-          case "day":
-          case "days":
-          case "d":
-            adjustedUnit = "D";
+          case 'day':
+          case 'days':
+          case 'd':
+            adjustedUnit = 'D';
             break;
-          case "week":
-          case "weeks":
-          case "w":
-            adjustedUnit = "W";
+          case 'week':
+          case 'weeks':
+          case 'w':
+            adjustedUnit = 'W';
             break;
-          case "month":
-          case "months":
-          case "m":
-            adjustedUnit = "M";
+          case 'month':
+          case 'months':
+          case 'm':
+            adjustedUnit = 'M';
             break;
-          case "year":
-          case "years":
-          case "y":
-            adjustedUnit = "Y";
+          case 'year':
+          case 'years':
+          case 'y':
+            adjustedUnit = 'Y';
             break;
           default:
-            return "Invalid delay unit- must be day/days/d, week/weeks/w, month/months/m, or year/years/y. The unit must be second, i.e. 1 day";
+            return 'Invalid delay unit- must be day/days/d, week/weeks/w, month/months/m, or year/years/y. The unit must be second, i.e. 1 day';
         }
-        incomeValue.delay = delayAmount + adjustedUnit;
+        await incomes.update(income, { delay: delayAmount + adjustedUnit });
         break;
       default:
-        return "Field not found";
+        return 'Field not found';
     }
-    incomeList[income] = incomeValue;
-    await dbm.saveFile("keys", "incomeList", incomeList);
-
-    return "Field " + fieldNumber + " changed to " + newValue;
+    return 'Field ' + fieldNumber + ' changed to ' + newValue;
   }
 }
 
