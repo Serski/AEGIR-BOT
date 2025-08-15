@@ -13,14 +13,6 @@ async function findShopItem(term) {
   return rows[0] || null;
 }
 
-async function getPlayerBalance(playerId) {
-  const { rows } = await pool.query(
-    `SELECT gold FROM balances WHERE id = $1`,
-    [playerId]
-  );
-  return rows[0]?.gold ?? 0;
-}
-
 async function buy(playerId, itemTerm, qty) {
   const client = await pool.connect();
   try {
@@ -38,12 +30,12 @@ async function buy(playerId, itemTerm, qty) {
     const priceTotal = price * (qty || 1);
 
     const balRes = await client.query(
-      `SELECT gold FROM balances WHERE id = $1 FOR UPDATE`,
+      `SELECT amount FROM balances WHERE id = $1 FOR UPDATE`,
       [playerId]
     );
-    const currentGold = balRes.rows[0]?.gold ?? 0;
-    if (currentGold < priceTotal) {
-      throw new Error(`Not enough gold. Need ${priceTotal}, you have ${currentGold}.`);
+    const currentAmount = balRes.rows[0]?.amount ?? 0;
+    if (currentAmount < priceTotal) {
+      throw new Error(`Not enough balance. Need ${priceTotal}, you have ${currentAmount}.`);
     }
 
     for (let i = 0; i < qty; i++) {
@@ -55,7 +47,7 @@ async function buy(playerId, itemTerm, qty) {
     }
 
     await client.query(
-      `UPDATE balances SET gold = gold - $2 WHERE id = $1`,
+      `UPDATE balances SET amount = amount - $2 WHERE id = $1`,
       [playerId, priceTotal]
     );
 
