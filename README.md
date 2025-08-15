@@ -49,6 +49,18 @@ DISCORD_TOKEN=abcdef CLIENT_ID=1234567890 GUILD_ID=0987654321 node bot.js
 On Railway, configure these variables in the project settings. Adding a PostgreSQL service will supply `DATABASE_URL`, and you may
 set `PGPOOL_*` variables to adjust connection pooling.
 
+## Database migrations
+
+Before running the bot, apply the SQL files in the `migrations/` directory to your database. The `005_create_resolve_item_id.sql` migration creates the `resolve_item_id(raw TEXT)` helper used by inventory operations to translate item names or codes to canonical `items.id` values.
+
+Run the migration with `psql` (replace `$DATABASE_URL` with your connection string):
+
+```bash
+psql "$DATABASE_URL" -f migrations/005_create_resolve_item_id.sql
+```
+
+This migration must be executed before performing any inventory operations.
+
 ## /panel command
 
 Use `/panel` to open a personal control panel. The response is ephemeral and visible only to the invoking user. The panel features a select menu with:
