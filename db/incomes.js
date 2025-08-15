@@ -15,7 +15,7 @@ async function add(name, fields = {}) {
   let i = 2;
   for (const [key, value] of Object.entries(fields)) {
     columns.push(key);
-    params.push(value);
+    params.push(Array.isArray(value) ? JSON.stringify(value) : value);
     placeholders.push(`$${i++}`);
   }
   const sql = `INSERT INTO incomes (${columns.join(', ')}) VALUES (${placeholders.join(', ')}) RETURNING *`;
@@ -31,7 +31,7 @@ async function update(name, fields = {}) {
   let i = 1;
   for (const [key, value] of entries) {
     sets.push(`${key} = $${i++}`);
-    params.push(value);
+    params.push(Array.isArray(value) ? JSON.stringify(value) : value);
   }
   params.push(name);
   const sql = `UPDATE incomes SET ${sets.join(', ')} WHERE name = $${i} RETURNING *`;
