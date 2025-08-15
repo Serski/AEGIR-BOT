@@ -56,6 +56,18 @@ async function init() {
      )`
   );
 
+  await db.query(
+    `CREATE TABLE IF NOT EXISTS incomes (
+       name       TEXT PRIMARY KEY,
+       gold_given INTEGER,
+       item_code  TEXT,
+       item_amount INTEGER,
+       emoji      TEXT,
+       roles      JSONB,
+       delay      TEXT
+     )`
+  );
+
   // normalized tables for balances, inventories, inventory items and cooldowns
   await db.query(
     'CREATE TABLE IF NOT EXISTS balances (id TEXT PRIMARY KEY, amount INTEGER DEFAULT 0)'
