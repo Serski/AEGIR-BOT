@@ -20,6 +20,7 @@ test('allIncomes returns message when no incomes exist', async () => {
   stubModule('logger.js', { debug() {}, info() {}, error() {} });
   stubModule('db/items.js', {});
   stubModule('db/keys.js', {});
+  stubModule('db/kingdoms.js', {});
   stubModule('db/characters.js', {});
   stubModule('db/editing-fields.js', {});
   const discordPath = require.resolve('discord.js');
