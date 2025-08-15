@@ -3,6 +3,7 @@ const { postSale } = require('../../marketplace');
 const items = require('../../db/items');
 const clientManager = require('../../clientManager');
 const characters = require('../../db/characters');
+const logger = require('../../logger');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -52,11 +53,32 @@ module.exports = {
             const emoji = clientManager.getEmoji('Gold') ?? '';
             await interaction.reply(`Listed ${qty} × ${res.itemCode} for ${emoji}${price} each on the marketplace.`);
         } catch (err) {
-            console.error(err.stack);
+            logger.error(err.stack);
+
+            const errorMessages = {
+                '23505': 'A sale with these details already exists.',
+                '23503': 'This sale references data that does not exist.',
+                '23514': 'Sale details violate a database constraint.',
+                '23502': 'A required value was missing.',
+                '42883': 'A required database function is missing. Please contact an administrator.'
+            };
+
+            let userMessage = errorMessages[err.code];
+
+            if (!userMessage) {
+                if (/function .* does not exist/i.test(err.message)) {
+                    userMessage = 'A required database function is missing. Please contact an administrator.';
+                } else if (/violates.*constraint/i.test(err.message)) {
+                    userMessage = 'This action violates a database constraint.';
+                } else {
+                    userMessage = 'Failed to process your request.';
+                }
+            }
+
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp({ content: 'Failed to process your request.', ephemeral: true });
+                await interaction.followUp({ content: userMessage, ephemeral: true });
             } else {
-                await interaction.reply({ content: 'Failed to process your request.', ephemeral: true });
+                await interaction.reply({ content: userMessage, ephemeral: true });
             }
         }
     }
