@@ -12,12 +12,17 @@ module.exports = {
                 .setRequired(true)
         ),
     async execute(interaction) {
-        const income = interaction.options.getString('income');
-        const reply = await admin.editIncomeMenu(income, interaction.user.tag);
-        if (typeof reply === 'string') {
-            await interaction.reply(reply);
-        } else {
-            await interaction.reply({ embeds: [reply] });
+        try {
+            const income = interaction.options.getString('income');
+            const reply = await admin.editIncomeMenu(income, interaction.user.tag);
+            if (typeof reply === 'string') {
+                await interaction.reply(reply);
+            } else {
+                await interaction.reply({ embeds: [reply] });
+            }
+        } catch (err) {
+            console.error(err.stack);
+            await interaction.reply({ content: 'Failed to process your request.', ephemeral: true });
         }
     }
 };

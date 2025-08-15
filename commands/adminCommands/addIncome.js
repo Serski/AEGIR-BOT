@@ -17,10 +17,15 @@ module.exports = {
                 .setRequired(true)
         ),
     async execute(interaction) {
-        const role = interaction.options.getRole('role');
-        const income = interaction.options.getString('income');
+        try {
+            const role = interaction.options.getRole('role');
+            const income = interaction.options.getString('income');
 
-        const reply = await admin.addIncome(role, income);
-        await interaction.reply(reply);
+            const reply = await admin.addIncome(role, income);
+            await interaction.reply(reply);
+        } catch (err) {
+            console.error(err.stack);
+            await interaction.reply({ content: 'Failed to process your request.', ephemeral: true });
+        }
     }
   };
