@@ -4,21 +4,16 @@ const admin = require('./admin');
 const panel = require('./panel');
 const logger = require('./logger');
 const db = require('./pg-client');
-const { ensureItem, grantItemToPlayer } = require('./inventory-grants');
+const items = require('./db/items');
+const inventory = require('./db/inventory');
 const { randomUUID } = require('crypto');
 const characters = require('./db/characters');
-
-const sanitizeCategory = (category) => {
-  const sanitized = (category || '').trim().toLowerCase();
-  return sanitized === 'ship' ? 'ships' : sanitized;
-};
 
 // MODALS
 const addItem = async (interaction) => {
   // Get the data entered by the user
   const itemName = interaction.fields.getTextInputValue('itemname');
   const itemPrice = interaction.fields.getTextInputValue('itemprice');
-  const itemCategory = sanitizeCategory(interaction.fields.getTextInputValue('itemcategory'));
 
   const priceInt = itemPrice ? parseInt(itemPrice) : undefined;
   if (itemPrice && isNaN(priceInt)) {
@@ -27,7 +22,7 @@ const addItem = async (interaction) => {
   }
 
   if (itemName) {
-    const itemId = await ensureItem(db, itemName, itemCategory);
+    const itemId = await items.resolveItemCode(itemName);
     const rowId = randomUUID();
     await db.query(
       `INSERT INTO shop (id, data) VALUES ($1, jsonb_build_object('name',$2,'price',$3,'item_id',$4,'item',$4)) ON CONFLICT (id) DO UPDATE SET data=EXCLUDED.data`,
@@ -150,8 +145,8 @@ const newChar = async (interaction) => {
        ON CONFLICT (id) DO NOTHING`,
       [charId]
     );
-    const tokenId = await ensureItem(db, 'Adventure Token', 'Misc');
-    await grantItemToPlayer(db, charId, tokenId, 1);
+    const tokenId = await items.resolveItemCode('Adventure Token');
+    await inventory.give(charId, tokenId, 1);
     await interaction.reply(`Character '${charName}' has been created.`);
   } else {
     await interaction.reply({ content: 'Character creation failed. Please provide a name and bio.', ephemeral: true });
