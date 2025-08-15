@@ -106,7 +106,6 @@ async function init() {
 
   await seedTableIfEmpty('shop', path.join(__dirname, 'seed-data', 'shop.json'));
   await seedTableIfEmpty('recipes', path.join(__dirname, 'seed-data', 'recipes.json'));
-  await seedTableIfEmpty('keys', path.join(__dirname, 'seed-data', 'keys.json'));
 
   logger.info('[database-manager] initialization complete.');
 }

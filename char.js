@@ -1,4 +1,5 @@
 // DEPRECATED: legacy character helper. Use modules in ./db instead.
+const keys = require('./db/keys');
 const dbm = require('./database-manager'); // Importing the database manager
 const shop = require('./shop');
 const clientManager = require('./clientManager');
@@ -416,7 +417,7 @@ class char {
 
     // Load the data
     let charData = await dbm.loadFile(collectionName, charID);
-    let incomeListFromRoles = await dbm.loadFile('keys', 'incomeList');
+    let incomeListFromRoles = await keys.get('incomeList');
     const numericID = charData.numeric_id;
 
     var now = new Date();

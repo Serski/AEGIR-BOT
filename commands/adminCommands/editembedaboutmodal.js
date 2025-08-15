@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const admin = require('../../admin'); // Importing the database manager
+const keys = require('../../db/keys');
 const dbm = require ('../../database-manager');
 const logger = require('../../logger');
 
@@ -15,7 +16,7 @@ module.exports = {
             let mapName = editingFields["Map Edited"];
             let mapTypeEdited = editingFields["Map Type Edited"];
 
-            let maps = await dbm.loadFile('keys', mapTypeEdited);
+            let maps = await keys.get(mapTypeEdited);
 
             let mapAbout = maps[mapName].mapOptions.about;
             if (mapAbout == null || mapAbout == undefined) {
