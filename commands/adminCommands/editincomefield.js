@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const admin = require('../../admin'); // Importing the database manager
+const admin = require('../../admin');
 
 ///editfield <field number> <new value>
 module.exports = {
@@ -29,11 +29,7 @@ module.exports = {
             newValue = "DELETEFIELD";
         }
 
-        let reply = await admin.editIncomeField(fieldNumber, interaction.user.tag, newValue);
-        if (typeof(reply) == 'string') {
-            await interaction.reply(reply);
-        } else {
-            await interaction.reply({ embeds: [reply] });
-        }
+        const reply = await admin.editIncomeField(fieldNumber, interaction.user.tag, newValue);
+        await interaction.reply(reply);
     }
 };

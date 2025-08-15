@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const admin = require('../../admin'); // Importing the database manager
+const admin = require('../../admin');
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -19,13 +19,8 @@ module.exports = {
     async execute(interaction) {
         const role = interaction.options.getRole('role');
         const income = interaction.options.getString('income');
-            //addIncome(roleID, incomeString)
-            let reply = await admin.addIncome(role, income);
-            if (typeof(reply) == 'string') {
-                await interaction.reply(reply);
-            } else {
-                await interaction.reply({ embeds: [reply] });
-            }
-            // Call the useItem function from the Shop class
+
+        const reply = await admin.addIncome(role, income);
+        await interaction.reply(reply);
     }
-};
+  };
