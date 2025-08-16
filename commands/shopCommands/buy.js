@@ -28,7 +28,7 @@ module.exports = {
       `SELECT (data->>'price')::numeric AS price,
               data->>'item' AS name
          FROM shop
-        WHERE item_id = $1`,
+        WHERE data->>'item_id' = $1`,
       [itemId]
     );
     const row = rows[0];
