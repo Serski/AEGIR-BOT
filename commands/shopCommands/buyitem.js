@@ -6,11 +6,12 @@ async function findShopItem(term) {
   const { rows } = await pool.query(`
     SELECT id,
            data->>'item' AS name,
-           data->>'item_id' AS item_id,
+           COALESCE(item_id, data->>'item_id') AS item_id,
            (data->>'price')::numeric AS price,
            data->'infoOptions'->>'Category' AS category
       FROM shop
-     WHERE LOWER(data->>'item_id') = $1
+     WHERE LOWER(item_id) = $1
+        OR LOWER(data->>'item_id') = $1
         OR data->>'item' ILIKE $2
      LIMIT 1
   `, [term.toLowerCase(), term]);
