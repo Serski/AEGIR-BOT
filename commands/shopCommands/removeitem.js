@@ -16,7 +16,7 @@ module.exports = {
     const removed = await shop.removeItem(itemName);
 
     if (removed === 0) {
-      await interaction.reply(`Item '${itemName}' was not found in the shop.`);
+      await interaction.reply('Item not found');
     } else {
       await interaction.reply(`Item '${itemName}' has been removed from the shop.`);
     }
