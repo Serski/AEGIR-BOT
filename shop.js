@@ -1,4 +1,4 @@
-console.log('[shop.js] using DELETE by item / data->>\'item_id\' / id');
+console.log('[shop.js] removeItem: matching by item/id/name (case-insensitive)');
 const db = require('./pg-client');
 const Discord = require('discord.js');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
@@ -22,18 +22,23 @@ class shop {
     return res.rows[0] ? res.rows[0].name : 'ERROR';
   }
 
-  // accepts either an item code or a row id (string)
-  static async removeItem(codeOrId) {
-    const key = String(codeOrId).trim();
+  // accepts either an item code, row id, or display name (case-insensitive)
+  static async removeItem(codeOrIdOrName) {
+    const key = String(codeOrIdOrName).trim();
+
     const sql = `
-      DELETE FROM shop
-      WHERE
-        item = $1
-        OR (data->>'item_id') = $1
-        OR id = $1
-      RETURNING id, name, item AS item_code, price;
-    `;
+    DELETE FROM shop
+    WHERE
+      lower(item) = lower($1)               -- item code column
+      OR id = $1                            -- row id
+      OR lower(data->>'item_id') = lower($1)
+      OR lower(name) = lower($1)            -- display name column
+      OR lower(data->>'name') = lower($1)
+    RETURNING id, name, item AS item_code, price;
+  `;
+
     const { rows } = await db.query(sql, [key]);
+    // if no rows deleted, return null so the command can reply "not found"
     return rows[0] ?? null;
   }
 
