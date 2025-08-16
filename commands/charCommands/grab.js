@@ -2,7 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const characters = require('../../db/characters');
 const items = require('../../db/items');
 const inventory = require('../../db/inventory');
-const { storageMap } = require('./store');
+const storage = require('../../db/storage');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -22,14 +22,12 @@ module.exports = {
             return interaction.reply({ content: err.message, ephemeral: true });
         }
 
-        const userStore = storageMap.get(userId) || {};
-        const storedQty = userStore[itemCode] || 0;
+        const storedQty = await storage.get(userId, itemCode);
         if (storedQty < qty) {
             return interaction.reply({ content: 'Not enough stored items.', ephemeral: true });
         }
 
-        userStore[itemCode] = storedQty - qty;
-        storageMap.set(userId, userStore);
+        await storage.retrieve(userId, itemCode, qty);
         await inventory.give(userId, itemCode, qty);
         return interaction.reply(`Retrieved ${qty} ${itemCode}.`);
     },
