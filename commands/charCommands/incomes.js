@@ -5,6 +5,7 @@ const clientManager = require('../../clientManager');
 const items = require('../../db/items');
 const shop = require('../../shop');
 const db = require('../../pg-client');
+const inventory = require('../../db/inventory');
 
 const cooldowns = new Map();
 
@@ -53,12 +54,7 @@ module.exports = {
                     );
                 }
                 if (inc.item_id && inc.item_amount > 0) {
-                    await t.query(
-                        `INSERT INTO inventory_items (instance_id, owner_id, item_id, durability, metadata)
-                         SELECT gen_random_uuid()::text, $1, $2, NULL, '{}'::jsonb
-                         FROM generate_series(1, $3)`,
-                        [userId, inc.item_id, inc.item_amount]
-                    );
+                    await inventory.give(userId, inc.item_id, inc.item_amount, t);
                 }
             });
 

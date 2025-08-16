@@ -47,8 +47,9 @@ async function getCount(userId, itemCode) {
 }
 
 // insert qty rows; caller has validated item exists
-async function give(userId, itemCode, qty = 1) {
-  const { rows } = await pool.query(
+// optionally accepts a transaction/client with a query method
+async function give(userId, itemCode, qty = 1, client = pool) {
+  const { rows } = await client.query(
     `INSERT INTO inventory_items (instance_id, owner_id, item_id, durability, metadata)
      SELECT gen_random_uuid()::text, $1, $2, NULL, '{}'::jsonb
      FROM generate_series(1, $3)
