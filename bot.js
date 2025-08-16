@@ -78,12 +78,12 @@ for (const folder of commandFolders) {
   const commandFiles = fs.readdirSync(commandsPath).filter(f => f.endsWith('.js'));
   for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
-    const command  = require(filePath);
-    if ('data' in command && 'execute' in command) {
-      client.commands.set(command.data.name, command);
-    } else {
-      logger.warn(`Command at ${filePath} missing "data" or "execute".`);
+    const cmd = require(filePath);
+    if (typeof cmd?.data?.name !== 'string' || typeof cmd?.execute !== 'function') {
+      console.warn(`[WARNING] Skipping ${filePath}; exports:`, cmd ? Object.keys(cmd) : 'NO EXPORTS');
+      continue;
     }
+    client.commands.set(cmd.data.name, cmd);
   }
 }
 
