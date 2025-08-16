@@ -69,6 +69,8 @@ async function loadCommands() {
 	})();
 }
 
-loadCommands();
+if (require.main === module) {
+        loadCommands();
+}
 
 module.exports = { loadCommands };
