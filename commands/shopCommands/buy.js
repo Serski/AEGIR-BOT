@@ -23,9 +23,12 @@ module.exports = {
     const itemCode = interaction.options.getString('item_code');
     const qty = interaction.options.getInteger('quantity') ?? 1;
 
-    // read price from shop_v to prevent client-side spoofing
+    // read price from shop to prevent client-side spoofing
     const { rows } = await pool.query(
-      `SELECT price, name FROM shop_v WHERE item_code = $1`,
+      `SELECT (data->>'price')::numeric AS price,
+              data->>'item' AS name
+         FROM shop
+        WHERE data->>'item_id' = $1`,
       [itemCode]
     );
     const row = rows[0];

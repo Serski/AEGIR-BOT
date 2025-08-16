@@ -4,11 +4,15 @@ const characters = require('../../db/characters');
 
 async function findShopItem(term) {
   const { rows } = await pool.query(`
-    SELECT id, name, item_code, price, category
-    FROM shop_v
-    WHERE LOWER(item_code) = $1
-       OR name ILIKE $2
-    LIMIT 1
+    SELECT id,
+           data->>'item' AS name,
+           data->>'item_id' AS item_id,
+           (data->>'price')::numeric AS price,
+           data->'infoOptions'->>'Category' AS category
+      FROM shop
+     WHERE LOWER(data->>'item_id') = $1
+        OR data->>'item' ILIKE $2
+     LIMIT 1
   `, [term.toLowerCase(), term]);
   return rows[0] || null;
 }
@@ -42,7 +46,7 @@ async function buy(playerId, itemTerm, qty) {
       await client.query(
         `INSERT INTO inventory_items (instance_id, owner_id, item_id, durability, metadata)
          VALUES (gen_random_uuid()::text, $1, $2, NULL, '{}'::jsonb)`,
-        [playerId, item.item_code]
+        [playerId, item.item_id]
       );
     }
 
