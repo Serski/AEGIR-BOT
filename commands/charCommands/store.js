@@ -2,8 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const characters = require('../../db/characters');
 const items = require('../../db/items');
 const inventory = require('../../db/inventory');
-
-const storageMap = new Map();
+const storage = require('../../db/storage');
 const cooldowns = new Map();
 
 module.exports = {
@@ -37,11 +36,8 @@ module.exports = {
         }
 
         await inventory.take(userId, itemCode, qty);
-        const userStore = storageMap.get(userId) || {};
-        userStore[itemCode] = (userStore[itemCode] || 0) + qty;
-        storageMap.set(userId, userStore);
+        await storage.store(userId, itemCode, qty);
 
         return interaction.reply(`Stored ${qty} ${itemCode}.`);
     },
-    storageMap,
 };
