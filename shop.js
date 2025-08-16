@@ -21,6 +21,24 @@ class shop {
     return res.rows[0] ? res.rows[0].name : 'ERROR';
   }
 
+  static async removeItem(itemName) {
+    let code;
+    try {
+      code = await items.resolveItemCode(itemName);
+    } catch (err) {
+      return `Could not resolve "${itemName}": ${err.message}`;
+    }
+
+    const { rowCount } = await db.query(
+      'DELETE FROM shop WHERE item_code = $1 OR id = $1',
+      [code]
+    );
+    if (rowCount === 0) {
+      return `Item "${itemName}" not found.`;
+    }
+    return null;
+  }
+
   static async inspect(itemName) {
     let itemCode;
     try {
