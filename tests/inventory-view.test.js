@@ -48,10 +48,7 @@ const { newDb, DataType } = require('pg-mem');
   await pool.query('CREATE TABLE balances (id TEXT PRIMARY KEY, amount INTEGER DEFAULT 0)');
   await pool.query('CREATE TABLE items (id TEXT PRIMARY KEY, category TEXT, data JSONB)');
   await pool.query('CREATE TABLE inventory_items (instance_id TEXT PRIMARY KEY, owner_id TEXT, item_id TEXT, durability INTEGER, metadata JSONB)');
-  await pool.query('CREATE TABLE shop (id TEXT PRIMARY KEY, name TEXT, item_id TEXT, price INTEGER, data JSONB)');
-  await pool.query(`CREATE VIEW shop_v AS
-    SELECT s.id, s.name, s.item_id AS item_code, s.price, i.category
-      FROM shop s LEFT JOIN items i ON s.item_id = i.id`);
+  await pool.query('CREATE TABLE shop (id TEXT PRIMARY KEY, data JSONB)');
   await pool.query(`CREATE VIEW v_inventory AS
     SELECT ii.owner_id AS character_id,
            ii.item_id,
@@ -63,7 +60,7 @@ const { newDb, DataType } = require('pg-mem');
      GROUP BY ii.owner_id, ii.item_id, it.category`);
 
   await pool.query('INSERT INTO items (id, category, data) VALUES ($1, $2, $3)', [itemName, category, {}]);
-  await pool.query('INSERT INTO shop (id, name, item_id, price, data) VALUES ($1, $2, $3, $4, $5)', [itemName, itemName, itemName, 10, { channels: '', need_role: '', give_role: '' }]);
+  await pool.query('INSERT INTO shop (id, data) VALUES ($1, $2)', [itemName, { item_id: itemName, item: itemName, price: 10, infoOptions: { Category: category } }]);
   await pool.query('INSERT INTO balances (id, amount) VALUES ($1, $2)', ['Player#0001', 100]);
 
   const dbStub = {

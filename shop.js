@@ -8,7 +8,13 @@ const inventoryModule = require('./db/inventory');
 
 async function fetchShopItems() {
   const { rows } = await db.query(
-    'SELECT id, name, item_code, price, category FROM shop_v ORDER BY name'
+    `SELECT id,
+            data->>'item' AS name,
+            data->>'item_id' AS item_id,
+            (data->>'price')::numeric AS price,
+            data->'infoOptions'->>'Category' AS category
+       FROM shop
+      ORDER BY name`
   );
   return rows;
 }
@@ -16,7 +22,11 @@ async function fetchShopItems() {
 class shop {
   static async findItemName(itemName) {
     const res = await db.query(
-      'SELECT name FROM shop_v WHERE LOWER(name)=LOWER($1) OR LOWER(item_code)=LOWER($1) ORDER BY name',
+      `SELECT data->>'item' AS name
+         FROM shop
+        WHERE LOWER(data->>'item') = LOWER($1)
+           OR LOWER(data->>'item_id') = LOWER($1)
+        ORDER BY name`,
       [itemName]
     );
     return res.rows[0] ? res.rows[0].name : 'ERROR';
@@ -34,7 +44,10 @@ class shop {
       OR lower(data->>'item_id') = lower($1)
       OR lower(name) = lower($1)            -- display name column
       OR lower(data->>'name') = lower($1)
-    RETURNING id, name, item AS item_code, price;
+    RETURNING id,
+              COALESCE(name, data->>'item') AS name,
+              COALESCE(item, data->>'item_id') AS item_id,
+              COALESCE(price, (data->>'price')::numeric) AS price;
   `;
 
     const { rows } = await db.query(sql, [key]);
@@ -51,16 +64,21 @@ class shop {
     }
 
     const { rows } = await db.query(
-      `SELECT name, item_code, price, category, description, icon
-         FROM shop_v
-        WHERE item_code = $1`,
+      `SELECT data->>'item' AS name,
+              data->>'item_id' AS item_id,
+              (data->>'price')::numeric AS price,
+              data->'infoOptions'->>'Category' AS category,
+              data->'infoOptions'->>'Description' AS description,
+              COALESCE(data->>'icon', data->'infoOptions'->>'Icon') AS icon
+         FROM shop
+        WHERE data->>'item_id' = $1`,
       [itemCode]
     );
 
     let info = rows[0];
     if (!info) {
       const { rows: itemRows } = await db.query(
-        `SELECT id AS item_code,
+        `SELECT id AS item_id,
                 data->>'name' AS name,
                 NULL::numeric AS price,
                 data->>'category' AS category,
@@ -83,7 +101,7 @@ class shop {
     if (info.icon) embed.setThumbnail(info.icon);
 
     embed.addFields(
-      { name: 'Item Code', value: info.item_code, inline: true },
+      { name: 'Item Code', value: info.item_id, inline: true },
       { name: 'Category', value: info.category || 'Unknown', inline: true }
     );
 
@@ -106,7 +124,7 @@ class shop {
       if (!price || Number.isNaN(price)) continue;
       const category = row.category ?? 'Other';
       if (!categories[category]) categories[category] = [];
-      categories[category].push({ name: row.name, price, item_code: row.item_code });
+      categories[category].push({ name: row.name, price, item_id: row.item_id });
     }
 
     for (const [category, list] of Object.entries(categories)) {
@@ -122,7 +140,13 @@ class shop {
     const itemsPerPage = 25;
 
     const { rows } = await db.query(
-      'SELECT id, name, item_code, price, category FROM shop_v ORDER BY name'
+      `SELECT id,
+              data->>'item' AS name,
+              data->>'item_id' AS item_id,
+              (data->>'price')::numeric AS price,
+              data->'infoOptions'->>'Category' AS category
+         FROM shop
+        ORDER BY name`
     );
 
     let itemCategories = {};
@@ -350,7 +374,15 @@ class shop {
 
   static async getItemPrice(itemName) {
     const res = await db.query(
-      'SELECT id, name, item_code, price, category FROM shop_v WHERE LOWER(name)=LOWER($1) OR LOWER(item_code)=LOWER($1) ORDER BY name',
+      `SELECT id,
+              data->>'item' AS name,
+              data->>'item_id' AS item_id,
+              (data->>'price')::numeric AS price,
+              data->'infoOptions'->>'Category' AS category
+         FROM shop
+        WHERE LOWER(data->>'item') = LOWER($1)
+           OR LOWER(data->>'item_id') = LOWER($1)
+        ORDER BY name`,
       [itemName]
     );
     if (!res.rows[0]) {
@@ -365,7 +397,15 @@ class shop {
 
   static async getItemCategory(itemName) {
     const res = await db.query(
-      'SELECT id, name, item_code, price, category FROM shop_v WHERE LOWER(name)=LOWER($1) OR LOWER(item_code)=LOWER($1) ORDER BY name',
+      `SELECT id,
+              data->>'item' AS name,
+              data->>'item_id' AS item_id,
+              (data->>'price')::numeric AS price,
+              data->'infoOptions'->>'Category' AS category
+         FROM shop
+        WHERE LOWER(data->>'item') = LOWER($1)
+           OR LOWER(data->>'item_id') = LOWER($1)
+        ORDER BY name`,
       [itemName]
     );
     if (!res.rows[0]) {
@@ -376,7 +416,15 @@ class shop {
 
   static async getItemIcon(itemName) {
     const res = await db.query(
-      'SELECT id, name, item_code, price, category FROM shop_v WHERE LOWER(name)=LOWER($1) OR LOWER(item_code)=LOWER($1) ORDER BY name',
+      `SELECT id,
+              data->>'item' AS name,
+              data->>'item_id' AS item_id,
+              (data->>'price')::numeric AS price,
+              data->'infoOptions'->>'Category' AS category
+         FROM shop
+        WHERE LOWER(data->>'item') = LOWER($1)
+           OR LOWER(data->>'item_id') = LOWER($1)
+        ORDER BY name`,
       [itemName]
     );
     if (!res.rows[0]) {
@@ -387,7 +435,15 @@ class shop {
 
   static async getItemMetadata(itemId) {
     const res = await db.query(
-      'SELECT id, name, item_code, price, category FROM shop_v WHERE LOWER(name)=LOWER($1) OR LOWER(item_code)=LOWER($1) ORDER BY name',
+      `SELECT id,
+              data->>'item' AS name,
+              data->>'item_id' AS item_id,
+              (data->>'price')::numeric AS price,
+              data->'infoOptions'->>'Category' AS category
+         FROM shop
+        WHERE LOWER(data->>'item') = LOWER($1)
+           OR LOWER(data->>'item_id') = LOWER($1)
+        ORDER BY name`,
       [itemId]
     );
     if (!res.rows[0]) return null;
@@ -408,7 +464,13 @@ class shop {
       return 'Item not found!';
     }
     const { rows } = await db.query(
-      'SELECT id, name, item_code, price, category FROM shop_v WHERE item_code = $1',
+      `SELECT id,
+              data->>'item' AS name,
+              data->>'item_id' AS item_id,
+              (data->>'price')::numeric AS price,
+              data->'infoOptions'->>'Category' AS category
+         FROM shop
+        WHERE data->>'item_id' = $1`,
       [meta.item_code]
     );
     if (!rows[0]) {

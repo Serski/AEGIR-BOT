@@ -26,10 +26,10 @@ const shopPath = path.join(root, 'shop.js');
 
 test('createShopEmbed shows only items with numeric prices', async () => {
   const rows = [
-    { id: 1, name: 'Longboat', item_code: 'longboat', price: 100, category: 'Ships' },
-    { id: 2, name: 'Broken Ship', item_code: 'broken_ship', price: 'abc', category: 'Ships' },
-    { id: 3, name: 'Wood', item_code: 'wood', price: 5, category: 'Resources' },
-    { id: 4, name: 'Stone', item_code: 'stone', price: null, category: 'Materials' }
+    { id: 1, name: 'Longboat', item_id: 'longboat', price: 100, category: 'Ships' },
+    { id: 2, name: 'Broken Ship', item_id: 'broken_ship', price: 'abc', category: 'Ships' },
+    { id: 3, name: 'Wood', item_id: 'wood', price: 5, category: 'Resources' },
+    { id: 4, name: 'Stone', item_id: 'stone', price: null, category: 'Materials' }
   ];
 
   const dbStub = { query: async () => ({ rows }) };
