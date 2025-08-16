@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { removeItem } = require('../../shop');
+const shop = require('../../shop');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -13,7 +13,7 @@ module.exports = {
     ),
   async execute(interaction) {
     const itemName = interaction.options.getString('itemname');
-    const error = await removeItem(itemName);
+    const error = await shop.removeItem(itemName);
 
     if (error) {
       await interaction.reply(error);
