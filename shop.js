@@ -407,21 +407,17 @@ class shop {
 
   static async getItemIcon(itemName) {
     const res = await db.query(
-      `SELECT id,
-              data->>'item' AS name,
-              data->>'item_id' AS item_id,
-              (data->>'price')::numeric AS price,
-              data->'infoOptions'->>'Category' AS category
+      `SELECT data->'infoOptions'->>'Icon' AS icon
          FROM shop
         WHERE LOWER(data->>'item') = LOWER($1)
            OR LOWER(data->>'item_id') = LOWER($1)
-        ORDER BY name`,
+        ORDER BY data->>'item'`,
       [itemName]
     );
     if (!res.rows[0]) {
       return 'ERROR';
     }
-    return '';
+    return res.rows[0].icon || '';
   }
 
   static async getItemMetadata(itemId) {
@@ -430,18 +426,19 @@ class shop {
               data->>'item' AS name,
               data->>'item_id' AS item_id,
               (data->>'price')::numeric AS price,
-              data->'infoOptions'->>'Category' AS category
+              data->'infoOptions'->>'Category' AS category,
+              data->'infoOptions'->>'Icon' AS icon
          FROM shop
         WHERE LOWER(data->>'item') = LOWER($1)
            OR LOWER(data->>'item_id') = LOWER($1)
-        ORDER BY name`,
+        ORDER BY data->>'item'`,
       [itemId]
     );
     if (!res.rows[0]) return null;
     const row = res.rows[0];
     return {
       name: row.name,
-      icon: '',
+      icon: row.icon || '',
       category: row.category ?? 'Other',
       transferrable: '',
       usage: {},
