@@ -14,8 +14,8 @@ async function listSales({ sellerId, limit, offset, cursor } = {}) {
   }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   let sql = `
-    SELECT id, name, item_code AS item_id, price, quantity, seller
-    FROM marketplace_v
+    SELECT id, name, item_id, price, quantity, seller
+    FROM marketplace
     ${where}
     ORDER BY ${cursor ? 'id' : 'name NULLS LAST'}
   `;
@@ -30,7 +30,7 @@ async function listSales({ sellerId, limit, offset, cursor } = {}) {
   const { rows } = await pool.query(sql, params);
   let totalCount;
   if (limit !== undefined || offset !== undefined) {
-    const countSql = `SELECT COUNT(*) FROM marketplace_v ${where}`;
+    const countSql = `SELECT COUNT(*) FROM marketplace ${where}`;
     const countParams = params.slice(0, conditions.length);
     const countRes = await pool.query(countSql, countParams);
     totalCount = Number(countRes.rows[0].count);
