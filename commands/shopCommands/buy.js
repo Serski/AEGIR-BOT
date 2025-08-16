@@ -8,8 +8,8 @@ module.exports = {
     .setName('buy')
     .setDescription('Buy a shop item')
     .addStringOption(option =>
-      option.setName('item_code')
-        .setDescription('Item code')
+      option.setName('item_id')
+        .setDescription('Item identifier')
         .setRequired(true)
     )
     .addIntegerOption(option =>
@@ -20,7 +20,7 @@ module.exports = {
     ),
   async execute(interaction) {
     const userId = await characters.ensureAndGetId(interaction.user);
-    const itemCode = interaction.options.getString('item_code');
+    const itemId = interaction.options.getString('item_id');
     const qty = interaction.options.getInteger('quantity') ?? 1;
 
     // read price from shop to prevent client-side spoofing
@@ -28,8 +28,8 @@ module.exports = {
       `SELECT (data->>'price')::numeric AS price,
               data->>'item' AS name
          FROM shop
-        WHERE data->>'item_id' = $1`,
-      [itemCode]
+        WHERE item_id = $1`,
+      [itemId]
     );
     const row = rows[0];
     if (!row) return interaction.reply({ ephemeral: true, content: `Item not in shop.` });
@@ -44,7 +44,7 @@ module.exports = {
     await pool.query(`UPDATE balances SET amount = amount - $2 WHERE id = $1`, [userId, total]);
 
     // grant the item(s)
-    await inventory.give(userId, itemCode, qty);
+    await inventory.give(userId, itemId, qty);
 
     return interaction.reply(`Bought ${qty} × ${row.name} for ${total}.`);
   }
