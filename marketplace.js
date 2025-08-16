@@ -42,7 +42,7 @@ async function postSale({ userId, itemCode, price = 0, quantity = 1 }) {
   const name = meta?.name || itemCode;
 
   const { rows } = await pool.query(
-    `INSERT INTO marketplace (id, name, item_code, price, seller, quantity)
+    `INSERT INTO marketplace (id, name, item_id, price, seller, quantity)
      VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5)
      RETURNING id`,
     [name, itemCode, price, userId, quantity]
@@ -164,7 +164,7 @@ async function buySale(saleId, buyerTag, buyerId) {
     await client.query('BEGIN');
 
     const { rows } = await client.query(
-      'SELECT id, name, price, quantity, seller, item_code FROM marketplace WHERE id = $1 FOR UPDATE',
+      'SELECT id, name, price, quantity, seller, item_id FROM marketplace WHERE id = $1 FOR UPDATE',
       [saleId]
     );
     if (!rows[0]) {
@@ -190,7 +190,7 @@ async function buySale(saleId, buyerTag, buyerId) {
       [sale.seller, totalPrice]
     );
 
-    await inventory.give(buyerId, sale.item_code, sale.quantity);
+    await inventory.give(buyerId, sale.item_id, sale.quantity);
     await client.query('DELETE FROM marketplace WHERE id = $1', [saleId]);
 
     await client.query('COMMIT');

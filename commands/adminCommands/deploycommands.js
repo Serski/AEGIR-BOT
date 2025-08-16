@@ -1,15 +1,13 @@
 const { SlashCommandBuilder } = require('discord.js');
-const fs = require('fs');
-const path = require('path');
-const deploycommands = require('../../deploy-commands');
+const deployCommands = require('../../deploy-commands');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('deploycommands')
-    .setDefaultMemberPermissions(0)
-    .setDescription('Deploy map commands'),
+    .setDescription('Reload all slash commands')
+    .setDefaultMemberPermissions(0),
   async execute(interaction) {
-    deploycommands.loadCommands();
-    await interaction.reply('Command files have been generated.');
+    await deployCommands.loadCommands();
+    await interaction.reply('Slash commands deployed.');
   },
 };
