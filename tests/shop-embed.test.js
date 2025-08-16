@@ -48,7 +48,7 @@ test('createShopEmbed shows only items with numeric prices', async () => {
     'discord.js': discordStub,
     './db/inventory': { getCount: async () => 0 },
     './clientManager': {},
-    './db/items': { getItemMetaByCode: async code => ({ item_code: code, name: code }) },
+    './db/items': { getItemMetaByCode: async code => ({ item_id: code, name: code }) },
     './logger': { debug() {}, info() {}, error() {} }
   });
 

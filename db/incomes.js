@@ -3,7 +3,7 @@ const pool = require('../pg-client');
 
 async function getAll() {
   const { rows } = await pool.query(
-    `SELECT name, gold_given, item_code, item_amount, emoji, roles, delay FROM incomes`
+    `SELECT name, gold_given, item_id, item_amount, emoji, roles, delay FROM incomes`
   );
   return rows;
 }

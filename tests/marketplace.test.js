@@ -29,7 +29,7 @@ function stubModule(file, exports) {
     'CREATE TABLE marketplace (id TEXT PRIMARY KEY, name TEXT, item_id TEXT, price INTEGER, seller TEXT, quantity INTEGER)'
   );
   pool.query(
-    "CREATE VIEW marketplace_v AS SELECT id, name, item_id AS item_code, price, seller, quantity FROM marketplace"
+    "CREATE VIEW marketplace_v AS SELECT id, name, item_id, price, seller, quantity FROM marketplace"
   );
   stubModule('pg-client.js', { pool, query: (text, params) => pool.query(text, params) });
 

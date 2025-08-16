@@ -471,7 +471,7 @@ class shop {
               data->'infoOptions'->>'Category' AS category
          FROM shop
         WHERE data->>'item_id' = $1`,
-      [meta.item_code]
+      [meta.item_id]
     );
     if (!rows[0]) {
       return 'Item not found!';
@@ -492,9 +492,9 @@ class shop {
       return 'You do not have enough gold!';
     }
 
-    const itemCode = meta.item_code;
+    const itemId = meta.item_id;
     try {
-      await inventoryModule.getCount(charID, itemCode);
+      await inventoryModule.getCount(charID, itemId);
     } catch (err) {
       logger.error(err);
     }
@@ -514,7 +514,7 @@ class shop {
         await t.query(
           `INSERT INTO inventory_items (instance_id, owner_id, item_id, durability, metadata)
            VALUES ($1, $2, $3, NULL, '{}'::jsonb)`,
-          [iid, charID, itemCode]
+          [iid, charID, itemId]
         );
       }
     });
