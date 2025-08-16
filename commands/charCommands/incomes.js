@@ -52,12 +52,12 @@ module.exports = {
                         [userId, inc.gold_given]
                     );
                 }
-                if (inc.item_code && inc.item_amount > 0) {
+                if (inc.item_id && inc.item_amount > 0) {
                     await t.query(
                         `INSERT INTO inventory_items (instance_id, owner_id, item_id, durability, metadata)
                          SELECT gen_random_uuid()::text, $1, $2, NULL, '{}'::jsonb
                          FROM generate_series(1, $3)`,
-                        [userId, inc.item_code, inc.item_amount]
+                        [userId, inc.item_id, inc.item_amount]
                     );
                 }
             });
@@ -69,10 +69,10 @@ module.exports = {
             if (inc.gold_given > 0) {
                 parts.push(`${clientManager.getEmoji('Gold')} ${inc.gold_given}`);
             }
-            if (inc.item_code && inc.item_amount > 0) {
-                const icon = await shop.getItemIcon(inc.item_code);
-                const meta = await items.getItemMetaByCode(inc.item_code);
-                const itemName = meta ? meta.name : inc.item_code;
+            if (inc.item_id && inc.item_amount > 0) {
+                const icon = await shop.getItemIcon(inc.item_id);
+                const meta = await items.getItemMetaByCode(inc.item_id);
+                const itemName = meta ? meta.name : inc.item_id;
                 parts.push(`${icon} ${inc.item_amount} ${itemName}`);
             }
             if (parts.length === 0) parts.push('Nothing');

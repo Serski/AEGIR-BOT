@@ -961,7 +961,7 @@ When selected grants the:
     const fields = {
       delay: '1D',
       gold_given: 0,
-      item_code: null,
+      item_id: null,
       item_amount: 0,
       emoji: clientManager.getEmoji('Gold'),
       roles: [roleID],
@@ -986,7 +986,7 @@ When selected grants the:
       } catch {
         return 'Item not found';
       }
-      fields.item_code = itemCode;
+      fields.item_id = itemCode;
       fields.item_amount = amount;
     }
 
@@ -1007,7 +1007,7 @@ When selected grants the:
     const miscList = [];
     for (const row of incomeRows) {
       const gold = row.gold_given || 0;
-      const item = row.item_code || '';
+      const item = row.item_id || '';
       const amount = row.item_amount || 0;
       if (gold > 0 && item === '' && amount === 0) {
         goldList.push(row);
@@ -1019,7 +1019,7 @@ When selected grants the:
     }
 
     goldList.sort((a, b) => a.gold_given - b.gold_given);
-    itemList.sort((a, b) => a.item_code.localeCompare(b.item_code) || a.item_amount - b.item_amount);
+    itemList.sort((a, b) => a.item_id.localeCompare(b.item_id) || a.item_amount - b.item_amount);
 
     const sorted = goldList.concat(itemList).concat(miscList);
     const incomeEntries = [];
@@ -1032,10 +1032,10 @@ When selected grants the:
       if (row.gold_given > 0) {
         givenString += clientManager.getEmoji('Gold') + ' ' + row.gold_given + ' ';
       }
-      if (row.item_code && row.item_amount) {
-        const icon = await shop.getItemIcon(row.item_code);
-        const meta = await items.getItemMetaByCode(row.item_code);
-        const itemName = meta ? meta.name : row.item_code;
+      if (row.item_id && row.item_amount) {
+        const icon = await shop.getItemIcon(row.item_id);
+        const meta = await items.getItemMetaByCode(row.item_id);
+        const itemName = meta ? meta.name : row.item_id;
         givenString += icon + ' ' + row.item_amount + ' ' + itemName;
       }
       const entry = emoji + ' `' + delay + '` ' + '**' + row.name + '**: ' + rolesString + ' ' + givenString + '\n';
@@ -1109,9 +1109,9 @@ When selected grants the:
       }
     }
     let itemName = '';
-    if (incomeValue.item_code) {
-      const meta = await items.getItemMetaByCode(incomeValue.item_code);
-      itemName = meta ? meta.name : incomeValue.item_code;
+    if (incomeValue.item_id) {
+      const meta = await items.getItemMetaByCode(incomeValue.item_id);
+      itemName = meta ? meta.name : incomeValue.item_id;
     }
     const returnEmbed = new EmbedBuilder()
       .setTitle('Income: ' + income)
@@ -1186,7 +1186,7 @@ When selected grants the:
         break;
       case 5:
         if (newValue === 'DELETEFIELD') {
-          await incomes.update(income, { item_code: null, item_amount: 0 });
+          await incomes.update(income, { item_id: null, item_amount: 0 });
           break;
         }
         let itemCode;
@@ -1195,7 +1195,7 @@ When selected grants the:
         } catch {
           return 'Item not found';
         }
-        await incomes.update(income, { item_code: itemCode });
+        await incomes.update(income, { item_id: itemCode });
         break;
       case 6:
         if (newValue === 'DELETEFIELD') {

@@ -22,7 +22,7 @@ async function resolveItemCode(raw) {
 
 async function getItemMetaByCode(itemCode) {
   const { rows } = await pool.query(
-    `SELECT id AS item_code,
+    `SELECT id AS item_id,
             data->>'name' AS name,
             data->>'category' AS category,
             COALESCE(data->>'icon', data->'infoOptions'->>'Icon') AS icon
@@ -35,7 +35,7 @@ async function getItemMetaByCode(itemCode) {
 // Fetch a full item row (including JSON data) by item code or name
 async function getItemByNameOrCode(term) {
   const { rows } = await pool.query(
-    `SELECT id AS item_code, data
+    `SELECT id AS item_id, data
        FROM items
       WHERE id = $1 OR LOWER(data->>'name') = LOWER($1)
       LIMIT 1`,
