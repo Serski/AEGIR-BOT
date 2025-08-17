@@ -1,3 +1,11 @@
+console.log('[boot] starting, node', process.version);
+console.log('[boot] DISCORD_TOKEN?', !!process.env.DISCORD_TOKEN);
+process.on('unhandledRejection', e => console.error('[unhandledRejection]', e));
+process.on('uncaughtException',  e => console.error('[uncaughtException]', e));
+
+const { Client, GatewayIntentBits, Events } = require('discord.js');
+const { Collection } = require('discord.js');
+
 /**
  * AEGIR-BOT ─ runtime configuration
  * ---------------------------------
@@ -13,7 +21,6 @@
 
 const fs   = require('node:fs');
 const path = require('node:path');
-const { Client, GatewayIntentBits, Collection, Events } = require('discord.js');
 const logger             = require('./logger');
 
 // ────────────────────────────────────────────────────────────────
@@ -50,7 +57,6 @@ if (!token || !clientId || !guildId) {
 // ────────────────────────────────────────────────────────────────
 
 // other module imports
-const Discord           = require('discord.js');
 const interactionHandler = require('./interaction-handler');
 const db                 = require('./pg-client');
 const admin              = require('./admin');
