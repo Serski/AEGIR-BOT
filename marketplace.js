@@ -42,11 +42,20 @@ async function postSale({ userId, itemCode, price = 0, quantity = 1 }) {
   const name = meta?.name || itemCode;
 
   const { rows } = await pool.query(
-    `INSERT INTO marketplace (id, name, item_id, price, seller, quantity)
-     VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5)
-     RETURNING id`,
-    [name, itemCode, price, userId, quantity]
-  );
+  `INSERT INTO marketplace (id, data)
+   VALUES (
+     gen_random_uuid()::text,
+     jsonb_build_object(
+       'name', $1,
+       'item_id', $2,
+       'price', $3,
+       'seller', $4,
+       'quantity', $5
+     )
+   )
+   RETURNING id`,
+  [name, itemCode, price, userId, quantity]
+);
   const saleId = rows[0]?.id;
 
   logger.info('[marketplace.postSale] success', {
